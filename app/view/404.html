@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .error-title {
+            font-size: 48px;
+            color: #ff5722;
+        }
+
+        .error-text {
+            font-size: 22px;
+            margin: 5px;
+            color: #4db6ac;
+        }
+
+        .back-link {
+            font-size: 18px;
+            text-decoration: none;
+            color: #4db6ac;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        #canvas {
+            border: solid 2px #ccc;
+            display: block;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="error-title">Oops! 404</h1>
+        <p id="instructions">使用鼠标左键画画</p>
+        <canvas id="canvas" width="800" height="400"></canvas>
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            let drawing = false;
+
+            const startDrawing = (e) => {
+                drawing = true;
+                draw(e);
+            };
+
+            const stopDrawing = () => {
+                drawing = false;
+                ctx.beginPath();
+            };
+
+            const draw = (e) => {
+                if (!drawing) return;
+
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#4db6ac';
+
+                ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            };
+
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mousemove', draw);
+        </script>
+
+        <p class="error-text">It looks like the page you're looking for got lost in cyberspace.</p>
+        <p class="error-text">Our AI tried its best to find it, but no luck!</p>
+        <p><a class="back-link" href="/">Click here to return to the homepage.</a></p>
+    </div>
+</body>
+
+</html>

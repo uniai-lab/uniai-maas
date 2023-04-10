@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SSE Test</title>
+</head>
+
+<body>
+    <h1>Server-Sent Events Test</h1>
+    <textarea name="prompt" id="prompt" cols="30" rows="10" placeholder="Input something"></textarea>
+    <button id="submit">Run</button>
+    <div style="width:500px" id="output">
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const prompt = document.getElementById('prompt')
+        document.getElementById('submit').onclick = function () {
+            // 替换为您的 SSE 服务的 URL
+            const value = prompt.value
+            const sseUrl = `/chat/chat-stream?input=${value}`;
+            const eventSource = new EventSource(sseUrl);
+
+            eventSource.onmessage = (e) => output.textContent = JSON.parse(e.data).data
+
+            eventSource.onerror = (e) => console.error('Error:', e)
+        }
+
+
+    </script>
+</body>
+
+</html>

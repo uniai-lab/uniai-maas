@@ -1,0 +1,23 @@
+# @format
+
+version: '3.5'
+
+services:
+    pgvector:
+        container_name: pgvector
+        image: ankane/pgvector:latest
+        restart: always
+        environment:
+            - POSTGRES_USER
+            - POSTGRES_PASSWORD
+            - POSTGRES_DB
+        ports:
+            - 5432:5432
+        # volumes:
+        # - ./data:/var/lib/postgresql/data
+    cache:
+        container_name: redis
+        image: redis:latest
+        restart: always
+        ports:
+            - 6379:6379

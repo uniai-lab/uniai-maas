@@ -1,0 +1,26 @@
+{
+    "extends": "@eggjs/tsconfig",
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "CommonJS",
+        "strict": true,
+        "noImplicitAny": false,
+        "moduleResolution": "node",
+        "allowJs": false,
+        "pretty": true,
+        "noEmitOnError": false,
+        "noUnusedLocals": false,
+        "ignoreDeprecations": "5.0",
+        "paths": {
+            "@util/*": ["app/util/*"],
+            "@service/*": ["app/service/*"],
+            "@model/*": ["app/model/*"],
+            "@public/*": ["app/public/*"],
+            "@controller/*": ["app/controller/*"],
+            "@interface/*": ["app/interface/*"],
+            "@middleware/*": ["app/middleware/*"]
+        },
+        "baseUrl": "."
+    },
+    "exclude": ["node_modules", "docker", "logs", "run"]
+}
