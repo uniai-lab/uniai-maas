@@ -1,15 +1,17 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
+import { UserContext } from '@interface/Context'
 import auth from 'app/middleware/auth'
 
 @HTTPController({ path: '/lechat' })
 export default class LeChat {
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.POST })
-    async userinfo(@Context() ctx: EggContext) {
+    async userinfo(@Context() ctx: UserContext) {
         try {
-            const res = await ctx.service.user.getUser(parseInt(ctx.params.userId))
+            const userId = ctx.userId as number
+            const res = await ctx.service.user.getUser(userId)
             if (!res) throw new Error('User not found')
             const data: UserinfoResponseData = {
                 id: res.id,

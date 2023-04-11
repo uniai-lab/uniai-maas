@@ -97,7 +97,8 @@ export default class Chat {
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.POST })
     async userInfo(@Context() ctx: UserContext) {
         try {
-            const res = await ctx.service.user.getUser(ctx.params.userId)
+            const userId = ctx.userId as number
+            const res = await ctx.service.user.getUser(userId)
             if (!res) throw new Error('Fail to get user info')
 
             const task: Array<UserTask> = []
@@ -148,7 +149,7 @@ export default class Chat {
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
-            const userId = ctx.params.userId as number
+            const userId = ctx.userId as number
             if (!userId) throw new Error('No user id')
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
@@ -182,7 +183,7 @@ export default class Chat {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
-            const userId = ctx.params.userId as number
+            const userId = ctx.userId as number
             if (!userId) throw new Error('No user id')
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
@@ -202,7 +203,7 @@ export default class Chat {
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.POST })
     async getChatStream(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.params.userId as number
+            const userId = ctx.userId as number
             const res = await ctx.service.chat.getChatStream(userId)
 
             if (!res) throw new Error('Chat not found or timeout')
@@ -228,7 +229,7 @@ export default class Chat {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListPost) {
         try {
-            const userId = ctx.params.userId as number
+            const userId = ctx.userId as number
             if (!userId) throw new Error('No user id')
             const dialogId = params.dialogId as number
 
@@ -261,7 +262,7 @@ export default class Chat {
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
     async upload(@Context() ctx: UserContext, @HTTPBody() params: ResourceUploadPost) {
         try {
-            const userId = ctx.params.userId as number
+            const userId = ctx.userId as number
             if (!userId) throw new Error('No user id')
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
@@ -299,7 +300,7 @@ export default class Chat {
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.POST })
     async listDialogResource(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.params.userId
+            const userId = ctx.userId as number
             const res = await ctx.service.chat.listDialog(userId)
             const data: DialogResponseData[] = []
             for (const item of res)
