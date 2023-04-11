@@ -223,7 +223,7 @@ export default class Chat extends Service {
                 throw new Error('Another chat stream is processing')
             // request to GPT
             const res = await openai.chat(prompts, stream)
-            this.startChatStream((res as unknown) as IncomingMessage, userId, dialog.id)
+            this.startChatStream(res as unknown as IncomingMessage, userId, dialog.id)
         } else {
             // request to GPT
             const res = await openai.chat(prompts, stream)
@@ -304,13 +304,12 @@ export default class Chat extends Service {
         if (new Date().getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() >= WEEK) {
             user.chance.uploadChanceFree = parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0')
             user.chance.uploadChanceFreeUpdateAt = new Date()
+            await user.chance.save()
         }
 
-        if (user.chance.uploadChanceFree > 0) user.chance.uploadChanceFree--
-        else if (user.chance.uploadChance > 0) user.chance.uploadChance--
+        if (user.chance.uploadChanceFree > 0) await user.chance.decrement({ uploadChanceFree: 1 })
+        else if (user.chance.uploadChance > 0) await user.chance.decrement({ uploadChance: 1 })
         else throw new Error('Chance of upload not enough, waiting for one week')
-
-        await user.chance.save()
     }
 
     // reduce user chat chance
@@ -324,12 +323,11 @@ export default class Chat extends Service {
         if (new Date().getTime() - user.chance.chatChanceFreeUpdateAt.getTime() >= WEEK) {
             user.chance.chatChanceFree = parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0')
             user.chance.chatChanceFreeUpdateAt = new Date()
+            await user.chance.save()
         }
 
-        if (user.chance.chatChanceFree > 0) user.chance.chatChanceFree--
-        else if (user.chance.chatChance > 0) user.chance.chatChance--
+        if (user.chance.chatChanceFree > 0) await user.chance.decrement({ chatChanceFree: 1 })
+        else if (user.chance.chatChance > 0) await user.chance.decrement({ chatChance: 1 })
         else throw new Error('Chance of chat not enough, waiting for one week')
-
-        await user.chance.save()
     }
 }

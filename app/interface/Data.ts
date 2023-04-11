@@ -29,6 +29,7 @@ interface ChatStreamCache {
     chatId?: number
     error?: Error
 }
+
 interface UserTask extends ConfigTask {
     flag?: boolean
 }

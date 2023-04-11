@@ -1,15 +1,7 @@
 /** @format */
 
-import {
-    HTTPController,
-    HTTPMethod,
-    HTTPMethodEnum,
-    Context,
-    EggContext,
-    HTTPBody,
-    Middleware,
-    Inject
-} from '@eggjs/tegg'
+import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, Inject } from '@eggjs/tegg'
+import { UserContext } from '@interface/Context'
 import auth from 'app/middleware/auth'
 import $ from '@util/util'
 import { EggLoader } from 'egg'
@@ -21,7 +13,7 @@ export default class Chat {
 
     // app configs
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.POST })
-    async config(@Context() ctx: EggContext) {
+    async config(@Context() ctx: UserContext) {
         try {
             const data = await ctx.service.user.getConfig()
             ctx.service.res.success('Config list', data)
@@ -33,7 +25,7 @@ export default class Chat {
 
     // wechat login
     @HTTPMethod({ path: '/wx-login', method: HTTPMethodEnum.POST })
-    async wxLogin(@Context() ctx: EggContext, @HTTPBody() params: WXSignInPost) {
+    async wxLogin(@Context() ctx: UserContext, @HTTPBody() params: WXSignInPost) {
         try {
             const res = await ctx.service.wechat.signIn(params.code)
             const data: UserWechatLoginResponseData = {
@@ -51,7 +43,7 @@ export default class Chat {
 
     // wechat register
     @HTTPMethod({ path: '/wx-register', method: HTTPMethodEnum.POST })
-    async wxRegister(@Context() ctx: EggContext, @HTTPBody() params: WXSignUpPost) {
+    async wxRegister(@Context() ctx: UserContext, @HTTPBody() params: WXSignUpPost) {
         try {
             const { code, openid, iv, encryptedData } = params
             if (!code) throw new Error('Code can not be null')
@@ -103,7 +95,7 @@ export default class Chat {
     // get user info
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.POST })
-    async userInfo(@Context() ctx: EggContext) {
+    async userInfo(@Context() ctx: UserContext) {
         try {
             const res = await ctx.service.user.getUser(ctx.params.userId)
             if (!res) throw new Error('Fail to get user info')
@@ -154,7 +146,7 @@ export default class Chat {
     // send chat message
     @Middleware(auth())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatPost) {
+    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
             const userId = ctx.params.userId as number
             if (!userId) throw new Error('No user id')
@@ -164,6 +156,7 @@ export default class Chat {
 
             await ctx.service.chat.reduceChatChance(userId)
             const res = await ctx.service.chat.chat(input, userId, dialogId)
+
             if (!res) throw new Error('Fail to get sync response')
             const data: ChatResponseData = {
                 type: false,
@@ -187,7 +180,7 @@ export default class Chat {
     // send chat message and set stream
     @Middleware(auth())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
-    async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatPost) {
+    async chatStream(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
             const userId = ctx.params.userId as number
             if (!userId) throw new Error('No user id')
@@ -207,7 +200,7 @@ export default class Chat {
     // get chat stream
     @Middleware(auth())
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.POST })
-    async getChatStream(@Context() ctx: EggContext) {
+    async getChatStream(@Context() ctx: UserContext) {
         try {
             const userId = ctx.params.userId as number
             const res = await ctx.service.chat.getChatStream(userId)
@@ -233,7 +226,7 @@ export default class Chat {
 
     @Middleware(auth())
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
-    async listChat(@Context() ctx: EggContext, @HTTPBody() params: ChatListPost) {
+    async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListPost) {
         try {
             const userId = ctx.params.userId as number
             if (!userId) throw new Error('No user id')
@@ -266,7 +259,7 @@ export default class Chat {
 
     @Middleware(auth())
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
-    async upload(@Context() ctx: EggContext, @HTTPBody() params: ResourceUploadPost) {
+    async upload(@Context() ctx: UserContext, @HTTPBody() params: ResourceUploadPost) {
         try {
             const userId = ctx.params.userId as number
             if (!userId) throw new Error('No user id')
@@ -276,7 +269,6 @@ export default class Chat {
             if (!resourceTypeId) throw new Error('No resource type id')
             if (params.fileName) file.filename = params.fileName // use customize filename
 
-            await ctx.service.chat.reduceUploadChance(userId)
             const res = await ctx.service.chat.upload(file, userId, resourceTypeId)
             const resource: UploadResponseData = {
                 id: res.id,
@@ -294,6 +286,7 @@ export default class Chat {
             }
             // create dialog
             const [dialog, created] = await ctx.service.chat.dialog(userId, res.id)
+            await ctx.service.chat.reduceUploadChance(userId)
 
             ctx.service.res.success('success to upload', { resource, dialog, created })
         } catch (e) {
@@ -304,7 +297,7 @@ export default class Chat {
 
     @Middleware(auth())
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.POST })
-    async listDialogResource(@Context() ctx: EggContext) {
+    async listDialogResource(@Context() ctx: UserContext) {
         try {
             const userId = ctx.params.userId
             const res = await ctx.service.chat.listDialog(userId)
@@ -333,7 +326,7 @@ export default class Chat {
 
     /*
     @HTTPMethod({ path: '/get-code', method: HTTPMethodEnum.POST })
-    async getCode(@Context() ctx: EggContext, @HTTPBody() params: SignInPost) {
+    async getCode(@Context() ctx: UserContext, @HTTPBody() params: SignInPost) {
         try {
             const res = await ctx.service.phone.getCode(params.phone)
             ctx.service.res.success('success to get sms code', res)
@@ -344,7 +337,7 @@ export default class Chat {
     }
 
     @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })
-    async signIn(@Context() ctx: EggContext, @HTTPBody() params: SignInPost) {
+    async signIn(@Context() ctx: UserContext, @HTTPBody() params: SignInPost) {
         try {
             const res = await ctx.service.phone.signIn(params.phone, params.code)
             ctx.service.res.success('success to sign in', res)
