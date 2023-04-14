@@ -1,34 +1,46 @@
+<!-- @format -->
+
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>SSE Test</title>
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <title>SSE Test</title>
-</head>
+    <body>
+        <h1>Server-Sent Events Test</h1>
+        <textarea name="prompt" id="prompt" cols="30" rows="10" placeholder="Input something"></textarea>
+        <button id="submit">Run</button>
+        <div style="width: 500px" id="output"></div>
 
-<body>
-    <h1>Server-Sent Events Test</h1>
-    <textarea name="prompt" id="prompt" cols="30" rows="10" placeholder="Input something"></textarea>
-    <button id="submit">Run</button>
-    <div style="width:500px" id="output">
-    </div>
+        <script>
+            window.onload = function () {
+                const output = document.getElementById('output')
+                const prompt = document.getElementById('prompt')
+                document.getElementById('submit').onclick = function () {
+                    // 替换为您的 SSE 服务的 URL
+                    const value = prompt.value
+                    const json = {
+                        prompt: value,
+                        max_length: 4096,
+                        history: []
+                    }
+                    const sseUrl = `https://api.glm60.cas-ll.com/chat-stream?jsonData=${JSON.stringify(json)}`
+                    const eventSource = new EventSource(sseUrl)
 
-    <script>
-        const output = document.getElementById('output');
-        const prompt = document.getElementById('prompt')
-        document.getElementById('submit').onclick = function () {
-            // 替换为您的 SSE 服务的 URL
-            const value = prompt.value
-            const sseUrl = `/chat/chat-stream?input=${value}`;
-            const eventSource = new EventSource(sseUrl);
+                    eventSource.onmessage = e => {
+                        data = JSON.parse(e.data)
+                        output.innerText = data.response
+                        console.log(data)
+                        if (data.end) eventSource.close()
+                    }
 
-            eventSource.onmessage = (e) => output.textContent = JSON.parse(e.data).data
-
-            eventSource.onerror = (e) => console.error('Error:', e)
-        }
-
-
-    </script>
-</body>
-
+                    eventSource.onerror = e => {
+                        console.error('Error:', e.message)
+                        eventSource.close()
+                    }
+                }
+            }
+        </script>
+    </body>
 </html>
