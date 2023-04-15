@@ -33,3 +33,9 @@ interface ChatStreamCache {
 interface UserTask extends ConfigTask {
     flag?: boolean
 }
+
+declare const AIModelEnum: {
+    readonly GPT: 'GPT'
+    readonly GLM: 'GLM'
+}
+declare type AIModelEnum = (typeof AIModelEnum)[keyof typeof AIModelEnum]

@@ -132,7 +132,8 @@ interface ResourceUploadPost {
 
 interface ChatPost {
     input: string
-    dialogId: number
+    dialogId?: number
+    model?: AIModelEnum
 }
 
 interface ChatListPost {

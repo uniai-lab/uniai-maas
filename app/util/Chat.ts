@@ -19,6 +19,13 @@ import openai from '@util/openai' // OpenAI models
 import glm from '@util/glm' // GLM models
 import $ from '@util/util'
 
+declare const AIModelEnum: {
+    readonly GPT: 'GPT'
+    readonly GLM: 'GLM'
+}
+
+declare type AIModelEnum = (typeof AIModelEnum)[keyof typeof AIModelEnum]
+
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 3000
 const PAGE_LIMIT = 5
@@ -155,7 +162,13 @@ export default class Chat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GLM') {
+    async chat(
+        input: string,
+        userId: number,
+        dialogId?: number,
+        stream: boolean = false,
+        model: AIModelEnum = AIModelEnum.GPT
+    ) {
         const { ctx } = this
 
         // acquire dialog
@@ -217,7 +230,7 @@ export default class Chat extends Service {
         // save user input
         await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
 
-        if (model === 'GPT') {
+        if (model === AIModelEnum.GPT) {
             // check processing chat
             const cache = await this.getChatStream(userId)
             if (cache && !cache.end && new Date().getTime() - cache.time < CHAT_STREAM_EXPIRE)
@@ -233,7 +246,7 @@ export default class Chat extends Service {
                 await openai.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
                 return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
             }
-        } else if (model === 'GLM') {
+        } else if (model === AIModelEnum.GLM) {
             const res = await glm.chat(prompts)
             if (stream) {
             } else {

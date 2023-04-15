@@ -22,7 +22,7 @@ export class OpenAILog extends Model {
     userId!: number
 
     @AllowNull(false)
-    @Column(DataType.STRING)
+    @Column(DataType.TEXT)
     message!: string
 
     @Default(0)

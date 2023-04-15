@@ -153,10 +153,11 @@ export default class Chat {
             if (!userId) throw new Error('No user id')
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
-            const dialogId = params.dialogId as number
+            const dialogId = params.dialogId
+            const model = params.model
 
             await ctx.service.chat.reduceChatChance(userId)
-            const res = await ctx.service.chat.chat(input, userId, dialogId)
+            const res = await ctx.service.chat.chat(input, userId, dialogId, false, model)
 
             if (!res) throw new Error('Fail to get sync response')
             const data: ChatResponseData = {
