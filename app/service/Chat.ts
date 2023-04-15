@@ -147,9 +147,9 @@ export default class Chat extends Service {
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId?: number) {
-        const { ctx } = this
-        if (dialogId) return await ctx.model.Dialog.findByPk(dialogId, { include: { model: ctx.model.Chat } })
+    async listChat(userId: number, dialogId?: number, limit: number = 25) {
+        if (dialogId)
+            return await this.ctx.model.Dialog.findByPk(dialogId, { include: { model: this.ctx.model.Chat }, limit })
         // free chat
         return (await this.dialog(userId))[0]
     }
@@ -214,56 +214,71 @@ export default class Chat extends Service {
             content: input
         })
 
-        // save user input
+        // save user prompt
         await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
-        // check processing chat
-        const cache = await this.getChatStream(userId)
-        if (cache && !cache.end && new Date().getTime() - cache.time < CHAT_STREAM_EXPIRE)
-            throw new Error('Another chat is processing')
 
-        if (model === 'GPT') {
-            // request to GPT
-            const res = await openai.chat(prompts, stream)
-            // stream mode
-            if (stream) this.startChatStream(res as unknown as IncomingMessage, userId, dialog.id)
-            else {
-                // sync mode
-                const content = res.choices[0].message?.content
-                if (!content) throw new Error('Fail to get sync response')
-                await openai.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
-                return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
-            }
-        } else if (model === 'GLM') {
-            if (stream) {
+        // request AI model API (GPT, GLM)
+        const res = await openai.chat(prompts, stream)
+        if (stream) {
+            // check processing chat
+            const check = await this.getChatStream(userId)
+            if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
+                throw new Error('Another chat is processing')
+            // reset chat stream cache
+            const cache: ChatStreamCache = {
+                dialogId: dialog.id,
+                content: '',
+                end: false,
+                time: new Date().getTime()
+            } as ChatStreamCache
+
+            if (model === 'GPT') {
+                const stream = res as unknown as IncomingMessage
+                // start chat stream
+                let tmp = ''
+                stream.on('data', (data: Buffer) => {
+                    const message = data
+                        .toString('utf8')
+                        .split('\n')
+                        .filter(m => m.length > 0)
+                    for (const item of message) {
+                        tmp += item.replace(/^data: /, '')
+                        if (isJSON(tmp)) {
+                            const data = JSON.parse(tmp) as CreateChatCompletionStreamResponse
+                            tmp = ''
+                            cache.content += data.choices[0].delta.content || ''
+                            if (cache.content) $.setCache(userId, cache)
+                        }
+                    }
+                })
+
+                stream.on('end', () => this.streamEnd(userId, cache))
+
+                stream.on('error', e => {
+                    cache.end = true
+                    cache.error = e
+                    $.setCache(userId, cache)
+                })
+            } else if (model === 'GLM') {
                 const es = await glm.chat<EventSource>(prompts, true)
-                // reset chat stream cache
-                const cache: ChatStreamCache = {
-                    dialogId: dialog.id,
-                    content: '',
-                    end: false,
-                    time: new Date().getTime()
-                }
-                $.setCache(userId, cache)
 
                 es.onmessage = e => {
                     const res = JSON.parse(e.data) as GLMChatResponse
                     cache.content = res.message
                     if (cache.content) $.setCache(userId, cache)
                 }
-                es.onerror = async _ => {
+                es.onerror = () => {
                     es.close()
-                    cache.end = true
-                    if (cache.content) {
-                        const chat = await this.saveChat(
-                            cache.dialogId,
-                            ChatCompletionResponseMessageRoleEnum.Assistant,
-                            cache.content
-                        )
-                        cache.chatId = chat.id
-                    }
-                    $.setCache(userId, cache)
+                    this.streamEnd(userId, cache)
                 }
-            } else {
+            }
+        } else {
+            if (model === 'GPT') {
+                const content = res.choices[0].message?.content
+                if (!content) throw new Error('Fail to get sync response')
+                await openai.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
+                return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
+            } else if (model === 'GLM') {
                 const res = await glm.chat<GLMChatResponse>(prompts, false)
                 const content = res.message
                 if (!content) throw new Error('Fail to get sync response')
@@ -273,6 +288,19 @@ export default class Chat extends Service {
         }
     }
 
+    async streamEnd(userId: number, cache: ChatStreamCache) {
+        cache.end = true
+        if (cache.content) {
+            const chat = await this.saveChat(
+                cache.dialogId,
+                ChatCompletionResponseMessageRoleEnum.Assistant,
+                cache.content
+            )
+            cache.chatId = chat.id
+        }
+        $.setCache(userId, cache)
+    }
+
     // save chat
     async saveChat(
         dialogId: number,
@@ -280,50 +308,6 @@ export default class Chat extends Service {
         content: string
     ) {
         return await this.ctx.model.Chat.create({ dialogId, role, content })
-    }
-
-    // chat stream with cache
-    startChatStream(stream: IncomingMessage, userId: number, dialogId: number) {
-        // reset chat stream cache
-        const cache: ChatStreamCache = { dialogId, content: '', end: false, time: new Date().getTime() }
-        $.setCache(userId, cache)
-
-        // start chat stream
-        let tmp = ''
-        stream.on('data', (data: Buffer) => {
-            const message = data
-                .toString('utf8')
-                .split('\n')
-                .filter(m => m.length > 0)
-            for (const item of message) {
-                tmp += item.replace(/^data: /, '')
-                if (isJSON(tmp)) {
-                    const data = JSON.parse(tmp) as CreateChatCompletionStreamResponse
-                    tmp = ''
-                    cache.content += data.choices[0].delta.content || ''
-                    if (cache.content) $.setCache(userId, cache)
-                }
-            }
-        })
-
-        stream.on('end', async () => {
-            cache.end = true
-            if (cache.content) {
-                const chat = await this.saveChat(
-                    dialogId,
-                    ChatCompletionResponseMessageRoleEnum.Assistant,
-                    cache.content
-                )
-                cache.chatId = chat.id
-            }
-            $.setCache(userId, cache)
-        })
-
-        stream.on('error', e => {
-            cache.end = true
-            cache.error = e
-            $.setCache(userId, cache)
-        })
     }
 
     // get current chat stream by userId

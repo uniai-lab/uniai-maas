@@ -235,7 +235,7 @@ export default class Chat {
             if (!userId) throw new Error('No user id')
             const dialogId = params.dialogId as number
 
-            const res = await ctx.service.chat.listChat(userId, dialogId)
+            const res = await ctx.service.chat.listChat(userId, dialogId, 25)
             if (!res) throw new Error('Dialog not found')
             const data: ChatResponseData[] = []
             for (const item of res.chats)
