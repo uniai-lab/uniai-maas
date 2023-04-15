@@ -189,9 +189,10 @@ export default class Chat {
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
             const dialogId = params.dialogId as number
+            const model = params.model
 
             await ctx.service.chat.reduceChatChance(userId)
-            await ctx.service.chat.chat(input, userId, dialogId, true)
+            await ctx.service.chat.chat(input, userId, dialogId, true, model)
             ctx.service.res.success('Success start chat stream', null)
         } catch (e) {
             console.error(e)

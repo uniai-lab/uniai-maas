@@ -25,7 +25,7 @@ const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
 // const FIND_SIMILARITY = 0.23
 const CHAT_BACKTRACK = 3
-const CHAT_STREAM_EXPIRE = 5 * 60 * 1000
+const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Chat extends Service {
@@ -216,12 +216,12 @@ export default class Chat extends Service {
 
         // save user input
         await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
+        // check processing chat
+        const cache = await this.getChatStream(userId)
+        if (cache && !cache.end && new Date().getTime() - cache.time < CHAT_STREAM_EXPIRE)
+            throw new Error('Another chat is processing')
 
         if (model === 'GPT') {
-            // check processing chat
-            const cache = await this.getChatStream(userId)
-            if (cache && !cache.end && new Date().getTime() - cache.time < CHAT_STREAM_EXPIRE)
-                throw new Error('Another chat is processing')
             // request to GPT
             const res = await openai.chat(prompts, stream)
             // stream mode
@@ -234,9 +234,37 @@ export default class Chat extends Service {
                 return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
             }
         } else if (model === 'GLM') {
-            const res = await glm.chat(prompts)
             if (stream) {
+                const es = await glm.chat<EventSource>(prompts, true)
+                // reset chat stream cache
+                const cache: ChatStreamCache = {
+                    dialogId: dialog.id,
+                    content: '',
+                    end: false,
+                    time: new Date().getTime()
+                }
+                $.setCache(userId, cache)
+
+                es.onmessage = e => {
+                    const res = JSON.parse(e.data) as GLMChatResponse
+                    cache.content = res.message
+                    if (cache.content) $.setCache(userId, cache)
+                }
+                es.onerror = async _ => {
+                    es.close()
+                    cache.end = true
+                    if (cache.content) {
+                        const chat = await this.saveChat(
+                            cache.dialogId,
+                            ChatCompletionResponseMessageRoleEnum.Assistant,
+                            cache.content
+                        )
+                        cache.chatId = chat.id
+                    }
+                    $.setCache(userId, cache)
+                }
             } else {
+                const res = await glm.chat<GLMChatResponse>(prompts, false)
                 const content = res.message
                 if (!content) throw new Error('Fail to get sync response')
                 await glm.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
