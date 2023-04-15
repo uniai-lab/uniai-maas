@@ -147,9 +147,15 @@ export default class Chat extends Service {
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId?: number, limit: number = 25) {
-        if (dialogId)
-            return await this.ctx.model.Dialog.findByPk(dialogId, { include: { model: this.ctx.model.Chat }, limit })
+    async listChat(userId: number, dialogId?: number, limit: number = 20) {
+        const { ctx } = this
+        if (dialogId) {
+            const dialog =  await ctx.model.Dialog.findByPk(dialogId, {
+                include: { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
+            })
+            dialog?.chats.reverse()
+            return dialog
+        }
         // free chat
         return (await this.dialog(userId))[0]
     }
