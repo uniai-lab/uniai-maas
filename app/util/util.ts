@@ -26,12 +26,12 @@ const mint = new Mint(json)
 
 export default {
     // http get request
-    async get<T>(url: string, params?: any): Promise<T> {
+    async get<T, S>(url: string, params?: T): Promise<S> {
         const res = await axios.get(url, { params })
         return res.data
     },
     // http post request
-    async post<T>(url: string, body?: any): Promise<T> {
+    async post<T, S>(url: string, body?: T): Promise<S> {
         const res = await axios.post(url, body)
         return res.data
     },

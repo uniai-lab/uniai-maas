@@ -5,7 +5,7 @@ import { ChatCompletionRequestMessage } from 'openai'
 import $ from '@util/util'
 
 export default {
-    async log(ctx: EggContext, userId: number, log: GLMChatResaponse, message?: string) {
+    async log(ctx: EggContext, userId: number, log: GLMChatResponse, message?: string) {
         return await ctx.model.OpenAILog.create({
             model: log.model,
             userId,
@@ -16,19 +16,21 @@ export default {
         })
     },
     async chat(messages: ChatCompletionRequestMessage[], stream: boolean = false) {
-        let user = ''
+        console.log(stream)
+        let prompt = ''
         const history: string[] = []
         for (const item of messages) {
             if (item.role === 'assistant') {
-                history.push(user)
-                user = ''
+                history.push(prompt)
                 history.push(item.content)
-            } else user += `${item.content}\n`
+                prompt = ''
+            } else prompt += `${item.content}\n`
         }
-        console.log(stream)
-        let prompt = ''
-        for (const item of messages) prompt += `[${item.role}] ${item.content}\n`
+        console.log(history)
         console.log(prompt)
-        return await $.post<GLMChatResaponse>(`${process.env.GLM_API as string}/chat`, { prompt })
+        return await $.post<GLMChatRequest, GLMChatResponse>(`${process.env.GLM_API as string}/chat`, {
+            prompt,
+            history: history.length ? [history] : []
+        })
     }
 }

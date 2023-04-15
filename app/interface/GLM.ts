@@ -1,7 +1,7 @@
 /** @format */
 
 interface GLMEmbeddingResponse {}
-interface GLMChatResaponse {
+interface GLMChatResponse {
     message: string
     prompt_tokens: number
     completion_tokens: number
@@ -11,7 +11,7 @@ interface GLMChatResaponse {
 }
 interface GLMChatRequest {
     prompt: string
-    history?: string[]
+    history?: string[][]
     max_length?: number
     top_p?: number
     temperature?: number
