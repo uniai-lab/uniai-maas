@@ -21,7 +21,7 @@ import glm from '@util/glm' // GLM models
 import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
-const MAX_TOKEN = 3000
+const MAX_TOKEN = 2000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
 // const FIND_SIMILARITY = 0.23
