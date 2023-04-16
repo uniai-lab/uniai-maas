@@ -27,7 +27,8 @@ export default {
                 prompt = ''
             } else prompt += `${item.content}\n`
         }
-        console.log(prompt)
+        console.log('history', history)
+        console.log('prompt', prompt)
 
         const url = process.env.GLM_API as string
         const params: GLMChatRequest = { prompt }
