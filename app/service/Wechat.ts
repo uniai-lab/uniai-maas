@@ -33,7 +33,7 @@ export default class Wechat extends Service {
         })
 
         // directly login in
-        if ((user && user.phone) || process.env.DEV_MODE === 'on') {
+        if (user && user.phone) {
             user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
             user.tokenTime = new Date()
         }
