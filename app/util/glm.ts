@@ -5,7 +5,6 @@ import { ChatCompletionRequestMessage } from 'openai'
 import $ from '@util/util'
 import EventSource from 'eventsource'
 import qs from 'qs'
-import { Stream } from 'stream'
 
 export default {
     async log(ctx: EggContext, userId: number, log: GLMChatResponse, message?: string) {
@@ -28,6 +27,8 @@ export default {
                 prompt = ''
             } else prompt += `${item.content}\n`
         }
+        console.log(prompt)
+
         const url = process.env.GLM_API as string
         const params: GLMChatRequest = { prompt }
         if (history.length) params.history = [history]
