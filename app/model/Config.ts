@@ -34,6 +34,11 @@ export class Config extends Model {
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
+    isJson: boolean
+
+    @AllowNull(false)
+    @Default(false)
+    @Column(DataType.BOOLEAN)
     isDel!: boolean
 
     @AllowNull(false)

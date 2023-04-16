@@ -1,28 +1,17 @@
 /** @format */
 
-import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { Service } from 'egg'
 import md5 from 'md5'
 import { random } from 'lodash'
+import { AccessLevel, SingletonProto } from '@eggjs/tegg'
+import { Service } from 'egg'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class User extends Service {
     // get app configs to user
     async getConfig() {
-        const { ctx } = this
-        const res = await ctx.model.Config.findAll({
-            where: {
-                isDel: false,
-                isEffect: true
-            }
-        })
+        const res = await this.ctx.model.Config.findAll()
         const data: ConfigResponseData = {}
-        for (const item of res) {
-            let value: any = null
-            if (item.description === 'JSON') value = JSON.parse(item.value)
-            else value = item.value
-            data[item.key] = value
-        }
+        for (const item of res) data[item.key] = item.isJson ? JSON.parse(item.value) : item.value
         return data
     }
 
@@ -65,6 +54,4 @@ export default class User extends Service {
         user.phone = phone
         return await user.save()
     }
-
-    async sendCode() {}
 }

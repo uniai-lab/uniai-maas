@@ -5,7 +5,8 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import {
     ChatCompletionRequestMessage,
     ChatCompletionRequestMessageRoleEnum,
-    ChatCompletionResponseMessageRoleEnum
+    ChatCompletionResponseMessageRoleEnum,
+    CreateChatCompletionResponse
 } from 'openai'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
@@ -15,7 +16,7 @@ import { Resource } from '@model/Resource'
 import { Dialog } from '@model/Dialog'
 import { IncomingMessage } from 'http'
 import isJSON from '@stdlib/assert-is-json'
-import openai from '@util/openai' // OpenAI models
+import gpt from '@util/openai' // OpenAI models
 import glm from '@util/glm' // GLM models
 import $ from '@util/util'
 
@@ -74,8 +75,8 @@ export default class Chat extends Service {
         // check same similarity for first one page, 1000 tokens
         const p: string[] = await $.splitPage(file.text, 800)
         if (!p.length) throw new Error('File content cannot be split')
-        const embed = await openai.embedding([p[0]])
-        await openai.log(ctx, userId, embed, '[Chat/upload]: check similarity for first page')
+        const embed = await gpt.embedding([p[0]])
+        await gpt.log(ctx, userId, embed, '[Chat/upload]: check similarity for first page')
         const embedding = embed.data[0].embedding
         const result = await ctx.model.Resource.similarFindAll(embedding, 1, SAME_SIMILARITY)
         if (result.length) return result[0]
@@ -84,8 +85,8 @@ export default class Chat extends Service {
         const s: string[] = await $.splitPage(file.text, 400)
         s[0] = ctx.__('Main content of this document, including the title, summary, abstract, and authors') + s[0]
         if (!s.length) throw new Error('File content cannot be split')
-        const res = await openai.embedding(s)
-        await openai.log(ctx, userId, res, '[Chat/upload]: embedding all pages (sentences)')
+        const res = await gpt.embedding(s)
+        await gpt.log(ctx, userId, res, '[Chat/upload]: embedding all pages (sentences)')
 
         // save resource to cos
         const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${file.ext}`, file.path)
@@ -119,45 +120,44 @@ export default class Chat extends Service {
     // async saveImage(userId: number, typeId: number, path: string, file: EggFile, buff: Buffer) {}
 
     // find or create the dialog
-    async dialog(userId: number, resourceId: number | null = null) {
+    async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
         const { ctx } = this
 
-        // free chat initial content
-        let content = `${ctx.__('Hello, I am AI Reading Guy')}
-                       ${ctx.__('Feel free to chat with me')}`
-        // resource chat initial content
-        if (resourceId) {
-            const resource = await ctx.model.Resource.findOne({
-                where: { id: resourceId, isEffect: true, isDel: false }
-            })
-            if (!resource) throw new Error('Resource not found')
-            content = `${ctx.__('Hello, I am AI Reading Guy')}
-                       ${ctx.__('I have finished reading the file')} ${resource.fileName}
-                       ${ctx.__('You can ask me questions about this book')}`
-        }
-
         // create or find the dialog
-        return await ctx.model.Dialog.findOrCreate({
-            where: { userId, resourceId },
-            defaults: {
-                chats: [{ role: ChatCompletionRequestMessageRoleEnum.Assistant, content }]
-            },
-            include: { model: ctx.model.Chat }
-        })
+        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
+        // first create
+        if (created) {
+            // free chat initial content
+            let content = `${ctx.__('Hello, I am AI Reading Guy')}\n${ctx.__('Feel free to chat with me')}`
+            // resource chat initial content
+            if (resourceId) {
+                const resource = await ctx.model.Resource.findOne({
+                    where: { id: resourceId, isEffect: true, isDel: false }
+                })
+                content = `${ctx.__('Hello, I am AI Reading Guy')}
+                       ${ctx.__('I have finished reading the file')} ${resource?.fileName}
+                       ${ctx.__('You can ask me questions about this book')}`
+            }
+            res.chats = [
+                await ctx.model.Chat.create({
+                    dialogId: res.id,
+                    role: ChatCompletionRequestMessageRoleEnum.Assistant,
+                    content
+                })
+            ]
+        }
+        return res
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId?: number, limit: number = 20) {
+    async listChat(userId: number, dialogId: number | null = null, limit: number = 20) {
         const { ctx } = this
-        if (dialogId) {
-            const dialog =  await ctx.model.Dialog.findByPk(dialogId, {
-                include: { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
-            })
-            dialog?.chats.reverse()
-            return dialog
-        }
-        // free chat
-        return (await this.dialog(userId))[0]
+        const include: IncludeOptions = { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
+        const dialog = dialogId
+            ? await ctx.model.Dialog.findByPk(dialogId, { include })
+            : await this.dialog(userId, null, include)
+        dialog?.chats.reverse()
+        return dialog
     }
 
     // chat
@@ -197,7 +197,7 @@ export default class Chat extends Service {
         */
         // directly to find similar pages of the resource id
         if (dialog.resourceId) {
-            const embed = await openai.embedding([input + inputAll])
+            const embed = await gpt.embedding([input + inputAll])
             const embedding = embed.data[0].embedding
             const role = ChatCompletionRequestMessageRoleEnum.System
             const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, dialog.resourceId)
@@ -223,13 +223,13 @@ export default class Chat extends Service {
         // save user prompt
         await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
 
-        // request AI model API (GPT, GLM)
-        const res = await openai.chat(prompts, stream)
+        // stream mode
         if (stream) {
-            // check processing chat
+            // check processing chat stream
             const check = await this.getChatStream(userId)
             if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
                 throw new Error('Another chat is processing')
+
             // reset chat stream cache
             const cache: ChatStreamCache = {
                 dialogId: dialog.id,
@@ -238,11 +238,12 @@ export default class Chat extends Service {
                 time: new Date().getTime()
             } as ChatStreamCache
 
+            // request GPT
             if (model === 'GPT') {
-                const stream = res as unknown as IncomingMessage
-                // start chat stream
+                const res = await gpt.chat<IncomingMessage>(prompts, true)
+
                 let tmp = ''
-                stream.on('data', (data: Buffer) => {
+                res.on('data', (data: Buffer) => {
                     const message = data
                         .toString('utf8')
                         .split('\n')
@@ -258,14 +259,12 @@ export default class Chat extends Service {
                     }
                 })
 
-                stream.on('end', () => this.streamEnd(userId, cache))
+                res.on('end', () => this.streamEnd(userId, cache))
+                res.on('error', () => this.streamEnd(userId, cache))
+            }
 
-                stream.on('error', e => {
-                    cache.end = true
-                    cache.error = e
-                    $.setCache(userId, cache)
-                })
-            } else if (model === 'GLM') {
+            // request GLM
+            if (model === 'GLM') {
                 const es = await glm.chat<EventSource>(prompts, true)
 
                 es.onmessage = e => {
@@ -278,13 +277,20 @@ export default class Chat extends Service {
                     this.streamEnd(userId, cache)
                 }
             }
-        } else {
+        }
+        // sync mode
+        else {
+            // request GPT
             if (model === 'GPT') {
+                const res = await gpt.chat<CreateChatCompletionResponse>(prompts, false)
                 const content = res.choices[0].message?.content
                 if (!content) throw new Error('Fail to get sync response')
-                await openai.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
+                await gpt.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
                 return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
-            } else if (model === 'GLM') {
+            }
+
+            // request GLM
+            if (model === 'GLM') {
                 const res = await glm.chat<GLMChatResponse>(prompts, false)
                 const content = res.message
                 if (!content) throw new Error('Fail to get sync response')

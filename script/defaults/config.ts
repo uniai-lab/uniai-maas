@@ -12,7 +12,7 @@ const menu = [
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
-        title: '15次对话',
+        title: '999次对话',
         tip: '对话次数'
     }
 ]
@@ -20,14 +20,14 @@ const menu = [
 const task = [
     {
         title: '分享给好友',
-        tip: '对话次数 +10',
-        buttonTitle: '去分享',
+        tip: '对话次数+100',
+        buttonTitle: '立即分享',
         type: 1 // 分享
     },
     {
         title: '关注公众号',
-        tip: '对话次数 +10',
-        buttonTitle: '去关注',
+        tip: '对话次数+100',
+        buttonTitle: '立即关注',
         type: 2 // 关注
     }
 ]
@@ -36,46 +36,28 @@ export default [
     {
         key: 'appName',
         value: '读书君',
-        description: 'app名称'
+        description: '小程序名称'
     },
     {
         key: 'appVersion',
-        value: 'v1.0.0',
-        description: 'app版本号'
-    },
-    {
-        key: 'weekChatChance',
-        value: '10',
-        description: '每周对话次数'
-    },
-    {
-        key: 'weekResourceAmount',
-        value: '10',
-        description: '每周文档数目'
-    },
-    {
-        key: 'resourceSize',
-        value: '10MB',
-        description: '允许上传文件大小'
-    },
-    {
-        key: 'shareReward',
-        value: '10',
-        description: '分享一次送对话次数'
+        value: 'v1.0.1',
+        description: '小程序版本号'
     },
     {
         key: 'footer',
-        value: '更多福利请关注公众号'
+        value: '更多福利请关注公众号',
+        description: '底部标语'
     },
     {
         key: 'footerCopy',
-        value: '智读君（点击复制）'
+        value: '智读君（点击复制）',
+        description: '点击复制按钮'
     },
     {
         key: 'officialAccount',
-        value: 'readbot'
+        value: 'readbot',
+        description: '公众号名'
     },
-
     {
         key: 'shareTitle',
         value: 'AI文档分析利器，不来试试吗？'
@@ -102,7 +84,7 @@ export default [
     },
     {
         key: 'DEFAULT_FREE_CHAT_CHANCE',
-        value: 15
+        value: 999
     },
     {
         key: 'DEFAULT_FREE_UPLOAD_CHANCE',
@@ -110,7 +92,7 @@ export default [
     },
     {
         key: 'SHARE_REWARD_CHAT_CHANCE',
-        value: 10
+        value: 100
     },
     {
         key: 'SHARE_REWARD_UPLOAD_CHANCE',
@@ -118,16 +100,16 @@ export default [
     },
     {
         key: 'FOLLOW_REWARD_CHAT_CHANCE',
-        value: 10
+        value: 100
     },
     {
         key: 'menu',
         value: JSON.stringify(menu),
-        description: 'JSON'
+        isJson: true
     },
     {
         key: 'task',
         value: JSON.stringify(task),
-        description: 'JSON'
+        isJson: true
     }
 ]

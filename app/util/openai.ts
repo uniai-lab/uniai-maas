@@ -42,7 +42,7 @@ export default {
             })
         ).data
     },
-    async chat(messages: ChatCompletionRequestMessage[], stream: boolean = false) {
+    async chat<T>(messages: ChatCompletionRequestMessage[], stream: boolean = false) {
         const responseType: ResponseType = stream ? 'stream' : 'json'
         return (
             await openai.createChatCompletion(
@@ -53,7 +53,7 @@ export default {
                 },
                 { responseType }
             )
-        ).data
+        ).data as T
     },
     async listModels() {
         return (await openai.listModels()).data

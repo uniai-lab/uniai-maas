@@ -288,10 +288,10 @@ export default class Chat {
                 updatedAt: res.updatedAt
             }
             // create dialog
-            const [dialog, created] = await ctx.service.chat.dialog(userId, res.id)
+            const dialog = await ctx.service.chat.dialog(userId, res.id)
             await ctx.service.chat.reduceUploadChance(userId)
 
-            ctx.service.res.success('success to upload', { resource, dialog, created })
+            ctx.service.res.success('success to upload', { resource, dialog })
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
