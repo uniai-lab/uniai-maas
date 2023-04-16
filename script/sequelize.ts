@@ -93,7 +93,7 @@ async function query(table: string, id: number): Promise<void> {
 // init config table
 async function config(): Promise<void> {
     await db.models['config'].bulkCreate(configs, {
-        updateOnDuplicate: ['value', 'description']
+        updateOnDuplicate: ['value', 'description', 'is_json']
     })
 }
 // init resource type table
