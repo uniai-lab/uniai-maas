@@ -12,9 +12,9 @@ export default class Wechat extends Service {
         const { ctx } = this
         if (!code) throw new Error('Code can not be null')
 
-        const authURL = process.env.WX_APP_AUTH_URL // wx api, get login auth
-        const appId = process.env.WX_APP_ID // wx AppID
-        const appSecret = process.env.WX_APP_SECRET // wx AppSecret
+        const authURL = process.env.WX_APP_AUTH_URL as string // wx api, get login auth
+        const appId = process.env.WX_APP_ID as string // wx AppID
+        const appSecret = process.env.WX_APP_SECRET as string // wx AppSecret
 
         // get access_token, openid, unionid
         const url = `${authURL}?grant_type=authorization_code&appid=${appId}&secret=${appSecret}&js_code=${code}`
@@ -33,7 +33,7 @@ export default class Wechat extends Service {
         })
 
         // directly login in
-        if (user && user.phone) {
+        if ((user && user.phone) || process.env.DEV_MODE === 'on') {
             user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
             user.tokenTime = new Date()
         }
