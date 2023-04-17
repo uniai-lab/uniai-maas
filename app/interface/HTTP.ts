@@ -196,3 +196,20 @@ interface AdminUpdateUserPost {
     level?: number
     countryCode?: number
 }
+/*=======================AI API===================*/
+interface UniAIChatPost {
+    prompts: UniAIChatPrompt[]
+    model?: AIModelEnum
+}
+interface UniAIChatResponseData {
+    message: string
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    model: string
+    object: string
+}
+interface UniAIChatPrompt {
+    role: string
+    content: string
+}

@@ -10,6 +10,7 @@ type AutoInstanceType<T, U = T extends CanExportFunc ? T : T extends AnyFunc ? R
 import ExportAdmin from '../../../app/service/Admin';
 import ExportChat from '../../../app/service/Chat';
 import ExportRes from '../../../app/service/Res';
+import ExportUniAI from '../../../app/service/UniAI';
 import ExportUser from '../../../app/service/User';
 import ExportWechat from '../../../app/service/Wechat';
 
@@ -18,6 +19,7 @@ declare module 'egg' {
     admin: AutoInstanceType<typeof ExportAdmin>;
     chat: AutoInstanceType<typeof ExportChat>;
     res: AutoInstanceType<typeof ExportRes>;
+    uniAI: AutoInstanceType<typeof ExportUniAI>;
     user: AutoInstanceType<typeof ExportUser>;
     wechat: AutoInstanceType<typeof ExportWechat>;
   }
