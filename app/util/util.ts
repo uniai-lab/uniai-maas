@@ -1,6 +1,6 @@
 /** @format */
 import * as fs from 'fs'
-import axios from 'axios'
+import axios, { AxiosRequestConfig } from 'axios'
 import crypto from 'crypto'
 import store from 'store2'
 import { sentences } from 'sbd'
@@ -26,14 +26,12 @@ const mint = new Mint(json)
 
 export default {
     // http get request
-    async get<T, S>(url: string, params?: T): Promise<S> {
-        const res = await axios.get(url, { params })
-        return res.data
+    async get<RequestT, ResponseT>(url: string, params?: RequestT, config?: AxiosRequestConfig): Promise<ResponseT> {
+        return (await axios.get(url, { params, ...config })).data
     },
     // http post request
-    async post<T, S>(url: string, body?: T): Promise<S> {
-        const res = await axios.post(url, body)
-        return res.data
+    async post<RequestT, ResponseT>(url: string, body?: RequestT, config?: AxiosRequestConfig): Promise<ResponseT> {
+        return (await axios.post(url, body, config)).data
     },
     // filter sensitive words and replace
     async filterSensitive(content: string, replace: string = ''): Promise<string> {

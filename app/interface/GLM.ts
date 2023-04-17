@@ -2,7 +2,7 @@
 
 interface GLMEmbeddingResponse {}
 interface GLMChatResponse {
-    message: string
+    content: string
     prompt_tokens: number
     completion_tokens: number
     total_tokens: number

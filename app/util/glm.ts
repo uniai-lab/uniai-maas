@@ -2,9 +2,8 @@
 
 import { EggContext } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage } from 'openai'
+import { IncomingMessage } from 'http'
 import $ from '@util/util'
-import EventSource from 'eventsource'
-import qs from 'qs'
 
 export default {
     async log(ctx: EggContext, userId: number, log: GLMChatResponse, message?: string) {
@@ -31,9 +30,9 @@ export default {
         const url = process.env.GLM_API as string
         const params: GLMChatRequest = { prompt }
         if (history.length) params.history = [history]
-        const json = qs.stringify({ jsonData: JSON.stringify(params) })
 
-        if (stream) return new EventSource(`${url}/chat-stream?${json}`) as T
-        else return await $.post<GLMChatRequest, T>(`${url}/chat`, params)
+        return stream
+            ? await $.post<GLMChatRequest, T>(`${url}/chat-stream`, params, { responseType: 'stream' })
+            : await $.post<GLMChatRequest, T>(`${url}/chat`, params, { responseType: 'json' })
     }
 }

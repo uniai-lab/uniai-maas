@@ -14,13 +14,11 @@ import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
 import { Resource } from '@model/Resource'
 import { Dialog } from '@model/Dialog'
-import { Stream } from 'stream'
+import { IncomingMessage } from 'http'
 import isJSON from '@stdlib/assert-is-json'
 import gpt from '@util/openai' // OpenAI models
 import glm from '@util/glm' // GLM models
 import $ from '@util/util'
-import { createParser, EventSourceParser, ParsedEvent, ReconnectInterval } from 'eventsource-parser'
-import { IncomingMessage } from 'http'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2000
@@ -244,46 +242,57 @@ export default class Chat extends Service {
                 content: '',
                 end: false,
                 time: new Date().getTime()
-            }
-            const GPTDataParse = createParser(e => {
-                if (e.type === 'event')
-                    if (isJSON(e.data)) {
-                        const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
+            } as ChatStreamCache
+
+            let tmp = ''
+            const streamData = function () {
+                const eventSource = new EventSource(`http://10.144.1.1/chat-stream`)
+
+                eventSource.onmessage = function (event) {
+                    const data = JSON.parse(event.data)
+                    // 处理数据
+                }
+
+                eventSource.onerror = function () {
+                    // 处理错误
+                }
+
+                /*
+                const message = data
+                    .toString('utf8')
+                    .split('\n')
+                    .filter(m => m.length > 0)
+                for (const item of message) {
+                    tmp += item.replace(/^data: /, '')
+                    if (isJSON(tmp)) {
+                        console.log(JSON.parse(tmp))
+                        const data = JSON.parse(tmp) as CreateChatCompletionStreamResponse
+                        tmp = ''
                         cache.content += data.choices[0].delta.content || ''
                         if (cache.content) $.setCache(userId, cache)
                     }
-            })
-            const GLMDataParse = createParser(e => {
-                if (e.type === 'event') {
-                    if (isJSON(e.data)) {
-                        const data = JSON.parse(e.data) as GLMChatResponse
-                        cache.content = data.content
-                        if (cache.content) $.setCache(userId, cache)
-                    }
                 }
-            })
+                */
+            }
 
             let res: IncomingMessage | undefined
-            let parser: EventSourceParser = GLMDataParse
             switch (model) {
                 case 'GPT':
                     res = await gpt.chat<IncomingMessage>(prompts, true)
-                    parser = GPTDataParse
                     break
                 case 'GLM':
-                    parser = GLMDataParse
                     res = await glm.chat<IncomingMessage>(prompts, true)
                     break
                 default:
-                    parser = GLMDataParse
                     res = await glm.chat<IncomingMessage>(prompts, true)
             }
 
+            streamData(res)
+            /*
+            res.on('data', (data: Buffer) => streamData(data))
             res.on('end', () => this.streamEnd(userId, cache))
             res.on('error', e => this.streamEnd(userId, cache, e))
-            res.on('data', (buff: Buffer) => {
-                parser.feed(buff.toString('utf8'))
-            })
+            */
         }
         // sync mode
         else {
@@ -299,7 +308,7 @@ export default class Chat extends Service {
             // request GLM
             if (model === 'GLM') {
                 const res = await glm.chat<GLMChatResponse>(prompts)
-                const content = res.content
+                const content = res.message
                 if (!content) throw new Error('Fail to get GLM sync response')
                 await glm.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
                 return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)

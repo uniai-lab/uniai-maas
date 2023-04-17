@@ -49,6 +49,7 @@
         "egg-tracer": "^2.0.0",
         "egg-view-nunjucks": "^2.3.0",
         "eventsource": "^2.0.2",
+        "eventsource-parser": "^1.0.0",
         "file-type": "16.5.4",
         "gpt-3-encoder": "^1.1.4",
         "ioredis": "^5.3.1",

@@ -32,9 +32,9 @@ export default class UniAI {
             // chat to GLM
             if (params.model === 'GLM') {
                 const res = (await ctx.service.uniAI.chat(prompts, model)) as GLMChatResponse
-                if (res.message)
+                if (res.content)
                     ctx.service.res.success('Success to chat to GLM', {
-                        message: res.message,
+                        message: res.content,
                         promptTokens: res.prompt_tokens,
                         completionTokens: res.completion_tokens,
                         totalTokens: res.total_tokens,
