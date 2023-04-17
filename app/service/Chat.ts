@@ -22,7 +22,7 @@ import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2000
-const PAGE_LIMIT = 5
+const PAGE_LIMIT = 1
 const SAME_SIMILARITY = 0.01
 // const FIND_SIMILARITY = 0.23
 const CHAT_BACKTRACK = 3
@@ -186,6 +186,11 @@ export default class Chat extends Service {
             if (item.role === ChatCompletionRequestMessageRoleEnum.User) inputAll += `${item.content}\n`
         }
 
+        prompts.push({
+            role: ChatCompletionRequestMessageRoleEnum.System,
+            content: ctx.__('Your English name is Reading Guy')
+        })
+
         /*
         let must = true
         // try to find the most similar resource in db
@@ -200,25 +205,25 @@ export default class Chat extends Service {
             const embed = await gpt.embedding([input + inputAll])
             const embedding = embed.data[0].embedding
             const role = ChatCompletionRequestMessageRoleEnum.System
+            // add start prompts
+            prompts.push({ role, content: ctx.__('The content of document is as follows') })
             const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, dialog.resourceId)
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
             pages.sort((a, b) => a.id - b.id)
             for (const item of pages) prompts.push({ role, content: item.content })
-
-            // add start prompts
-            prompts.unshift({ role, content: ctx.__('The content of document is as follows') })
             // add end prompts
             prompts.push({ role, content: ctx.__('Answer according to the document') })
         }
 
-        prompts.unshift({
-            role: ChatCompletionRequestMessageRoleEnum.System,
-            content: ctx.__('Your English name is Reading Guy')
-        })
         prompts.push({
             role: ChatCompletionRequestMessageRoleEnum.User,
             content: input
         })
+        if (dialog.resourceId)
+            prompts.push({
+                role: ChatCompletionRequestMessageRoleEnum.User,
+                content: ctx.__('If you cannot answer questions')
+            })
 
         // save user prompt
         await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
