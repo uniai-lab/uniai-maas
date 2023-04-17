@@ -163,7 +163,7 @@ export default class Chat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GPT') {
+    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GLM') {
         const { ctx } = this
 
         // acquire dialog
