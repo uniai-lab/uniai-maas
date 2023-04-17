@@ -25,7 +25,7 @@ const MAX_TOKEN = 2000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
 // const FIND_SIMILARITY = 0.23
-const CHAT_BACKTRACK = 5
+const CHAT_BACKTRACK = 3
 const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -205,7 +205,8 @@ export default class Chat extends Service {
             const embed = await gpt.embedding([input + inputAll])
             const embedding = embed.data[0].embedding
             const role = ChatCompletionRequestMessageRoleEnum.System
-            // add start prompts
+            // handle prompt
+            prompts.push({ role: role, content: ctx.__('Your duty is') })
             prompts.push({ role, content: ctx.__('The content of document is as follows') })
             const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, dialog.resourceId)
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
