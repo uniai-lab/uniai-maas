@@ -199,10 +199,19 @@ interface AdminUpdateUserPost {
 /*=======================AI API===================*/
 interface UniAIChatPost {
     prompts: UniAIChatPrompt[]
+    resourceId?: number
+    model?: AIModelEnum
+}
+interface UniAIEmbeddingPost {
+    content: string
+    fileName: string
+    filePath: string
+    fileSize: number
+    author?: string
     model?: AIModelEnum
 }
 interface UniAIChatResponseData {
-    message: string
+    content: string
     promptTokens: number
     completionTokens: number
     totalTokens: number
@@ -212,4 +221,10 @@ interface UniAIChatResponseData {
 interface UniAIChatPrompt {
     role: string
     content: string
+}
+interface UniAIEmbeddingResponseData {
+    id: number
+    page: number
+    promptTokens: number
+    totalTokens: number
 }

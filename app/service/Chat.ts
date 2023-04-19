@@ -14,13 +14,12 @@ import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
 import { Resource } from '@model/Resource'
 import { Dialog } from '@model/Dialog'
-import { Stream } from 'stream'
+import { createParser, EventSourceParser } from 'eventsource-parser'
+import { IncomingMessage } from 'http'
 import isJSON from '@stdlib/assert-is-json'
 import gpt from '@util/openai' // OpenAI models
 import glm from '@util/glm' // GLM models
 import $ from '@util/util'
-import { createParser, EventSourceParser, ParsedEvent, ReconnectInterval } from 'eventsource-parser'
-import { IncomingMessage } from 'http'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2000
@@ -183,7 +182,7 @@ export default class Chat extends Service {
         const prompts: ChatCompletionRequestMessage[] = []
         let inputAll: string = ''
         for (const item of dialog.chats) {
-            // add user former prompts
+            // add user chat history
             prompts.push({ role: item.role as ChatCompletionRequestMessageRoleEnum, content: item.content })
             if (item.role === ChatCompletionRequestMessageRoleEnum.User) inputAll += `${item.content}\n`
         }
@@ -193,16 +192,7 @@ export default class Chat extends Service {
             content: ctx.__('Your English name is Reading Guy')
         })
 
-        /*
-        let must = true
-        // try to find the most similar resource in db
-        if (!dialog.resourceId) {
-            const resources = await ctx.model.Resource.similarFindAll(embedding, 1, FIND_SIMILARITY)
-            if (resources.length) dialog.resourceId = resources[0].id
-            must = false
-        }
-        */
-        // directly to find similar pages of the resource id
+        // find similar pages of the resource id
         if (dialog.resourceId) {
             const embed = await gpt.embedding([input + inputAll])
             const embedding = embed.data[0].embedding
@@ -263,8 +253,8 @@ export default class Chat extends Service {
                 }
             })
 
-            let res: IncomingMessage | undefined
-            let parser: EventSourceParser = GLMDataParse
+            let res: IncomingMessage
+            let parser: EventSourceParser
             switch (model) {
                 case 'GPT':
                     res = await gpt.chat<IncomingMessage>(prompts, true)
@@ -279,11 +269,9 @@ export default class Chat extends Service {
                     res = await glm.chat<IncomingMessage>(prompts, true)
             }
 
+            res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
             res.on('end', () => this.streamEnd(userId, cache))
             res.on('error', e => this.streamEnd(userId, cache, e))
-            res.on('data', (buff: Buffer) => {
-                parser.feed(buff.toString('utf8'))
-            })
         }
         // sync mode
         else {
