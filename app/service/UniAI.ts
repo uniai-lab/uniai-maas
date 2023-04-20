@@ -3,15 +3,29 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
+import { IncomingMessage } from 'http'
 import glm from '@util/glm'
 import gpt from '@util/openai'
 import $ from '@util/util'
-import { IncomingMessage } from 'http'
 
 const SAME_SIMILARITY = 0.01
+const PAGE_LIMIT = 5
+const MAX_TOKEN = 2000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
+    // find related resource
+    async findResource(prompts: ChatCompletionRequestMessage[], resourceId?: number) {
+        const { ctx } = this
+        let userInput: string = ''
+        for (const item of prompts) userInput += `${item.content}\n`
+        const embed = await gpt.embedding([userInput])
+        const embedding = embed.data[0].embedding
+        const where = resourceId ? { resourceId } : undefined
+        const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, where)
+        while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
+        return pages.sort((a, b) => a.id - b.id)
+    }
     // add a new user
     async chat(prompts: ChatCompletionRequestMessage[], model: AIModelEnum = 'GLM', stream: boolean = false) {
         if (stream) {
@@ -22,7 +36,7 @@ export default class UniAI extends Service {
             if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts)
         }
     }
-    // embedding a resource
+    // embed context
     async embedding(
         content: string,
         fileName: string,

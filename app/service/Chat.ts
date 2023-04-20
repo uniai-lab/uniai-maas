@@ -192,15 +192,16 @@ export default class Chat extends Service {
             content: ctx.__('Your English name is Reading Guy')
         })
 
+        const resourceId = dialog.resourceId
         // find similar pages of the resource id
-        if (dialog.resourceId) {
+        if (resourceId) {
             const embed = await gpt.embedding([input + inputAll])
             const embedding = embed.data[0].embedding
             const role = ChatCompletionRequestMessageRoleEnum.System
             // handle prompt
             prompts.push({ role: role, content: ctx.__('Your duty is') })
             prompts.push({ role, content: ctx.__('The content of document is as follows') })
-            const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, dialog.resourceId)
+            const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, { resourceId })
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
             pages.sort((a, b) => a.id - b.id)
             for (const item of pages) prompts.push({ role, content: item.content })
@@ -212,7 +213,7 @@ export default class Chat extends Service {
             role: ChatCompletionRequestMessageRoleEnum.User,
             content: input
         })
-        if (dialog.resourceId)
+        if (resourceId)
             prompts.push({
                 role: ChatCompletionRequestMessageRoleEnum.User,
                 content: ctx.__('If you cannot answer questions')

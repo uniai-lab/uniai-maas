@@ -1,5 +1,6 @@
 /** @format */
 
+import { WhereOptions } from 'sequelize'
 import {
     Table,
     Column,
@@ -42,11 +43,11 @@ export class Page extends Model {
     })
     embedding!: number[]
 
-    static async similarFindAll(vector: number[], limit?: number, resourceId?: number): Promise<Page[]> {
+    static async similarFindAll(vector: number[], limit?: number, where?: WhereOptions) {
         const db = this.sequelize
         return await this.findAll({
             order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
-            where: { resourceId },
+            where: where,
             limit
         })
     }

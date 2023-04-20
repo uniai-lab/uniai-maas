@@ -199,8 +199,10 @@ interface AdminUpdateUserPost {
 /*=======================AI API===================*/
 interface UniAIChatPost {
     prompts: UniAIChatPrompt[]
-    resourceId?: number
     model?: AIModelEnum
+}
+interface UniAIQueryResourcePost extends UniAIChatPost {
+    resourceId?: number
 }
 interface UniAIEmbeddingPost {
     content: string

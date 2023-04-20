@@ -122,6 +122,19 @@ export default class UniAI {
             ctx.service.res.error(e as Error)
         }
     }
+    @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
+    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIQueryResourcePost) {
+        try {
+            const prompts = params.prompts as ChatCompletionRequestMessage[]
+            if (!params.prompts.length) throw new Error('Empty prompts')
+            const res = await ctx.service.uniAI.findResource(prompts, params.resourceId)
+            const data = res.map(v => v.content)
+            ctx.service.res.success('Success to find resources content', data)
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
 
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: UniAIEmbeddingPost) {
