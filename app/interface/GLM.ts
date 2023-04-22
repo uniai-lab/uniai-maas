@@ -16,3 +16,8 @@ interface GLMChatRequest {
     top_p?: number
     temperature?: number
 }
+interface Text2VecResponse {
+    model: string
+    object: string
+    data: number[][]
+}

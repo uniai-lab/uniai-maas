@@ -2,7 +2,6 @@
 
 import { EggContext } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage } from 'openai'
-import { IncomingMessage } from 'http'
 import $ from '@util/util'
 
 export default {

@@ -122,6 +122,7 @@ export default class UniAI {
             ctx.service.res.error(e as Error)
         }
     }
+
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
     async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIQueryResourcePost) {
         try {

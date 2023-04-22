@@ -41,7 +41,6 @@ export class Resource extends Model {
         operator: 'vector_cosine_ops'
     })
     */
-    @AllowNull(false)
     @Column({
         type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
         get(): number[] {
@@ -58,6 +57,26 @@ export class Resource extends Model {
         return await this.findAll({
             order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
             where: distance ? db?.literal(`embedding <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
+            limit
+        })
+    }
+
+    @Column({
+        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
+        get(): number[] {
+            return JSON.parse(this.getDataValue('embedding2'))
+        },
+        set(value: number[]) {
+            this.setDataValue('embedding2', JSON.stringify(value))
+        }
+    })
+    embedding2!: number[]
+
+    static async similarFindAll2(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
+        const db = this.sequelize
+        return await this.findAll({
+            order: db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' ASC`),
+            where: distance ? db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
             limit
         })
     }
