@@ -128,7 +128,7 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
-            const res = await ctx.service.uniAI.findResource(prompts, params.resourceId)
+            const res = await ctx.service.uniAI.findResource(prompts, params.resourceId, params.maxPage, params.model)
             const data = res.map(v => v.content)
             ctx.service.res.success('Success to find resources content', data)
         } catch (e) {
