@@ -203,6 +203,7 @@ interface UniAIChatPost {
 }
 interface UniAIQueryResourcePost extends UniAIChatPost {
     resourceId?: number
+    maxPage?: number
 }
 interface UniAIEmbeddingPost {
     content: string

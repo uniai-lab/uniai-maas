@@ -8,24 +8,36 @@ import glm from '@util/glm'
 import text2vec from '@util/text2vec'
 import gpt from '@util/openai'
 import $ from '@util/util'
+import { Page } from '@model/Page'
 
 const SAME_SIMILARITY = 0.01
 const PAGE_LIMIT = 5
-const MAX_TOKEN = 2000
+const MAX_TOKEN = 3500
 const TOKEN_FIRST_PAGE = 800
 const TOKEN_ONE_PAGE = 400
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
     // find related resource
-    async findResource(prompts: ChatCompletionRequestMessage[], resourceId?: number) {
+    async findResource(
+        prompts: ChatCompletionRequestMessage[],
+        resourceId?: number,
+        maxPage: number = PAGE_LIMIT,
+        model: AIModelEnum = 'GLM'
+    ) {
         const { ctx } = this
         let userInput: string = ''
         for (const item of prompts) userInput += `${item.content}\n`
-        const embed = await gpt.embedding([userInput])
-        const embedding = embed.data[0].embedding
+        let pages: Page[] = []
         const where = resourceId ? { resourceId } : undefined
-        const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, where)
+        if (model === 'GPT') {
+            const embed = await gpt.embedding([userInput])
+            pages = await ctx.model.Page.similarFindAll(embed.data[0].embedding, maxPage, where)
+        }
+        if (model === 'GLM') {
+            const embed = await text2vec.embedding([userInput])
+            pages = await ctx.model.Page.similarFindAll2(embed.data[0], maxPage, where)
+        }
         while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
         return pages.sort((a, b) => a.id - b.id)
     }
