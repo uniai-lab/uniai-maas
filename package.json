@@ -1,7 +1,7 @@
 {
     "name": "maas-app",
     "version": "1.0.0",
-    "description": "Model as a Service backend template, use egg to create AI apps",
+    "description": "Model as a Service backend template, use egg typescript to create AI apps",
     "private": true,
     "egg": {
         "typescript": true

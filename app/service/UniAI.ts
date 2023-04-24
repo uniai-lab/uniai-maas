@@ -38,17 +38,18 @@ export default class UniAI extends Service {
             const embed = await text2vec.embedding([userInput])
             pages = await ctx.model.Page.similarFindAll2(embed.data[0], maxPage, where)
         }
+        if (!pages.length) throw new Error(`Resource not found: resourceId: ${resourceId}`)
         while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
         return pages.sort((a, b) => a.id - b.id)
     }
     // add a new user
     async chat(prompts: ChatCompletionRequestMessage[], model: AIModelEnum = 'GLM', stream: boolean = false) {
         if (stream) {
-            if (model === 'GPT') return await gpt.chat<IncomingMessage>(prompts, true)
-            if (model === 'GLM') return await glm.chat<IncomingMessage>(prompts, true)
+            if (model === 'GPT') return (await gpt.chat(prompts, true)) as IncomingMessage
+            if (model === 'GLM') return (await glm.chat(prompts, true)) as IncomingMessage
         } else {
-            if (model === 'GPT') return await gpt.chat<CreateChatCompletionResponse>(prompts)
-            if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts)
+            if (model === 'GPT') return (await gpt.chat(prompts)) as CreateChatCompletionResponse
+            if (model === 'GLM') return (await glm.chat(prompts)) as GLMChatResponse
         }
     }
     // embed context
