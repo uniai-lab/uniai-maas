@@ -53,14 +53,7 @@ export default class UniAI extends Service {
         }
     }
     // embed context
-    async embedding(
-        content: string,
-        fileName: string,
-        filePath: string,
-        fileSize: number,
-        author: string = '',
-        model: AIModelEnum = 'GPT'
-    ) {
+    async embedding(content: string, fileName: string, filePath: string, fileSize: number, model: AIModelEnum = 'GPT') {
         const { ctx } = this
         const userId = 0
         const typeId = 1
@@ -91,7 +84,6 @@ export default class UniAI extends Service {
                     filePath,
                     fileName,
                     fileSize,
-                    author,
                     promptTokens: res.usage.prompt_tokens,
                     totalTokens: res.usage.total_tokens,
                     pages: res.data.map((v, i) => {
@@ -132,7 +124,6 @@ export default class UniAI extends Service {
                     filePath,
                     fileName,
                     fileSize,
-                    author,
                     promptTokens: $.countTokens(content),
                     totalTokens: $.countTokens(content),
                     pages: res.data.map((v, i) => {

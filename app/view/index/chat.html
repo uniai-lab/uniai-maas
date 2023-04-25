@@ -2,45 +2,99 @@
 
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>SSE Test</title>
-    </head>
 
-    <body>
-        <h1>Server-Sent Events Test</h1>
-        <textarea name="prompt" id="prompt" cols="30" rows="10" placeholder="Input something"></textarea>
-        <button id="submit">Run</button>
-        <div style="width: 500px" id="output"></div>
+<head>
+    <meta charset="UTF-8" />
+    <title>SSE Test</title>
+</head>
 
-        <script>
-            window.onload = function () {
-                const output = document.getElementById('output')
-                const prompt = document.getElementById('prompt')
-                document.getElementById('submit').onclick = function () {
-                    // 替换为您的 SSE 服务的 URL
-                    const value = prompt.value
-                    const json = {
-                        prompt: value,
-                        max_length: 4096,
-                        history: []
-                    }
-                    const sseUrl = `https://api.glm60.cas-ll.com/chat-stream?jsonData=${JSON.stringify(json)}`
-                    const eventSource = new EventSource(sseUrl)
+<body>
+    <h1>Server-Sent Events Test</h1>
+    <textarea name="prompt" id="prompt" cols="30" rows="10" placeholder="Input something"></textarea>
+    <button id="submit">Run</button>
+    <pre style="width: 500px" id="output"></pre>
 
-                    eventSource.onmessage = e => {
-                        data = JSON.parse(e.data)
-                        output.innerText = data.response
-                        console.log(data)
-                        if (data.end) eventSource.close()
-                    }
-
-                    eventSource.onerror = e => {
-                        console.error('Error:', e.message)
-                        eventSource.close()
-                    }
-                }
+    <script>
+        function jsonParse(text) {
+            try {
+                return JSON.parse(text)
+            } catch (e) {
+                return null
             }
-        </script>
-    </body>
+        }
+        async function fetchStream(url, params) {
+            const { onmessage, onclose, ...otherParams } = params;
+            const push = async (controller, reader) => {
+                const { value, done } = await reader.read();
+                if (done) {
+                    controller.close();
+                    onclose?.();
+                } else {
+                    onmessage?.(new TextDecoder('utf-8').decode(value));
+                    controller.enqueue(value);
+                    push(controller, reader);
+                }
+            };
+            // 发送请求
+            return fetch(url, otherParams)
+                .then((response) => {
+                    // 以ReadableStream解析数据
+                    const reader = response.body.getReader();
+                    const stream = new ReadableStream({
+                        start(controller) {
+                            push(controller, reader);
+                        },
+                    });
+                    return stream;
+                })
+                .then((stream) => new Response(stream, { headers: { 'Content-Type': 'text/html' } }).text());
+        };
+        window.onload = function () {
+            const output = document.getElementById('output')
+            const prompt = document.getElementById('prompt')
+            document.getElementById('submit').onclick = function () {
+                // 替换为您的 SSE 服务的 URL
+                const value = prompt.value
+                const json = {
+                    model: "GLM",
+                    prompts: [
+                        {
+                            role: "user",
+                            content: value
+                        }
+                    ]
+                }
+                const url = `http://localhost:3000/ai/chat-stream`
+                fetchStream(url, {
+                    method: 'POST',
+                    body: JSON.stringify(json),
+                    headers: {
+                        'accept': 'text/event-stream',
+                        'Content-Type': 'application/json',
+                    },
+                    onmessage: (res) => {
+                        // todo
+                        res = res.replace(/^data: /, '')
+                        res = jsonParse(res.trim())
+                        if (res && res.status === 1) output.innerText = res.data.content
+                    },
+                });
+
+                /*
+                eventSource.onmessage = e => {
+                    data = JSON.parse(e.data)
+                    console.log(data)
+                    if (data.end) eventSource.close()
+                }
+
+                eventSource.onerror = e => {
+                    console.error('Error:', e.message)
+                    eventSource.close()
+                }
+                */
+            }
+        }
+    </script>
+</body>
+
 </html>

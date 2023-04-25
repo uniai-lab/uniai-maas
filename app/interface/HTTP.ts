@@ -9,7 +9,6 @@ interface StandardResponse<T> {
 interface DialogResponseData {
     dialogId: number
     resourceId: number
-    author: string
     page: number
     totalTokens: number
     fileSize: number
@@ -43,7 +42,6 @@ interface UploadResponseData {
     fileName: string
     fileSize: number
     filePath: string
-    author: string
     userId: number
     createdAt: Date
     updatedAt: Date
@@ -210,7 +208,6 @@ interface UniAIEmbeddingPost {
     fileName: string
     filePath: string
     fileSize: number
-    author?: string
     model?: AIModelEnum
 }
 interface UniAIChatResponseData {

@@ -168,7 +168,7 @@ export default class Chat {
                 userId,
                 avatar: process.env.DEFAULT_AVATAR_AI as string
             }
-            ctx.service.res.success('Chat result', data)
+            ctx.service.res.success('Chat success result', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.success('Chat error result', {
@@ -282,7 +282,6 @@ export default class Chat {
                 fileName: res.fileName,
                 fileSize: res.fileSize,
                 filePath: res.filePath,
-                author: res.author,
                 userId: res.userId,
                 createdAt: res.createdAt,
                 updatedAt: res.updatedAt
@@ -309,12 +308,11 @@ export default class Chat {
                 data.push({
                     dialogId: item.id,
                     resourceId: item.resource.id,
-                    author: item.resource.author,
                     page: item.resource.page,
                     totalTokens: item.resource.totalTokens,
                     fileName: item.resource.fileName,
                     fileSize: item.resource.fileSize,
-                    filePath: item.resource.filePath.replace('app', process.env.URL as string),
+                    filePath: item.resource.filePath,
                     updatedAt: item.resource.updatedAt,
                     typeId: item.resource.typeId,
                     typeName: item.resource.type.type,
@@ -326,28 +324,4 @@ export default class Chat {
             ctx.service.res.error(e as Error)
         }
     }
-
-    /*
-    @HTTPMethod({ path: '/get-code', method: HTTPMethodEnum.POST })
-    async getCode(@Context() ctx: UserContext, @HTTPBody() params: SignInPost) {
-        try {
-            const res = await ctx.service.phone.getCode(params.phone)
-            ctx.service.res.success('success to get sms code', res)
-        } catch (e) {
-            console.error(e)
-            ctx.service.res.error(e as Error)
-        }
-    }
-
-    @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })
-    async signIn(@Context() ctx: UserContext, @HTTPBody() params: SignInPost) {
-        try {
-            const res = await ctx.service.phone.signIn(params.phone, params.code)
-            ctx.service.res.success('success to sign in', res)
-        } catch (e) {
-            console.error(e)
-            ctx.service.res.error(e as Error)
-        }
-    }
-    */
 }

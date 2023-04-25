@@ -50,7 +50,7 @@ export class Resource extends Model {
             this.setDataValue('embedding', JSON.stringify(value))
         }
     })
-    embedding!: number[]
+    embedding: number[]
 
     static async similarFindAll(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
         const db = this.sequelize
@@ -70,7 +70,7 @@ export class Resource extends Model {
             this.setDataValue('embedding2', JSON.stringify(value))
         }
     })
-    embedding2!: number[]
+    embedding2: number[]
 
     static async similarFindAll2(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
         const db = this.sequelize
@@ -101,10 +101,6 @@ export class Resource extends Model {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    author!: string
-
-    @AllowNull(false)
-    @Column(DataType.STRING)
     filePath!: string
 
     @AllowNull(false)
@@ -121,14 +117,14 @@ export class Resource extends Model {
     @Column(DataType.BOOLEAN)
     isEffect!: boolean
 
+    @BelongsTo(() => ResourceType)
+    type: ResourceType
+
     @HasMany(() => Page)
     pages: Page[]
 
     @HasMany(() => Dialog)
     dialogs: Dialog[]
-
-    @BelongsTo(() => ResourceType)
-    type: ResourceType
 
     @HasMany(() => Chat)
     chats: Chat[]

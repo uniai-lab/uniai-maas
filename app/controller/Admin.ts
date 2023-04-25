@@ -25,7 +25,6 @@ export default class Admin {
                 fileName: res.fileName,
                 fileSize: res.fileSize,
                 filePath: res.filePath,
-                author: res.author,
                 userId: res.userId,
                 createdAt: res.createdAt,
                 updatedAt: res.updatedAt

@@ -57,16 +57,10 @@ export default class UniAI {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
         try {
-            ctx.set({
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                Connection: 'keep-alive'
-            })
             const prompts = params.prompts as ChatCompletionRequestMessage[]
-            const model = params.model || 'GLM'
             if (!params.prompts.length) throw new Error('Empty prompts')
 
-            const res = (await ctx.service.uniAI.chat(prompts, model, true)) as IncomingMessage
+            const res = (await ctx.service.uniAI.chat(prompts, params.model, true)) as IncomingMessage
 
             const stream = new PassThrough()
             const response: StandardResponse<UniAIChatResponseData> = {
@@ -79,12 +73,12 @@ export default class UniAI {
                     model: '',
                     object: ''
                 },
-                msg: 'success to get chat stream message'
+                msg: ''
             }
 
             let parser: EventSourceParser
             // chat to GPT
-            if (model === 'GPT') {
+            if (params.model === 'GPT') {
                 parser = createParser(e => {
                     if (e.type === 'event')
                         if (isJSON(e.data)) {
@@ -92,12 +86,13 @@ export default class UniAI {
                             response.data.content += data.choices[0].delta.content || ''
                             response.data.model = data.model
                             response.data.object = data.object
+                            response.msg = 'success to get chat stream message from GPT'
                             if (response.data.content) stream.write(`data: ${JSON.stringify(response)}\n\n`)
                         }
                 })
             }
             // chat to GLM
-            if (model === 'GLM') {
+            if (params.model === 'GLM') {
                 parser = createParser(e => {
                     if (e.type === 'event') {
                         if (isJSON(e.data)) {
@@ -108,14 +103,22 @@ export default class UniAI {
                             response.data.totalTokens = data.total_tokens
                             response.data.model = data.model
                             response.data.object = data.object
+                            response.msg = 'success to get chat stream message from GLM'
                             if (response.data.content) stream.write(`data: ${JSON.stringify(response)}\n\n`)
                         }
                     }
                 })
             }
+
             res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
             res.on('end', () => stream.end())
             res.on('error', () => stream.end())
+
+            ctx.set({
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                Connection: 'keep-alive'
+            })
             ctx.body = stream
         } catch (e) {
             console.error(e)
@@ -150,7 +153,6 @@ export default class UniAI {
                 params.fileName,
                 params.filePath,
                 params.fileSize,
-                params.author,
                 params.model
             )
             if (!res) throw new Error('Fail to embed text')

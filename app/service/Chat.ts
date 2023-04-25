@@ -109,7 +109,6 @@ export default class Chat extends Service {
                 filePath: `https://${upload.Location}`,
                 fileName: file.name,
                 fileSize: file.size,
-                author: ctx.__('Unknown'),
                 promptTokens: res.usage.prompt_tokens,
                 totalTokens: res.usage.total_tokens,
                 pages

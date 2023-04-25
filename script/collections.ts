@@ -2,6 +2,7 @@
 
 import { DataType } from '@zilliz/milvus2-sdk-node/dist/milvus/const/Milvus'
 import { CreateCollectionReq } from '@zilliz/milvus2-sdk-node/dist/milvus/types'
+
 // Milvus数据库里的collections，相当于表
 export const resource: CreateCollectionReq = {
     collection_name: 'Resource',
