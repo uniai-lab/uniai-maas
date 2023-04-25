@@ -6,6 +6,7 @@ import isJSON from '@stdlib/assert-is-json'
 import { createParser, EventSourceParser } from 'eventsource-parser'
 import { PassThrough } from 'stream'
 import { IncomingMessage } from 'http'
+import math from '@util/math'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -131,8 +132,19 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
-            const res = await ctx.service.uniAI.findResource(prompts, params.resourceId, params.maxPage, params.model)
-            const data = res.map(v => v.content)
+            const { pages, embed, model } = await ctx.service.uniAI.findResource(
+                prompts,
+                params.resourceId,
+                params.maxPage,
+                params.maxToken,
+                params.model
+            )
+            const data = pages.map(v => {
+                let embedding = v.embedding2 // default text2vector (GLM)
+                if (params.model === 'GPT') embedding = v.embedding
+                if (params.model === 'GLM') embedding = v.embedding2
+                return { content: v.content, similar: math.similarity([embedding, embed]), model }
+            })
             ctx.service.res.success('Success to find resources content', data)
         } catch (e) {
             console.error(e)

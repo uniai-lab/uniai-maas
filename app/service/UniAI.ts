@@ -5,13 +5,15 @@ import { Service } from 'egg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
 import { IncomingMessage } from 'http'
 import glm from '@util/glm'
-import text2vec from '@util/text2vec'
+import vec from '@util/text2vec'
 import gpt from '@util/openai'
 import $ from '@util/util'
 import { Page } from '@model/Page'
+import { WhereOptions } from 'sequelize'
+import { Op } from 'sequelize'
 
 const SAME_SIMILARITY = 0.01
-const PAGE_LIMIT = 5
+const MAX_PAGE = 5
 const MAX_TOKEN = 3500
 const TOKEN_FIRST_PAGE = 800
 const TOKEN_ONE_PAGE = 400
@@ -22,25 +24,43 @@ export default class UniAI extends Service {
     async findResource(
         prompts: ChatCompletionRequestMessage[],
         resourceId?: number,
-        maxPage: number = PAGE_LIMIT,
+        maxPage: number = MAX_PAGE,
+        maxToken: number = MAX_TOKEN,
         model: AIModelEnum = 'GLM'
     ) {
         const { ctx } = this
         let userInput: string = ''
         for (const item of prompts) userInput += `${item.content}\n`
         let pages: Page[] = []
-        const where = resourceId ? { resourceId } : undefined
+        let embed: number[] = []
+        const where: WhereOptions = {}
         if (model === 'GPT') {
-            const embed = await gpt.embedding([userInput])
-            pages = await ctx.model.Page.similarFindAll(embed.data[0].embedding, maxPage, where)
+            if (resourceId) {
+                const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['embedding'] })
+                if (!resource) throw new Error('Resource not found')
+                if (!resource.embedding) throw new Error('GPT embedding not found')
+                where.resourceId = resourceId
+            }
+            where.embedding = { [Op.ne]: null }
+            const res = await gpt.embedding([userInput])
+            embed = res.data[0].embedding
+            pages = await ctx.model.Page.similarFindAll(embed, maxPage, where)
         }
         if (model === 'GLM') {
-            const embed = await text2vec.embedding([userInput])
-            pages = await ctx.model.Page.similarFindAll2(embed.data[0], maxPage, where)
+            if (resourceId) {
+                const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['embedding2'] })
+                if (!resource) throw new Error('Resource not found')
+                if (!resource.embedding2) throw new Error('GLM embedding not found')
+                where.resourceId = resourceId
+            }
+            where.embedding2 = { [Op.ne]: null }
+            const res = await vec.embedding([userInput])
+            embed = res.data[0]
+            pages = await ctx.model.Page.similarFindAll2(embed, maxPage, where)
         }
-        if (!pages.length) throw new Error(`Resource not found: resourceId: ${resourceId}`)
-        while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
-        return pages.sort((a, b) => a.id - b.id)
+        if (!pages.length) throw new Error('Page not found')
+        while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) pages.pop()
+        return { pages: pages.sort((a, b) => a.id - b.id), embed, model }
     }
     // add a new user
     async chat(prompts: ChatCompletionRequestMessage[], model: AIModelEnum = 'GLM', stream: boolean = false) {
@@ -64,7 +84,7 @@ export default class UniAI extends Service {
             if (!p.length) throw new Error('File content cannot be split')
             const embed = await gpt.embedding([p[0]])
             await gpt.log(ctx, userId, embed, '[AI/embedding]: check similarity for first page')
-            const embedding = embed.data[0].embedding
+            const { embedding } = embed.data[0]
             const result = await ctx.model.Resource.similarFindAll(embedding, 1, SAME_SIMILARITY)
             if (result.length) return result[0]
 
@@ -102,8 +122,8 @@ export default class UniAI extends Service {
             // check same similarity for first one page, 800 tokens
             const p: string[] = await $.splitPage(content, TOKEN_FIRST_PAGE)
             if (!p.length) throw new Error('File content cannot be split')
-            const embed = await text2vec.embedding([p[0]])
-            await text2vec.log(ctx, userId, embed, '[AI/embedding]: check similarity for first page')
+            const embed = await vec.embedding([p[0]])
+            await vec.log(ctx, userId, embed, '[AI/embedding]: check similarity for first page')
             const embedding = embed.data[0]
             const result = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
             if (result.length) return result[0]
@@ -111,8 +131,8 @@ export default class UniAI extends Service {
             // embedding all pages, sentence-level, 400 token per page
             const s: string[] = await $.splitPage(content, TOKEN_ONE_PAGE)
             if (!s.length) throw new Error('File content cannot be split')
-            const res = await text2vec.embedding(s)
-            await text2vec.log(ctx, 0, res, '[AI/embedding]: embedding all pages (sentences)')
+            const res = await vec.embedding(s)
+            await vec.log(ctx, 0, res, '[AI/embedding]: embedding all pages (sentences)')
 
             // save resource + pages
             return await ctx.model.Resource.create(
