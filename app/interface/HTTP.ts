@@ -194,12 +194,23 @@ interface AdminUpdateUserPost {
     level?: number
     countryCode?: number
 }
-/*=======================AI API===================*/
+
+/*==================================AI API=================================*/
+interface UniAIChatPrompt {
+    role: string
+    content: string
+    name?: string
+}
 interface UniAIChatPost {
     prompts: UniAIChatPrompt[]
+    maxLength?: number
+    top?: number
+    temperature?: number
     model?: AIModelEnum
 }
-interface UniAIQueryResourcePost extends UniAIChatPost {
+interface UniAIQueryResourcePost {
+    prompts: UniAIChatPrompt[]
+    model?: AIModelEnum
     resourceId?: number
     maxPage?: number
     maxToken?: number
@@ -218,10 +229,6 @@ interface UniAIChatResponseData {
     totalTokens: number
     model: string
     object: string
-}
-interface UniAIChatPrompt {
-    role: string
-    content: string
 }
 interface UniAIEmbeddingResponseData {
     id: number

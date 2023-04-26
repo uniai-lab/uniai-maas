@@ -17,11 +17,17 @@ export default class UniAI {
     async chat(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
-            const model = params.model || 'GLM'
             if (!params.prompts.length) throw new Error('Empty prompts')
             // chat to GPT
-            if (model === 'GPT') {
-                const res = (await ctx.service.uniAI.chat(prompts, model)) as CreateChatCompletionResponse
+            if (params.model === 'GPT') {
+                const res = (await ctx.service.uniAI.chat(
+                    prompts,
+                    false,
+                    params.model,
+                    params.maxLength,
+                    params.top,
+                    params.temperature
+                )) as CreateChatCompletionResponse
                 if (res.choices[0].message?.content)
                     ctx.service.res.success('Success to chat to GPT', {
                         content: res.choices[0].message.content,
@@ -36,7 +42,14 @@ export default class UniAI {
             }
             // chat to GLM
             if (params.model === 'GLM') {
-                const res = (await ctx.service.uniAI.chat(prompts, model)) as GLMChatResponse
+                const res = (await ctx.service.uniAI.chat(
+                    prompts,
+                    false,
+                    params.model,
+                    params.maxLength,
+                    params.top,
+                    params.temperature
+                )) as GLMChatResponse
                 if (res.content)
                     ctx.service.res.success('Success to chat to GLM', {
                         content: res.content,
@@ -61,7 +74,14 @@ export default class UniAI {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
 
-            const res = (await ctx.service.uniAI.chat(prompts, params.model, true)) as IncomingMessage
+            const res = (await ctx.service.uniAI.chat(
+                prompts,
+                true,
+                params.model,
+                params.maxLength,
+                params.top,
+                params.temperature
+            )) as IncomingMessage
 
             const stream = new PassThrough()
             const response: StandardResponse<UniAIChatResponseData> = {
@@ -79,7 +99,7 @@ export default class UniAI {
 
             let parser: EventSourceParser
             // chat to GPT
-            if (params.model === 'GPT') {
+            if (params.model === 'GPT')
                 parser = createParser(e => {
                     if (e.type === 'event')
                         if (isJSON(e.data)) {
@@ -91,11 +111,11 @@ export default class UniAI {
                             if (response.data.content) stream.write(`data: ${JSON.stringify(response)}\n\n`)
                         }
                 })
-            }
+
             // chat to GLM
-            if (params.model === 'GLM') {
+            if (params.model === 'GLM')
                 parser = createParser(e => {
-                    if (e.type === 'event') {
+                    if (e.type === 'event')
                         if (isJSON(e.data)) {
                             const data = JSON.parse(e.data) as GLMChatResponse
                             response.data.content = data.content
@@ -107,13 +127,12 @@ export default class UniAI {
                             response.msg = 'success to get chat stream message from GLM'
                             if (response.data.content) stream.write(`data: ${JSON.stringify(response)}\n\n`)
                         }
-                    }
                 })
-            }
 
             res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-            res.on('end', () => stream.end())
-            res.on('error', () => stream.end())
+            res.on('end', stream.end)
+            res.on('error', stream.end)
+            res.on('close', stream.end)
 
             ctx.set({
                 'Content-Type': 'text/event-stream',

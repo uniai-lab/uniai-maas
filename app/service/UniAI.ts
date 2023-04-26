@@ -20,7 +20,7 @@ const TOKEN_ONE_PAGE = 400
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
-    // find related resource
+    // query resource
     async findResource(
         prompts: ChatCompletionRequestMessage[],
         resourceId?: number,
@@ -62,17 +62,24 @@ export default class UniAI extends Service {
         while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) pages.pop()
         return { pages: pages.sort((a, b) => a.id - b.id), embed, model }
     }
-    // add a new user
-    async chat(prompts: ChatCompletionRequestMessage[], model: AIModelEnum = 'GLM', stream: boolean = false) {
+    // chat to model
+    async chat(
+        prompts: ChatCompletionRequestMessage[],
+        stream: boolean = false,
+        model: AIModelEnum = 'GLM',
+        maxLength?: number,
+        top?: number,
+        temperature?: number
+    ) {
         if (stream) {
-            if (model === 'GPT') return (await gpt.chat(prompts, true)) as IncomingMessage
-            if (model === 'GLM') return (await glm.chat(prompts, true)) as IncomingMessage
+            if (model === 'GPT') return await gpt.chat<IncomingMessage>(prompts, true, top, temperature)
+            if (model === 'GLM') return await glm.chat<IncomingMessage>(prompts, true, maxLength, top, temperature)
         } else {
-            if (model === 'GPT') return (await gpt.chat(prompts)) as CreateChatCompletionResponse
-            if (model === 'GLM') return (await glm.chat(prompts)) as GLMChatResponse
+            if (model === 'GPT') return await gpt.chat<CreateChatCompletionResponse>(prompts, false, top, temperature)
+            if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts, false, maxLength, top, temperature)
         }
     }
-    // embed context
+    // embed content
     async embedding(content: string, fileName: string, filePath: string, fileSize: number, model: AIModelEnum = 'GPT') {
         const { ctx } = this
         const userId = 0

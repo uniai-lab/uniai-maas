@@ -2,13 +2,15 @@
 
 import { EggContext } from '@eggjs/tegg'
 import { ResponseType } from 'axios'
+import { IncomingMessage } from 'http'
 import {
     OpenAIApi,
     Configuration,
     ChatCompletionRequestMessage,
     CreateChatCompletionResponse,
     CreateEmbeddingRequestInput,
-    CreateEmbeddingResponse
+    CreateEmbeddingResponse,
+    ChatCompletionResponseMessage
 } from 'openai'
 
 const openai = new OpenAIApi(
@@ -42,16 +44,22 @@ export default {
             })
         ).data
     },
-    async chat<T>(messages: ChatCompletionRequestMessage[], stream: boolean = false) {
-        const responseType: ResponseType = stream ? 'stream' : 'json'
+    async chat<T = ChatCompletionResponseMessage | IncomingMessage>(
+        messages: ChatCompletionRequestMessage[],
+        stream: boolean = false,
+        top?: number,
+        temperature?: number
+    ) {
         return (
             await openai.createChatCompletion(
                 {
                     model: 'gpt-3.5-turbo',
                     messages,
-                    stream
+                    stream,
+                    temperature,
+                    top_p: top
                 },
-                { responseType }
+                { responseType: stream ? 'stream' : 'json' }
             )
         ).data as T
     },
