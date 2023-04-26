@@ -146,7 +146,7 @@ export default {
     async setCache<V>(key: string | number, value: V) {
         await redis.set(key.toString(), JSON.stringify(value))
     },
-    consine(v1: number[], v2: number[]) {
+    cosine(v1: number[], v2: number[]) {
         return similarity.cosine(v1, v2)
     }
 }
