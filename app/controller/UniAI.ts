@@ -6,7 +6,7 @@ import isJSON from '@stdlib/assert-is-json'
 import { createParser, EventSourceParser } from 'eventsource-parser'
 import { PassThrough } from 'stream'
 import { IncomingMessage } from 'http'
-import math from '@util/math'
+import { similarity } from 'ml-distance'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -162,7 +162,7 @@ export default class UniAI {
                 let embedding = v.embedding2 // default text2vector (GLM)
                 if (params.model === 'GPT') embedding = v.embedding
                 if (params.model === 'GLM') embedding = v.embedding2
-                return { content: v.content, similar: math.similarity([embedding, embed]), model }
+                return { content: v.content, similar: similarity.cosine(embedding, embed), model }
             })
             ctx.service.res.success('Success to find resources content', data)
         } catch (e) {
