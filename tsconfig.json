@@ -22,5 +22,5 @@
         },
         "baseUrl": "."
     },
-    "exclude": ["node_modules", "docker", "logs", "run"]
+    "exclude": ["node_modules", "docker", "logs", "run", "script"]
 }
