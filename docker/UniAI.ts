@@ -2,11 +2,11 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Inject } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
+import isJSON from '@stdlib/assert-is-json'
 import { createParser, EventSourceParser } from 'eventsource-parser'
 import { PassThrough } from 'stream'
 import { IncomingMessage } from 'http'
-import isJSON from '@stdlib/assert-is-json'
-import $ from '@util/util'
+import { similarity } from 'ml-distance'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
