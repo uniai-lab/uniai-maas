@@ -9,7 +9,7 @@
     "scripts": {
         "start": "egg-scripts start --daemon --title=egg-server-openai-app --port 3000",
         "stop": "egg-scripts stop --title=egg-server-openai-app",
-        "dev": "egg-bin dev --port 3000",
+        "dev": "egg-bin dev --port 3300",
         "ets": "ets",
         "test-local": "egg-bin test -p",
         "test": "npm run lint -- --fix && npm run test-local",

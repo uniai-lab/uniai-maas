@@ -2,7 +2,7 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
+import { ChatCompletionRequestMessage, CreateChatCompletionResponse, CreateEmbeddingResponse } from 'openai'
 import { IncomingMessage } from 'http'
 import glm from '@util/glm'
 import vec from '@util/text2vec'
@@ -33,6 +33,7 @@ export default class UniAI extends Service {
         for (const item of prompts) userInput += `${item.content}\n`
         let pages: Page[] = []
         let embed: number[] = []
+        let res: CreateEmbeddingResponse | Text2VecResponse | undefined
         const where: WhereOptions = {}
         if (model === 'GPT') {
             if (resourceId) {
@@ -42,7 +43,7 @@ export default class UniAI extends Service {
                 where.resourceId = resourceId
             }
             where.embedding = { [Op.ne]: null }
-            const res = await gpt.embedding([userInput])
+            res = (await gpt.embedding([userInput])) as CreateEmbeddingResponse
             embed = res.data[0].embedding
             pages = await ctx.model.Page.similarFindAll(embed, maxPage, where)
         }
@@ -54,13 +55,13 @@ export default class UniAI extends Service {
                 where.resourceId = resourceId
             }
             where.embedding2 = { [Op.ne]: null }
-            const res = await vec.embedding([userInput])
+            res = (await vec.embedding([userInput])) as Text2VecResponse
             embed = res.data[0]
             pages = await ctx.model.Page.similarFindAll2(embed, maxPage, where)
         }
         if (!pages.length) throw new Error('Page not found')
         while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) pages.pop()
-        return { pages: pages.sort((a, b) => a.id - b.id), embed, model }
+        return { pages: pages.sort((a, b) => a.id - b.id), embed, model: res?.model }
     }
     // chat to model
     async chat(

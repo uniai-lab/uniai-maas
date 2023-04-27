@@ -1,6 +1,5 @@
 /** @format */
 
-interface GLMEmbeddingResponse {}
 interface GLMChatResponse {
     content: string
     prompt_tokens: number
