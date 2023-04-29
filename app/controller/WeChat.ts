@@ -6,8 +6,8 @@ import auth from 'app/middleware/auth'
 import $ from '@util/util'
 import { EggLoader } from 'egg'
 
-@HTTPController({ path: '/chat' })
-export default class Chat {
+@HTTPController({ path: '/wechat' })
+export default class WeChat {
     @Inject()
     logger: EggLoader
 
@@ -24,7 +24,7 @@ export default class Chat {
     }
 
     // wechat login
-    @HTTPMethod({ path: '/wx-login', method: HTTPMethodEnum.POST })
+    @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async wxLogin(@Context() ctx: UserContext, @HTTPBody() params: WXSignInPost) {
         try {
             const res = await ctx.service.wechat.signIn(params.code)
@@ -42,7 +42,7 @@ export default class Chat {
     }
 
     // wechat register
-    @HTTPMethod({ path: '/wx-register', method: HTTPMethodEnum.POST })
+    @HTTPMethod({ path: '/register', method: HTTPMethodEnum.POST })
     async wxRegister(@Context() ctx: UserContext, @HTTPBody() params: WXSignUpPost) {
         try {
             const { code, openid, iv, encryptedData } = params
@@ -190,6 +190,7 @@ export default class Chat {
             if (!input) throw new Error('Input nothing')
             const dialogId = params.dialogId as number
             const model = params.model
+            console.log(params)
 
             await ctx.service.chat.reduceChatChance(userId)
             await ctx.service.chat.chat(input, userId, dialogId, true, model)
@@ -206,6 +207,7 @@ export default class Chat {
     async getChatStream(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
+            console.log(userId)
             const res = await ctx.service.chat.getChatStream(userId)
 
             if (!res) throw new Error('Chat not found or timeout')

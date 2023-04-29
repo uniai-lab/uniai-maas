@@ -179,12 +179,9 @@ export default class Chat extends Service {
         dialog.chats.shift()
 
         const prompts: ChatCompletionRequestMessage[] = []
-        let inputAll: string = ''
-        for (const item of dialog.chats) {
-            // add user chat history
+        // add user chat history
+        for (const item of dialog.chats)
             prompts.push({ role: item.role as ChatCompletionRequestMessageRoleEnum, content: item.content })
-            if (item.role === ChatCompletionRequestMessageRoleEnum.User) inputAll += `${item.content}\n`
-        }
 
         prompts.push({
             role: ChatCompletionRequestMessageRoleEnum.System,
@@ -194,7 +191,7 @@ export default class Chat extends Service {
         const resourceId = dialog.resourceId
         // find similar pages of the resource id
         if (resourceId) {
-            const embed = await gpt.embedding([input + inputAll])
+            const embed = await gpt.embedding([input])
             const embedding = embed.data[0].embedding
             const role = ChatCompletionRequestMessageRoleEnum.System
             // handle prompt
@@ -235,6 +232,7 @@ export default class Chat extends Service {
                 end: false,
                 time: new Date().getTime()
             }
+            await $.setCache(userId, cache)
             const GPTDataParse = createParser(e => {
                 if (e.type === 'event')
                     if (isJSON(e.data)) {

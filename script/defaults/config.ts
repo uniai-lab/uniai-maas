@@ -2,12 +2,12 @@
 const menu = [
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
-        title: '2MB',
+        title: '5MB',
         tip: '单个文档'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
-        title: '5个文档',
+        title: '10个文档',
         tip: '每周上传'
     },
     {
@@ -21,13 +21,13 @@ const task = [
     {
         title: '分享给好友',
         tip: '对话次数+100',
-        buttonTitle: '立即分享',
+        button: '立即分享',
         type: 1 // 分享
     },
     {
         title: '关注公众号',
         tip: '对话次数+100',
-        buttonTitle: '立即关注',
+        button: '立即关注',
         type: 2 // 关注
     }
 ]
@@ -35,36 +35,36 @@ const task = [
 export default [
     {
         key: 'appName',
-        value: '读书君',
+        value: '聊天机器人-微信小程序',
         description: '小程序名称'
     },
     {
         key: 'appVersion',
-        value: 'v1.0.1',
+        value: 'v1.0.0',
         description: '小程序版本号'
     },
     {
         key: 'footer',
-        value: '更多福利请关注公众号',
+        value: '更多信息关注公众号',
         description: '底部标语'
     },
     {
         key: 'footerCopy',
-        value: '智读君（点击复制）',
+        value: 'IICT（点击复制）',
         description: '点击复制按钮'
     },
     {
         key: 'officialAccount',
-        value: 'readbot',
-        description: '公众号名'
+        value: 'IICT_SUZ',
+        description: '公众号ID'
     },
     {
         key: 'shareTitle',
-        value: 'AI文档分析利器，不来试试吗？'
+        value: '大模型文档分析利器，快来试一试！'
     },
     {
         key: 'shareDesc',
-        value: 'AI文档分析利器，不来试试吗？'
+        value: '大模型文档分析利器，快来试一试！'
     },
     {
         key: 'shareImg',
@@ -72,7 +72,7 @@ export default [
     },
     {
         key: 'DEFAULT_AVATAR_AI',
-        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-ai.png'
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png'
     },
     {
         key: 'DEFAULT_AVATAR_USER',
@@ -88,7 +88,7 @@ export default [
     },
     {
         key: 'DEFAULT_FREE_UPLOAD_CHANCE',
-        value: 5
+        value: 10
     },
     {
         key: 'SHARE_REWARD_CHAT_CHANCE',
@@ -96,7 +96,7 @@ export default [
     },
     {
         key: 'SHARE_REWARD_UPLOAD_CHANCE',
-        value: 0
+        value: 10
     },
     {
         key: 'FOLLOW_REWARD_CHAT_CHANCE',

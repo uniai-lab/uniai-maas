@@ -17,7 +17,7 @@ interface ConfigMenu {
 interface ConfigTask {
     title?: string
     tip?: string
-    buttonTitle?: string
+    button?: string
     type?: number
 }
 

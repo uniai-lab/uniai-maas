@@ -10,7 +10,7 @@ export default class Wechat extends Service {
     // use wechat to login, get code, return openid, token
     async signIn(code: string) {
         const { ctx } = this
-        if (!code) throw new Error('Code can not be null')
+        if (!code) throw new Error('Code is null')
 
         const authURL = process.env.WX_APP_AUTH_URL as string // wx api, get login auth
         const appId = process.env.WX_APP_ID as string // wx AppID
@@ -18,9 +18,10 @@ export default class Wechat extends Service {
 
         // get access_token, openid, unionid
         const url = `${authURL}?grant_type=authorization_code&appid=${appId}&secret=${appSecret}&js_code=${code}`
-        const res: WXAuthCodeAPI = await $.get(url)
-        if (!res.openid || !res.session_key || !res.unionid) throw new Error('Fail to get openid')
+        const res = await $.get<undefined, WXAuthCodeAPI>(url)
+        if (!res.openid || !res.session_key) throw new Error('Fail to get openid or session key')
 
+        const config = await ctx.service.user.getConfig()
         // try to create user
         const [user, flag] = await ctx.model.User.findOrCreate({
             where: {
@@ -28,17 +29,29 @@ export default class Wechat extends Service {
             },
             defaults: {
                 wxUnionId: res.unionid,
-                wxSessionKey: res.session_key
-            }
+                wxSessionKey: res.session_key,
+                token: md5(`${res.openid}${new Date().getTime()}${code}`),
+                tokenTime: new Date(),
+                avatar: config.DEFAULT_AVATAR_USER as string,
+                name: ctx.__(config.DEFAULT_USERNAME as string),
+                username: ctx.__(config.DEFAULT_USERNAME as string),
+                chance: {
+                    level: 0,
+                    uploadSize: 5e6,
+                    chatChance: 0,
+                    chatChanceUpdateAt: new Date(),
+                    chatChanceFree: parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0'),
+                    chatChanceFreeUpdateAt: new Date(),
+                    uploadChance: 0,
+                    uploadChanceUpdateAt: new Date(),
+                    uploadChanceFree: parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0'),
+                    uploadChanceFreeUpdateAt: new Date()
+                }
+            },
+            include: ctx.model.UserChance
         })
 
-        // directly login in
-        if (user && user.phone) {
-            user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
-            user.tokenTime = new Date()
-        }
-
-        // not insert
+        // user is existed, update session key
         if (!flag) {
             user.wxSessionKey = res.session_key
             await user.save()
@@ -50,46 +63,29 @@ export default class Wechat extends Service {
     async signUp(code: string, openid: string, iv: string, encryptedData: string) {
         const { ctx } = this
 
-        const user = await ctx.model.User.findOne({
-            where: { wxOpenId: openid },
-            include: { model: ctx.model.UserChance }
-        })
+        const user = await ctx.model.User.findOne({ where: { wxOpenId: openid } })
         if (!user || !user.wxSessionKey) throw new Error('Fail to find user')
-        if (user.phone) return { user, register: false }
 
-        // decode
-        const appId = process.env.WX_APP_ID as string // wx AppID
-        const res = await $.decryptData(encryptedData, iv, user.wxSessionKey, appId)
-
-        // decode successfully to save
-        if (res && res.phoneNumber && res.countryCode) {
-            user.phone = res.phoneNumber
-            user.countryCode = res.countryCode
+        let register = false
+        if (user.phone) {
             user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
             user.tokenTime = new Date()
-            // default name and default avatar
-            user.name = `${ctx.__(process.env.DEFAULT_USERNAME as string)}${user.phone.slice(-4)}`
-            user.username = user.name
-            user.avatar = process.env.DEFAULT_AVATAR_USER as string
-            // insert user chance
-            const config = await ctx.service.user.getConfig()
-            user.chance = await ctx.model.UserChance.create({
-                userId: user.id,
-                level: 0,
-                uploadSize: 5e6,
-                chatChance: 0,
-                chatChanceUpdateAt: new Date(),
-                chatChanceFree: parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0'),
-                chatChanceFreeUpdateAt: new Date(),
-                uploadChance: 0,
-                uploadChanceUpdateAt: new Date(),
-                uploadChanceFree: parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0'),
-                uploadChanceFreeUpdateAt: new Date()
-            })
-            await user.save()
+        } else {
+            // decode
+            const appId = process.env.WX_APP_ID as string // wx AppID
+            const res = await $.decryptData(encryptedData, iv, user.wxSessionKey, appId)
+            // decode successfully to save
+            if (res && res.phoneNumber && res.countryCode) {
+                user.phone = res.phoneNumber
+                user.countryCode = res.countryCode
+                user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
+                user.tokenTime = new Date()
+            }
+            register = true
         }
 
-        return { user, register: true }
+        await user.save()
+        return { user, register }
     }
 
     // create default dialog, add manual book
