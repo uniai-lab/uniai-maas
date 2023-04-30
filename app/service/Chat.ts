@@ -265,7 +265,6 @@ export default class Chat extends Service {
             res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
             res.on('error', e => this.streamEnd(userId, cache, e))
             res.on('end', () => this.streamEnd(userId, cache))
-            res.on('close', () => this.streamEnd(userId, cache))
         }
         // sync mode
         else {
