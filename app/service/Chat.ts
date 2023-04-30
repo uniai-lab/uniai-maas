@@ -119,20 +119,18 @@ export default class Chat extends Service {
     // async saveImage(userId: number, typeId: number, path: string, file: EggFile, buff: Buffer) {}
 
     // find or create the dialog
-    async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
+    async dialog(userId: number, id: number | null = null, include?: IncludeOptions) {
         const { ctx } = this
 
         // create or find the dialog
-        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
+        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, id }, include })
         // first create
         if (created) {
             // free chat initial content
             let content = `${ctx.__('Hello, I am AI Reading Guy')}\n${ctx.__('Feel free to chat with me')}`
             // resource chat initial content
-            if (resourceId) {
-                const resource = await ctx.model.Resource.findOne({
-                    where: { id: resourceId, isEffect: true, isDel: false }
-                })
+            if (id) {
+                const resource = await ctx.model.Resource.findOne({ where: { id, isEffect: true, isDel: false } })
                 content = `${ctx.__('Hello, I am AI Reading Guy')}
                        ${ctx.__('I have finished reading the file')} ${resource?.fileName}
                        ${ctx.__('You can ask me questions about this book')}`
@@ -193,13 +191,12 @@ export default class Chat extends Service {
             const embed = await vec.embedding([input])
             const embedding = embed.data[0]
             const role = ChatCompletionRequestMessageRoleEnum.System
-            // handle prompt
             prompts.push({ role, content: ctx.__('The content of document is as follows') })
+            // find related pages
             const pages = await ctx.model.Page.similarFindAll2(embedding, PAGE_LIMIT, { resourceId })
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
             pages.sort((a, b) => a.id - b.id)
             for (const item of pages) prompts.push({ role, content: item.content })
-            // add end prompts
             prompts.push({ role, content: ctx.__('Answer according to the document') })
         }
 
@@ -266,8 +263,9 @@ export default class Chat extends Service {
             }
 
             res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-            res.on('end', () => this.streamEnd(userId, cache))
             res.on('error', e => this.streamEnd(userId, cache, e))
+            res.on('end', () => this.streamEnd(userId, cache))
+            res.on('close', () => this.streamEnd(userId, cache))
         }
         // sync mode
         else {
