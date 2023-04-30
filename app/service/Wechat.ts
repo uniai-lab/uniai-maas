@@ -63,7 +63,7 @@ export default class Wechat extends Service {
     async signUp(code: string, openid: string, iv: string, encryptedData: string) {
         const { ctx } = this
 
-        const user = await ctx.model.User.findOne({ where: { wxOpenId: openid } })
+        const user = await ctx.model.User.findOne({ where: { wxOpenId: openid }, include: ctx.model.UserChance })
         if (!user || !user.wxSessionKey) throw new Error('Fail to find user')
 
         let register = false

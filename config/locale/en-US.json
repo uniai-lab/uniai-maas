@@ -1,5 +1,6 @@
 {
-    "Reader": "Reader",
+    "Reader": "User",
+    "User information": "Get user information",
     "No user id": "No user id",
     "Input nothing": "Input nothing",
     "Success to wechat register": "Success to wechat register",

@@ -19,6 +19,7 @@ import { IncomingMessage } from 'http'
 import isJSON from '@stdlib/assert-is-json'
 import gpt from '@util/openai' // OpenAI models
 import glm from '@util/glm' // GLM models
+import vec from '@util/text2vec'
 import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
@@ -76,18 +77,18 @@ export default class Chat extends Service {
         // check same similarity for first one page, 1000 tokens
         const p: string[] = await $.splitPage(file.text, 800)
         if (!p.length) throw new Error('File content cannot be split')
-        const embed = await gpt.embedding([p[0]])
-        await gpt.log(ctx, userId, embed, '[Chat/upload]: check similarity for first page')
-        const embedding = embed.data[0].embedding
-        const result = await ctx.model.Resource.similarFindAll(embedding, 1, SAME_SIMILARITY)
+        const embed = await vec.embedding([p[0]])
+        await vec.log(ctx, userId, embed, '[WeChat/upload]: check similarity for first page')
+        const embedding = embed.data[0]
+        const result = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
         if (result.length) return result[0]
 
         // embedding all pages, sentence-level, 500 token per page
         const s: string[] = await $.splitPage(file.text, 400)
         s[0] = ctx.__('Main content of this document, including the title, summary, abstract, and authors') + s[0]
         if (!s.length) throw new Error('File content cannot be split')
-        const res = await gpt.embedding(s)
-        await gpt.log(ctx, userId, res, '[Chat/upload]: embedding all pages (sentences)')
+        const res = await vec.embedding(s)
+        await vec.log(ctx, userId, res, '[WeChat/upload]: embedding all pages')
 
         // save resource to cos
         const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${file.ext}`, file.path)
@@ -95,7 +96,7 @@ export default class Chat extends Service {
         const pages: any[] = res.data.map((v, i) => {
             return {
                 page: i + 1,
-                embedding: v.embedding,
+                embedding2: v,
                 content: s[i],
                 length: $.countTokens(s[i])
             }
@@ -105,12 +106,10 @@ export default class Chat extends Service {
                 page: s.length, // sentence num
                 typeId,
                 userId,
-                embedding,
+                embedding2: embedding,
                 filePath: `https://${upload.Location}`,
                 fileName: file.name,
                 fileSize: file.size,
-                promptTokens: res.usage.prompt_tokens,
-                totalTokens: res.usage.total_tokens,
                 pages
             },
             { include: ctx.model.Page }
@@ -191,13 +190,12 @@ export default class Chat extends Service {
         const resourceId = dialog.resourceId
         // find similar pages of the resource id
         if (resourceId) {
-            const embed = await gpt.embedding([input])
-            const embedding = embed.data[0].embedding
+            const embed = await vec.embedding([input])
+            const embedding = embed.data[0]
             const role = ChatCompletionRequestMessageRoleEnum.System
             // handle prompt
-            prompts.push({ role: role, content: ctx.__('Your duty is') })
             prompts.push({ role, content: ctx.__('The content of document is as follows') })
-            const pages = await ctx.model.Page.similarFindAll(embedding, PAGE_LIMIT, { resourceId })
+            const pages = await ctx.model.Page.similarFindAll2(embedding, PAGE_LIMIT, { resourceId })
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
             pages.sort((a, b) => a.id - b.id)
             for (const item of pages) prompts.push({ role, content: item.content })
