@@ -123,7 +123,7 @@ export default class Chat extends Service {
         const { ctx } = this
 
         // create or find the dialog
-        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, id }, include })
+        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId: id }, include })
         // first create
         if (created) {
             // free chat initial content
