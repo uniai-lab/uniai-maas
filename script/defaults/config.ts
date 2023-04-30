@@ -35,7 +35,7 @@ const task = [
 export default [
     {
         key: 'appName',
-        value: '聊天机器人-微信小程序',
+        value: '乐聊-微信小程序',
         description: '小程序名称'
     },
     {
@@ -60,11 +60,11 @@ export default [
     },
     {
         key: 'shareTitle',
-        value: '大模型文档分析利器，快来试一试！'
+        value: '自主可控的大模型文档分析与对话小程序！'
     },
     {
         key: 'shareDesc',
-        value: '大模型文档分析利器，快来试一试！'
+        value: '自主可控的大模型文档分析与对话小程序！'
     },
     {
         key: 'shareImg',
