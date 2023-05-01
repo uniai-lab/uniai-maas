@@ -158,7 +158,7 @@ export default class Chat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GLM') {
+    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GPT') {
         const { ctx } = this
 
         // check processing chat stream
@@ -178,9 +178,8 @@ export default class Chat extends Service {
         if (dialogId) dialog = await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
         else dialog = await ctx.model.Dialog.findOne({ where: { resourceId: null, userId }, include })
         if (!dialog) throw new Error('Dialog is invalid')
-        if (!dialog.chats) dialog.chats = []
-        dialog.chats.reverse()
-        dialog.chats.shift()
+        dialog.chats?.reverse()
+        dialog.chats?.shift()
 
         const prompts: ChatCompletionRequestMessage[] = []
         // add user chat history
@@ -193,6 +192,7 @@ export default class Chat extends Service {
         })
 
         const resourceId = dialog.resourceId
+        let prompt = input
         // find similar pages of the resource id
         if (resourceId) {
             const embed = await vec.embedding([input])
@@ -204,18 +204,12 @@ export default class Chat extends Service {
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
             pages.sort((a, b) => a.id - b.id)
             for (const item of pages) prompts.push({ role, content: item.content })
-            prompts.push({ role, content: ctx.__('Answer according to the document') })
+            prompt = `${ctx.__('Answer according to the document')}${input}`
         }
-
         prompts.push({
             role: ChatCompletionRequestMessageRoleEnum.User,
-            content: input
+            content: prompt
         })
-        if (resourceId)
-            prompts.push({
-                role: ChatCompletionRequestMessageRoleEnum.User,
-                content: ctx.__('If you cannot answer questions')
-            })
 
         // save user prompt
         await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
@@ -229,7 +223,6 @@ export default class Chat extends Service {
                 end: false,
                 time: new Date().getTime()
             }
-            await $.setCache(userId, cache)
             const GPTDataParse = createParser(e => {
                 if (e.type === 'event')
                     if (isJSON(e.data)) {
@@ -257,13 +250,14 @@ export default class Chat extends Service {
                     break
                 case 'GLM':
                     parser = GLMDataParse
-                    res = await glm.chat<IncomingMessage>(prompts, true)
+                    res = await glm.chat<IncomingMessage>(prompts, true, 4096, 0.5)
                     break
                 default:
                     parser = GLMDataParse
-                    res = await glm.chat<IncomingMessage>(prompts, true)
+                    res = await glm.chat<IncomingMessage>(prompts, true, 4096, 0.5)
             }
 
+            await $.setCache(userId, cache)
             res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
             res.on('error', e => this.streamEnd(userId, cache, e))
             res.on('end', () => this.streamEnd(userId, cache))
@@ -281,7 +275,7 @@ export default class Chat extends Service {
 
             // request GLM
             if (model === 'GLM') {
-                const res = await glm.chat<GLMChatResponse>(prompts)
+                const res = await glm.chat<GLMChatResponse>(prompts, false, 4096, 0.5, 1)
                 const content = res.content
                 if (!content) throw new Error('Fail to get GLM sync response')
                 await glm.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
