@@ -47,17 +47,6 @@ interface UploadResponseData {
     updatedAt: Date
 }
 
-interface UserWechatLoginResponseData {
-    id: number
-    wxOpenId: string
-    wxUnionId: string
-    token?: string
-}
-
-interface UserWechatRegisterResponseData extends UserinfoResponseData {
-    fid?: number
-}
-
 interface UserinfoResponseData {
     id: number
     name: string
@@ -78,12 +67,13 @@ interface UserinfoResponseData {
         chatChanceFreeUpdateAt: Date
         uploadChance: number
         uploadChanceUpdateAt: Date
-        uploadFreeChance: number
+        uploadChanceFree: number
         uploadChanceFreeUpdateAt: Date
         totalChatChance: number
         totalUploadChance: number
     }
     task?: UserTask[]
+    fid?: number
 }
 
 // app config table to object

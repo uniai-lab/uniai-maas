@@ -25,40 +25,13 @@ export default class WeChat {
 
     // wechat login
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
-    async wxLogin(@Context() ctx: UserContext, @HTTPBody() params: WXSignInPost) {
+    async login(@Context() ctx: UserContext, @HTTPBody() params: WXSignInPost) {
         try {
-            const res = await ctx.service.wechat.signIn(params.code)
-            const data: UserWechatLoginResponseData = {
-                id: res.id,
-                wxOpenId: res.wxOpenId,
-                wxUnionId: res.wxUnionId,
-                token: res.token
-            }
-            ctx.service.res.success('Success to wechat login', data)
-        } catch (e) {
-            console.error(e)
-            ctx.service.res.error(e as Error)
-        }
-    }
+            const { code } = params
+            if (!code) throw new Error('Code is null')
 
-    // wechat register
-    @HTTPMethod({ path: '/register', method: HTTPMethodEnum.POST })
-    async wxRegister(@Context() ctx: UserContext, @HTTPBody() params: WXSignUpPost) {
-        try {
-            const { code, openid, iv, encryptedData } = params
-            if (!code) throw new Error('Code can not be null')
-            if (!openid) throw new Error('OpenID can not be null')
-            if (!iv) throw new Error('IV can not be null')
-            if (!encryptedData) throw new Error('EncryptedData can not be null')
-
-            const res = await ctx.service.wechat.signUp(code, openid, iv, encryptedData)
-            const user = res.user
-            if (res.register) {
-                await ctx.service.wechat.addDefaultResource(user.id)
-                if (params.fid) await ctx.service.wechat.shareReward(params.fid)
-            }
-
-            const data: UserWechatRegisterResponseData = {
+            const user = await ctx.service.wechat.signIn(code)
+            const data: UserinfoResponseData = {
                 id: user.id,
                 username: user.username,
                 name: user.name,
@@ -70,22 +43,49 @@ export default class WeChat {
                 wxOpenId: user.wxOpenId,
                 wxUnionId: user.wxUnionId,
                 chance: {
-                    level: user.chance.level,
-                    uploadSize: user.chance.uploadSize,
-                    chatChance: user.chance.chatChance,
-                    chatChanceUpdateAt: user.chance.chatChanceUpdateAt,
-                    chatChanceFree: user.chance.chatChanceFree,
-                    chatChanceFreeUpdateAt: user.chance.chatChanceFreeUpdateAt,
-                    uploadChance: user.chance.uploadChance,
-                    uploadChanceUpdateAt: user.chance.uploadChanceUpdateAt,
-                    uploadFreeChance: user.chance.uploadChanceFree,
-                    uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt,
+                    ...user.chance,
+                    totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
+                    totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                }
+            }
+            ctx.service.res.success('Success to WeChat login', data)
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    // wechat register, get phone number
+    @HTTPMethod({ path: '/register', method: HTTPMethodEnum.POST })
+    async register(@Context() ctx: UserContext, @HTTPBody() params: WXSignUpPost) {
+        try {
+            const { code, openid, iv, encryptedData, fid } = params
+            if (!code) throw new Error('Code can not be null')
+            if (!openid) throw new Error('OpenID can not be null')
+            if (!iv) throw new Error('IV can not be null')
+            if (!encryptedData) throw new Error('EncryptedData can not be null')
+
+            const user = await ctx.service.wechat.signUp(code, openid, iv, encryptedData, fid)
+
+            const data: UserinfoResponseData = {
+                id: user.id,
+                username: user.username,
+                name: user.name,
+                phone: user.phone,
+                countryCode: user.countryCode,
+                avatar: user.avatar,
+                token: user.token,
+                tokenTime: user.tokenTime,
+                wxOpenId: user.wxOpenId,
+                wxUnionId: user.wxUnionId,
+                chance: {
+                    ...user.chance,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
                 fid: params.fid
             }
-            ctx.service.res.success('Success to wechat register', data)
+            ctx.service.res.success('Success to WeChat register', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -98,43 +98,32 @@ export default class WeChat {
     async userInfo(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            const res = await ctx.service.user.getUser(userId)
-            if (!res) throw new Error('Fail to get user info')
+            const { user, config } = await ctx.service.chat.getUserResetChance(userId)
 
             const task: Array<UserTask> = []
-            const config = await ctx.service.user.getConfig()
             if (config.task)
                 for (const item of config.task) {
                     let flag = true
-                    if (res.wxPublicOpenId && item.type === 2) flag = false
+                    if (user.wxPublicOpenId && item.type === 2) flag = false
                     task.push({ ...item, flag })
                 }
 
             const data: UserinfoResponseData = {
-                id: res.id,
-                username: res.username,
-                name: res.name,
-                phone: res.phone,
-                countryCode: res.countryCode,
-                avatar: res.avatar,
-                token: res.token,
-                tokenTime: res.tokenTime,
-                wxOpenId: res.wxOpenId,
-                wxUnionId: res.wxUnionId,
+                id: user.id,
+                username: user.username,
+                name: user.name,
+                phone: user.phone,
+                countryCode: user.countryCode,
+                avatar: user.avatar,
+                token: user.token,
+                tokenTime: user.tokenTime,
+                wxOpenId: user.wxOpenId,
+                wxUnionId: user.wxUnionId,
                 task,
                 chance: {
-                    level: res.chance.level,
-                    uploadSize: res.chance.uploadSize,
-                    chatChance: res.chance.chatChance,
-                    chatChanceUpdateAt: res.chance.chatChanceUpdateAt,
-                    chatChanceFree: res.chance.chatChanceFree,
-                    chatChanceFreeUpdateAt: res.chance.chatChanceFreeUpdateAt,
-                    uploadChance: res.chance.uploadChance,
-                    uploadChanceUpdateAt: res.chance.uploadChanceUpdateAt,
-                    uploadFreeChance: res.chance.uploadChanceFree,
-                    uploadChanceFreeUpdateAt: res.chance.uploadChanceFreeUpdateAt,
-                    totalChatChance: res.chance.chatChance + res.chance.chatChanceFree,
-                    totalUploadChance: res.chance.uploadChance + res.chance.uploadChanceFree
+                    ...user.chance,
+                    totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
+                    totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 }
             }
             ctx.service.res.success('User information', data)

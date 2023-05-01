@@ -321,14 +321,6 @@ export default class Chat extends Service {
         const user = await ctx.model.User.findByPk(userId, { include: { model: ctx.model.UserChance } })
         if (!user || !user.chance) throw new Error('Fail to find user')
 
-        // update free upload chance
-        const config = await ctx.service.user.getConfig()
-        if (new Date().getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() >= WEEK) {
-            user.chance.uploadChanceFree = parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0')
-            user.chance.uploadChanceFreeUpdateAt = new Date()
-            await user.chance.save()
-        }
-
         if (user.chance.uploadChanceFree > 0) await user.chance.decrement({ uploadChanceFree: 1 })
         else if (user.chance.uploadChance > 0) await user.chance.decrement({ uploadChance: 1 })
         else throw new Error('Chance of upload not enough, waiting for one week')
@@ -340,16 +332,30 @@ export default class Chat extends Service {
         const user = await ctx.model.User.findByPk(userId, { include: { model: ctx.model.UserChance } })
         if (!user || !user.chance) throw new Error('Fail to find user')
 
-        const config = await ctx.service.user.getConfig()
-        // update free chat chance
-        if (new Date().getTime() - user.chance.chatChanceFreeUpdateAt.getTime() >= WEEK) {
-            user.chance.chatChanceFree = parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0')
-            user.chance.chatChanceFreeUpdateAt = new Date()
-            await user.chance.save()
-        }
-
         if (user.chance.chatChanceFree > 0) await user.chance.decrement({ chatChanceFree: 1 })
         else if (user.chance.chatChance > 0) await user.chance.decrement({ chatChance: 1 })
         else throw new Error('Chance of chat not enough, waiting for one week')
+    }
+    // get user and reset free chat/upload chance
+    async getUserResetChance(userId: number) {
+        const { ctx } = this
+        const user = await ctx.service.user.getUser(userId)
+        if (!user || !user.chance) throw new Error('Fail to find user')
+
+        const config = await ctx.service.user.getConfig()
+        const now = new Date()
+        if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() >= WEEK) {
+            user.chance.uploadChanceFree = parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0')
+            user.chance.uploadChanceFreeUpdateAt = now
+            console.log('update upload', user.chance)
+            await user.chance.save()
+        }
+        if (now.getTime() - user.chance.chatChanceFreeUpdateAt.getTime() >= WEEK) {
+            user.chance.chatChanceFree = parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0')
+            user.chance.chatChanceFreeUpdateAt = now
+            console.log('update chat', user.chance)
+            await user.chance.save()
+        }
+        return { user, config }
     }
 }

@@ -10,7 +10,6 @@ export default class Wechat extends Service {
     // use wechat to login, get code, return openid, token
     async signIn(code: string) {
         const { ctx } = this
-        if (!code) throw new Error('Code is null')
 
         const authURL = process.env.WX_APP_AUTH_URL as string // wx api, get login auth
         const appId = process.env.WX_APP_ID as string // wx AppID
@@ -60,32 +59,32 @@ export default class Wechat extends Service {
         return user
     }
 
-    async signUp(code: string, openid: string, iv: string, encryptedData: string) {
+    async signUp(code: string, openid: string, iv: string, encryptedData: string, fid?: number) {
         const { ctx } = this
 
         const user = await ctx.model.User.findOne({ where: { wxOpenId: openid }, include: ctx.model.UserChance })
         if (!user || !user.wxSessionKey) throw new Error('Fail to find user')
 
-        let register = false
         if (user.phone) {
+            // directly sign in
             user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
             user.tokenTime = new Date()
         } else {
-            // decode
+            // register, decode user info
             const appId = process.env.WX_APP_ID as string // wx AppID
             const res = await $.decryptData(encryptedData, iv, user.wxSessionKey, appId)
-            // decode successfully to save
+            // decode successfully
             if (res && res.phoneNumber && res.countryCode) {
                 user.phone = res.phoneNumber
                 user.countryCode = res.countryCode
                 user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
                 user.tokenTime = new Date()
-            }
-            register = true
+                if (fid) await this.shareReward(fid)
+            } else throw new Error('Error to decode wechat userinfo')
         }
 
         await user.save()
-        return { user, register }
+        return user
     }
 
     // create default dialog, add manual book
