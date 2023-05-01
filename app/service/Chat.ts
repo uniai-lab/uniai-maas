@@ -27,7 +27,7 @@ const MAX_TOKEN = 2000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
 // const FIND_SIMILARITY = 0.23
-const CHAT_BACKTRACK = 3
+const CHAT_BACKTRACK = 4
 const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -161,6 +161,13 @@ export default class Chat extends Service {
     async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GLM') {
         const { ctx } = this
 
+        // check processing chat stream
+        if (stream) {
+            const check = await this.getChatStream(userId)
+            if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
+                throw new Error('Another chat is processing')
+        }
+
         // acquire dialog
         let dialog: Dialog | null
         const include: IncludeOptions = {
@@ -215,11 +222,6 @@ export default class Chat extends Service {
 
         // stream mode
         if (stream) {
-            // check processing chat stream
-            const check = await this.getChatStream(userId)
-            if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
-                throw new Error('Another chat is processing')
-
             // reset chat stream cache
             const cache: ChatStreamCache = {
                 dialogId: dialog.id,
@@ -347,13 +349,11 @@ export default class Chat extends Service {
         if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() >= WEEK) {
             user.chance.uploadChanceFree = parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0')
             user.chance.uploadChanceFreeUpdateAt = now
-            console.log('update upload', user.chance)
             await user.chance.save()
         }
         if (now.getTime() - user.chance.chatChanceFreeUpdateAt.getTime() >= WEEK) {
             user.chance.chatChanceFree = parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0')
             user.chance.chatChanceFreeUpdateAt = now
-            console.log('update chat', user.chance)
             await user.chance.save()
         }
         return { user, config }

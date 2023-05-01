@@ -179,7 +179,6 @@ export default class WeChat {
             if (!input) throw new Error('Input nothing')
             const dialogId = params.dialogId as number
             const model = params.model
-            console.log(params)
 
             await ctx.service.chat.reduceChatChance(userId)
             await ctx.service.chat.chat(input, userId, dialogId, true, model)
@@ -196,7 +195,6 @@ export default class WeChat {
     async getChatStream(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            console.log(userId)
             const res = await ctx.service.chat.getChatStream(userId)
 
             if (!res) throw new Error('Chat not found or timeout')
