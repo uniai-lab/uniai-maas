@@ -23,11 +23,11 @@ import vec from '@util/text2vec'
 import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
-const MAX_TOKEN = 2000
+const MAX_TOKEN = 3000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
 // const FIND_SIMILARITY = 0.23
-const CHAT_BACKTRACK = 4
+const CHAT_BACKTRACK = 3
 const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
