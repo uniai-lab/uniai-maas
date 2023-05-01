@@ -27,13 +27,6 @@ export default class Wechat extends Service {
                 wxOpenId: res.openid
             },
             defaults: {
-                wxUnionId: res.unionid,
-                wxSessionKey: res.session_key,
-                token: md5(`${res.openid}${new Date().getTime()}${code}`),
-                tokenTime: new Date(),
-                avatar: config.DEFAULT_AVATAR_USER as string,
-                name: ctx.__(config.DEFAULT_USERNAME as string),
-                username: ctx.__(config.DEFAULT_USERNAME as string),
                 chance: {
                     level: 0,
                     uploadSize: 5e6,
@@ -50,11 +43,17 @@ export default class Wechat extends Service {
             include: ctx.model.UserChance
         })
 
-        // user is existed, update session key
-        if (!flag) {
-            user.wxSessionKey = res.session_key
-            await user.save()
+        // first create, set default user info
+        if (flag) {
+            user.avatar = config.DEFAULT_AVATAR_USER as string
+            user.name = `${ctx.__(config.DEFAULT_USERNAME as string)}${user.id}`
         }
+
+        // user is existed, update session key
+        user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
+        user.tokenTime = new Date()
+        user.wxSessionKey = res.session_key
+        await user.save()
 
         return user
     }
