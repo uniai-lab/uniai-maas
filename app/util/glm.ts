@@ -19,19 +19,18 @@ export default {
     async chat<T = GLMChatRequest | IncomingMessage>(
         messages: ChatCompletionRequestMessage[],
         stream: boolean = false,
-        maxLength?: number,
         top?: number,
-        temperature?: number
+        temperature?: number,
+        maxLength?: number
     ) {
         let prompt = ''
         const history: string[] = []
-        for (const item of messages) {
+        for (const item of messages)
             if (item.role.toLowerCase() === 'assistant') {
                 history.push(prompt.trim()) // user message
                 history.push(item.content.trim()) // ai message
                 prompt = ''
             } else prompt += `${item.content}\n`
-        }
 
         const url = process.env.GLM_API as string
         const params: GLMChatRequest = { prompt: prompt.trim(), temperature, top_p: top, max_length: maxLength }

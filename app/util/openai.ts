@@ -1,7 +1,6 @@
 /** @format */
 
 import { EggContext } from '@eggjs/tegg'
-import { ResponseType } from 'axios'
 import { IncomingMessage } from 'http'
 import {
     OpenAIApi,

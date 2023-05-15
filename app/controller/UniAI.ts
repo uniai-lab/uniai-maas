@@ -24,7 +24,6 @@ export default class UniAI {
                     prompts,
                     false,
                     params.model,
-                    params.maxLength,
                     params.top,
                     params.temperature
                 )) as CreateChatCompletionResponse
@@ -46,9 +45,9 @@ export default class UniAI {
                     prompts,
                     false,
                     params.model,
-                    params.maxLength,
                     params.top,
-                    params.temperature
+                    params.temperature,
+                    params.maxLength
                 )) as GLMChatResponse
                 if (res.content)
                     ctx.service.res.success('Success to chat to GLM', {
@@ -78,9 +77,9 @@ export default class UniAI {
                 prompts,
                 true,
                 params.model,
-                params.maxLength,
                 params.top,
-                params.temperature
+                params.temperature,
+                params.maxLength
             )) as IncomingMessage
 
             const stream = new PassThrough()

@@ -68,16 +68,16 @@ export default class UniAI extends Service {
         prompts: ChatCompletionRequestMessage[],
         stream: boolean = false,
         model: AIModelEnum = 'GLM',
-        maxLength?: number,
         top?: number,
-        temperature?: number
+        temperature?: number,
+        maxLength?: number
     ) {
         if (stream) {
             if (model === 'GPT') return await gpt.chat<IncomingMessage>(prompts, true, top, temperature)
-            if (model === 'GLM') return await glm.chat<IncomingMessage>(prompts, true, maxLength, top, temperature)
+            if (model === 'GLM') return await glm.chat<IncomingMessage>(prompts, true, top, temperature, maxLength)
         } else {
             if (model === 'GPT') return await gpt.chat<CreateChatCompletionResponse>(prompts, false, top, temperature)
-            if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts, false, maxLength, top, temperature)
+            if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts, false, top, temperature, maxLength)
         }
     }
     // embed content
