@@ -129,9 +129,15 @@ export default class UniAI {
                 })
 
             res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-            res.on('end', stream.end)
-            res.on('error', stream.end)
-            res.on('close', stream.end)
+            res.on('error', () => {
+                stream.destroy(new Error(`Chat stream error`))
+            })
+            res.on('end', () => {
+                stream.end()
+            })
+            res.on('close', () => {
+                stream.destroy()
+            })
 
             ctx.set({
                 'Content-Type': 'text/event-stream',
