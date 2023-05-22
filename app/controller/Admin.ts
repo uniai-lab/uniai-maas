@@ -29,6 +29,11 @@ export default class Admin {
                 createdAt: res.createdAt,
                 updatedAt: res.updatedAt
             }
+            if (params.init)
+                await ctx.model.Config.upsert({
+                    key: 'INIT_RESOURCE_ID',
+                    value: res.id
+                })
 
             ctx.service.res.success('success to upload', { resource })
         } catch (e) {

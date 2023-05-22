@@ -167,6 +167,7 @@ interface AdminUpdateResourcePost {
     resourceId: number
     fileName: string
     resourceTypeId: number
+    init: boolean
 }
 
 interface AdminAddFollowRewardPost {
