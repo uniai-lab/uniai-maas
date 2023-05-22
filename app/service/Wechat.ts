@@ -7,7 +7,7 @@ import md5 from 'md5'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Wechat extends Service {
-    // use wechat to login, get code, return openid, token
+    // use wechat to login, get code, return new user
     async signIn(code: string) {
         const { ctx } = this
 
@@ -46,19 +46,20 @@ export default class Wechat extends Service {
         // first create, set default user info
         if (created) {
             user.avatar = config.DEFAULT_AVATAR_USER as string
-            user.name = `${ctx.__(config.DEFAULT_USERNAME as string)}${user.id}`
-            await ctx.service.chat.dialog(user.id, 0) // add default dialog resource
+            user.name = `${ctx.__(config.DEFAULT_USERNAME as string)} No.${user.id}`
+            // add default dialog resource
+            if (config.INIT_RESOURCE_ID) await ctx.service.chat.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
+            await ctx.service.chat.dialog(user.id) // add free chat dialog
         }
 
         // user is existed, update session key
         user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
         user.tokenTime = new Date()
         user.wxSessionKey = res.session_key
-        await user.save()
-
-        return user
+        return await user.save()
     }
 
+    // user sign phone number
     async signUp(code: string, openid: string, iv: string, encryptedData: string, fid?: number) {
         const { ctx } = this
 
@@ -87,22 +88,6 @@ export default class Wechat extends Service {
         return user
     }
 
-    // create default dialog, add manual book
-    async addDefaultResource(userId: number) {
-        const { ctx } = this
-        const resource = await ctx.model.Resource.findOne({ where: { userId: 0 }, order: [['updatedAt', 'DESC']] })
-        if (resource)
-            await ctx.model.Dialog.findOrCreate({
-                where: {
-                    userId,
-                    resourceId: resource.id
-                },
-                defaults: {
-                    resourceId: resource.id
-                }
-            })
-    }
-
     // user share and another one sign up, add reward
     async shareReward(userId: number) {
         const { ctx } = this
@@ -116,6 +101,7 @@ export default class Wechat extends Service {
         uc.chatChanceUpdateAt = new Date()
         return await uc.save()
     }
+
     // user follow wechat public account, add reward
     async followReward(unionId: string, openId: string) {
         const { ctx } = this

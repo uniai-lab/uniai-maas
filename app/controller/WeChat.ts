@@ -138,7 +138,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
             if (!userId) throw new Error('No user id')
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
@@ -173,11 +173,11 @@ export default class WeChat {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
             if (!userId) throw new Error('No user id')
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
-            const dialogId = params.dialogId as number
+            const dialogId = params.dialogId
             const model = params.model
 
             await ctx.service.chat.reduceChatChance(userId)

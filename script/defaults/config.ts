@@ -103,6 +103,10 @@ export default [
         value: 100
     },
     {
+        key: 'INIT_RESOURCE_ID',
+        value: 0
+    },
+    {
         key: 'menu',
         value: JSON.stringify(menu),
         isJson: true

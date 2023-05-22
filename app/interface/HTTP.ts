@@ -98,6 +98,7 @@ interface ConfigResponseData {
     SHARE_REWARD_CHAT_CHANCE?: string
     SHARE_REWARD_UPLOAD_CHANCE?: string
     FOLLOW_REWARD_CHAT_CHANCE?: string
+    INIT_RESOURCE_ID?: string
     menu?: Array<ConfigMenu>
     task?: Array<ConfigTask>
 }

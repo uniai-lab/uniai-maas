@@ -13,7 +13,6 @@ import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
 import { Resource } from '@model/Resource'
-import { Dialog } from '@model/Dialog'
 import { createParser, EventSourceParser } from 'eventsource-parser'
 import { IncomingMessage } from 'http'
 import isJSON from '@stdlib/assert-is-json'
@@ -39,7 +38,7 @@ export default class Chat extends Service {
         return await ctx.model.Dialog.findAll({
             where: {
                 userId,
-                resourceId: { [Op.ne]: null },
+                resourceId: { [Op.ne]: 0 },
                 isEffect: true,
                 isDel: false
             },
@@ -118,19 +117,25 @@ export default class Chat extends Service {
 
     // async saveImage(userId: number, typeId: number, path: string, file: EggFile, buff: Buffer) {}
 
-    // find or create the dialog
-    async dialog(userId: number, id: number | null = null, include?: IncludeOptions) {
+    // find or create a dialog
+    async dialog(userId: number, resourceId?: number, include?: IncludeOptions) {
         const { ctx } = this
 
         // create or find the dialog
-        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId: id }, include })
+        const [res, created] = await ctx.model.Dialog.findOrCreate({
+            where: { userId, resourceId: resourceId || null },
+            include
+        })
+
         // first create
         if (created) {
             // free chat initial content
             let content = `${ctx.__('Hello, I am AI Reading Guy')}\n${ctx.__('Feel free to chat with me')}`
             // resource chat initial content
-            if (id !== null) {
-                const resource = await ctx.model.Resource.findOne({ where: { id, isEffect: true, isDel: false } })
+            if (resourceId) {
+                const resource = await ctx.model.Resource.findOne({
+                    where: { id: resourceId, isEffect: true, isDel: false }
+                })
                 content = `${ctx.__('Hello, I am AI Reading Guy')}
                        ${ctx.__('I have finished reading the file')} ${resource?.fileName}
                        ${ctx.__('You can ask me questions about this book')}`
@@ -147,18 +152,24 @@ export default class Chat extends Service {
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId: number | null = null, limit: number = 20) {
+    async listChat(userId: number, dialogId?, limit: number = 15) {
         const { ctx } = this
         const include: IncludeOptions = { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
         const dialog = dialogId
             ? await ctx.model.Dialog.findByPk(dialogId, { include })
-            : await this.dialog(userId, null, include)
+            : await this.dialog(userId, undefined, include)
         dialog?.chats.reverse()
         return dialog
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GLM') {
+    async chat(
+        input: string,
+        userId: number,
+        dialogId: number = 0,
+        stream: boolean = false,
+        model: AIModelEnum = 'GLM'
+    ) {
         const { ctx } = this
 
         // check processing chat stream
@@ -169,14 +180,14 @@ export default class Chat extends Service {
         }
 
         // acquire dialog
-        let dialog: Dialog | null
         const include: IncludeOptions = {
             model: ctx.model.Chat,
             limit: CHAT_BACKTRACK,
             order: [['id', 'desc']]
         }
-        if (dialogId) dialog = await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
-        else dialog = await ctx.model.Dialog.findOne({ where: { resourceId: null, userId }, include })
+        console.log('================', dialogId)
+        const where = dialogId ? { id: dialogId, userId } : { resourceId: null, userId }
+        const dialog = await ctx.model.Dialog.findOne({ where, include })
         if (!dialog) throw new Error('Dialog is invalid')
         dialog.chats?.reverse()
         dialog.chats?.shift()
