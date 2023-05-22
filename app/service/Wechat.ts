@@ -22,7 +22,7 @@ export default class Wechat extends Service {
 
         const config = await ctx.service.user.getConfig()
         // try to create user
-        const [user, flag] = await ctx.model.User.findOrCreate({
+        const [user, created] = await ctx.model.User.findOrCreate({
             where: {
                 wxOpenId: res.openid
             },
@@ -44,9 +44,10 @@ export default class Wechat extends Service {
         })
 
         // first create, set default user info
-        if (flag) {
+        if (created) {
             user.avatar = config.DEFAULT_AVATAR_USER as string
             user.name = `${ctx.__(config.DEFAULT_USERNAME as string)}${user.id}`
+            await ctx.service.chat.dialog(user.id, 0) // add default dialog resource
         }
 
         // user is existed, update session key

@@ -129,7 +129,7 @@ export default class Chat extends Service {
             // free chat initial content
             let content = `${ctx.__('Hello, I am AI Reading Guy')}\n${ctx.__('Feel free to chat with me')}`
             // resource chat initial content
-            if (id) {
+            if (id !== null) {
                 const resource = await ctx.model.Resource.findOne({ where: { id, isEffect: true, isDel: false } })
                 content = `${ctx.__('Hello, I am AI Reading Guy')}
                        ${ctx.__('I have finished reading the file')} ${resource?.fileName}
@@ -158,7 +158,7 @@ export default class Chat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GPT') {
+    async chat(input: string, userId: number, dialogId?: number, stream: boolean = false, model: AIModelEnum = 'GLM') {
         const { ctx } = this
 
         // check processing chat stream
