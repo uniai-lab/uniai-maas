@@ -15,7 +15,7 @@ import {
 const openai = new OpenAIApi(
     new Configuration({
         apiKey: process.env.OPENAI_API_KEY,
-        basePath: process.env.OPENAI_PROXY
+        basePath: process.env.OPENAI_PROXY || undefined
     })
 )
 
