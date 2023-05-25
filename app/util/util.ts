@@ -10,6 +10,9 @@ import COS from 'cos-nodejs-sdk-v5'
 import { fromBuffer } from 'file-type'
 import pdf from 'pdf-parse'
 import mammoth from 'mammoth'
+import cheerio from 'cheerio'
+import { google } from 'googleapis'
+import { convert } from 'html-to-text'
 import Redis from 'ioredis'
 import { similarity } from 'ml-distance'
 
@@ -24,6 +27,8 @@ const cos = new COS({ SecretId: process.env.COS_SECRET_ID, SecretKey: process.en
 // sensitive words
 const json = JSON.parse(fs.readFileSync(`${__dirname}/sensitive.json`, 'utf-8'))
 const mint = new Mint(json)
+// search engine API
+const customsearch = google.customsearch('v1')
 
 export default {
     // http get request
@@ -33,6 +38,30 @@ export default {
     // http post request
     async post<RequestT, ResponseT>(url: string, body?: RequestT, config?: AxiosRequestConfig): Promise<ResponseT> {
         return (await axios.post(url, body, config)).data
+    },
+    // search online
+    async search(prompt: string, num: number) {
+        return await customsearch.cse.list({
+            auth: process.env.GOOGLE_SEARCH_API_TOKEN,
+            cx: process.env.GOOGLE_SEARCH_ENGINE_ID,
+            q: prompt,
+            num // 返回搜索结果数量
+        })
+    },
+    // extract text from an URL
+    async url2text(url: string) {
+        const html = await this.get<string, string>(url)
+        return this.html2text(html)
+    },
+    // extract text from HTML
+    html2text(html: string) {
+        return convert(html, {
+            selectors: [
+                { selector: 'a', format: 'inline' },
+                { selector: 'button', format: 'skip' },
+                { selector: 'img', format: 'skip' }
+            ]
+        })
     },
     // filter sensitive words and replace
     async filterSensitive(content: string, replace: string = ''): Promise<string> {

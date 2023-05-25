@@ -4,13 +4,15 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse, CreateEmbeddingResponse } from 'openai'
 import { IncomingMessage } from 'http'
+import { WhereOptions, Op } from 'sequelize'
+import { PassThrough } from 'stream'
+import { createParser, EventSourceParser } from 'eventsource-parser'
+import isJSON from '@stdlib/assert-is-json'
 import glm from '@util/glm'
 import vec from '@util/text2vec'
 import gpt from '@util/openai'
 import $ from '@util/util'
 import { Page } from '@model/Page'
-import { WhereOptions } from 'sequelize'
-import { Op } from 'sequelize'
 
 const SAME_SIMILARITY = 0.01
 const MAX_PAGE = 5
@@ -63,6 +65,7 @@ export default class UniAI extends Service {
         while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) pages.pop()
         return { pages: pages.sort((a, b) => a.id - b.id), embed, model: res?.model }
     }
+
     // chat to model
     async chat(
         prompts: ChatCompletionRequestMessage[],
@@ -80,6 +83,56 @@ export default class UniAI extends Service {
             if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts, false, top, temperature, maxLength)
         }
     }
+
+    // parse stream data to UniAIChatResponseData
+    streamParser(model: AIModelEnum) {
+        const stream = new PassThrough()
+        const res: StandardResponse<UniAIChatResponseData> = {
+            status: 1,
+            data: {
+                content: '',
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                model: '',
+                object: ''
+            },
+            msg: ''
+        }
+
+        let parser: EventSourceParser | null = null
+        // chat to GPT
+        if (model === 'GPT')
+            parser = createParser(e => {
+                if (e.type === 'event' && isJSON(e.data)) {
+                    const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
+                    res.data.content += data.choices[0].delta.content || ''
+                    res.data.completionTokens = $.countTokens(res.data.content)
+                    res.data.model = data.model
+                    res.data.object = data.object
+                    res.msg = 'success to get chat stream message from GPT'
+                    if (res.data.content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                }
+            })
+
+        // chat to GLM
+        if (model === 'GLM')
+            parser = createParser(e => {
+                if (e.type === 'event' && isJSON(e.data)) {
+                    const data = JSON.parse(e.data) as GLMChatResponse
+                    res.data.content = data.content
+                    res.data.promptTokens = data.prompt_tokens
+                    res.data.completionTokens = data.completion_tokens
+                    res.data.totalTokens = data.total_tokens
+                    res.data.model = data.model
+                    res.data.object = data.object
+                    res.msg = 'success to get chat stream message from GLM'
+                    if (res.data.content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                }
+            })
+        return { parser, stream }
+    }
+
     // embed content
     async embedding(content: string, fileName: string, filePath: string, fileSize: number, model: AIModelEnum = 'GPT') {
         const { ctx } = this

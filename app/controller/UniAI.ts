@@ -2,10 +2,7 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Inject } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
-import { createParser, EventSourceParser } from 'eventsource-parser'
-import { PassThrough } from 'stream'
 import { IncomingMessage } from 'http'
-import isJSON from '@stdlib/assert-is-json'
 import $ from '@util/util'
 
 @HTTPController({ path: '/ai' })
@@ -72,72 +69,25 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
+            const model = params.model || 'GLM'
 
             const res = (await ctx.service.uniAI.chat(
                 prompts,
                 true,
-                params.model,
+                model,
                 params.top,
                 params.temperature,
                 params.maxLength
             )) as IncomingMessage
 
-            const stream = new PassThrough()
-            const response: StandardResponse<UniAIChatResponseData> = {
-                status: 1,
-                data: {
-                    content: '',
-                    promptTokens: 0,
-                    completionTokens: 0,
-                    totalTokens: 0,
-                    model: '',
-                    object: ''
-                },
-                msg: ''
-            }
+            // parse stream data
+            const { parser, stream } = ctx.service.uniAI.streamParser(model)
+            if (!parser) throw new Error('Error to create parser')
 
-            let parser: EventSourceParser
-            // chat to GPT
-            if (params.model === 'GPT')
-                parser = createParser(e => {
-                    if (e.type === 'event')
-                        if (isJSON(e.data)) {
-                            const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
-                            response.data.content += data.choices[0].delta.content || ''
-                            response.data.model = data.model
-                            response.data.object = data.object
-                            response.msg = 'success to get chat stream message from GPT'
-                            if (response.data.content) stream.write(`data: ${JSON.stringify(response)}\n\n`)
-                        }
-                })
-
-            // chat to GLM
-            if (params.model === 'GLM')
-                parser = createParser(e => {
-                    if (e.type === 'event')
-                        if (isJSON(e.data)) {
-                            const data = JSON.parse(e.data) as GLMChatResponse
-                            response.data.content = data.content
-                            response.data.promptTokens = data.prompt_tokens
-                            response.data.completionTokens = data.completion_tokens
-                            response.data.totalTokens = data.total_tokens
-                            response.data.model = data.model
-                            response.data.object = data.object
-                            response.msg = 'success to get chat stream message from GLM'
-                            if (response.data.content) stream.write(`data: ${JSON.stringify(response)}\n\n`)
-                        }
-                })
-
-            res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-            res.on('error', () => {
-                stream.destroy(new Error(`Chat stream error`))
-            })
-            res.on('end', () => {
-                stream.end()
-            })
-            res.on('close', () => {
-                stream.destroy()
-            })
+            res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
+            res.on('error', e => stream.destroy(e))
+            res.on('end', () => stream.end())
+            res.on('close', () => stream.destroy())
 
             ctx.set({
                 'Content-Type': 'text/event-stream',
@@ -147,7 +97,6 @@ export default class UniAI {
             })
             ctx.body = stream
         } catch (e) {
-            console.error(e)
             ctx.service.res.error(e as Error)
         }
     }

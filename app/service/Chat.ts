@@ -152,7 +152,7 @@ export default class Chat extends Service {
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId?, limit: number = 15) {
+    async listChat(userId: number, dialogId: number = 0, limit: number = 15) {
         const { ctx } = this
         const include: IncludeOptions = { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
         const dialog = dialogId
@@ -185,7 +185,7 @@ export default class Chat extends Service {
             limit: CHAT_BACKTRACK,
             order: [['id', 'desc']]
         }
-        console.log('================', dialogId)
+
         const where = dialogId ? { id: dialogId, userId } : { resourceId: null, userId }
         const dialog = await ctx.model.Dialog.findOne({ where, include })
         if (!dialog) throw new Error('Dialog is invalid')
@@ -234,42 +234,37 @@ export default class Chat extends Service {
                 end: false,
                 time: new Date().getTime()
             }
-            const GPTDataParse = createParser(e => {
-                if (e.type === 'event')
-                    if (isJSON(e.data)) {
-                        const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
-                        cache.content += data.choices[0].delta.content || ''
-                        if (cache.content) $.setCache(userId, cache)
-                    }
-            })
-            const GLMDataParse = createParser(e => {
-                if (e.type === 'event') {
-                    if (isJSON(e.data)) {
-                        const data = JSON.parse(e.data) as GLMChatResponse
-                        cache.content = data.content
-                        if (cache.content) $.setCache(userId, cache)
-                    }
-                }
-            })
 
-            let res: IncomingMessage
+            let res: IncomingMessage | null = null
             let parser: EventSourceParser
-            switch (model) {
-                case 'GPT':
-                    res = await gpt.chat<IncomingMessage>(prompts, true)
-                    parser = GPTDataParse
-                    break
-                case 'GLM':
-                    parser = GLMDataParse
-                    res = await glm.chat<IncomingMessage>(prompts, true, 4096, 0.5)
-                    break
-                default:
-                    parser = GLMDataParse
-                    res = await glm.chat<IncomingMessage>(prompts, true, 4096, 0.5)
+            if (model === 'GPT') {
+                res = await gpt.chat<IncomingMessage>(prompts, true)
+                parser = createParser(e => {
+                    if (e.type === 'event')
+                        if (isJSON(e.data)) {
+                            const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
+                            cache.content += data.choices[0].delta.content || ''
+                            if (cache.content) $.setCache(userId, cache)
+                        }
+                })
+            }
+            if (model === 'GLM') {
+                res = await glm.chat<IncomingMessage>(prompts, true)
+                parser = createParser(e => {
+                    if (e.type === 'event') {
+                        if (isJSON(e.data)) {
+                            const data = JSON.parse(e.data) as GLMChatResponse
+                            cache.content = data.content
+                            if (cache.content) $.setCache(userId, cache)
+                        }
+                    }
+                })
             }
 
+            if (!res) throw new Error('Error to get response from model')
+
             await $.setCache(userId, cache)
-            res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
+            res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
             res.on('error', e => this.streamEnd(userId, cache, e))
             res.on('end', () => this.streamEnd(userId, cache))
         }
@@ -286,7 +281,7 @@ export default class Chat extends Service {
 
             // request GLM
             if (model === 'GLM') {
-                const res = await glm.chat<GLMChatResponse>(prompts, false, 4096, 0.5, 1)
+                const res = await glm.chat<GLMChatResponse>(prompts)
                 const content = res.content
                 if (!content) throw new Error('Fail to get GLM sync response')
                 await glm.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
@@ -343,6 +338,7 @@ export default class Chat extends Service {
         else if (user.chance.chatChance > 0) await user.chance.decrement({ chatChance: 1 })
         else throw new Error('Chance of chat not enough, waiting for one week')
     }
+
     // get user and reset free chat/upload chance
     async getUserResetChance(userId: number) {
         const { ctx } = this
