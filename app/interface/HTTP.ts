@@ -163,6 +163,8 @@ interface SignInPost {
     password: string
 }
 
+/*===========================Admin POST======================*/
+
 interface AdminUpdateResourcePost {
     resourceId: number
     fileName: string
@@ -187,7 +189,7 @@ interface AdminUpdateUserPost {
     countryCode?: number
 }
 
-/*==================================AI API=================================*/
+/*================================UniAI API=================================*/
 interface UniAIChatPrompt {
     role: string
     content: string
@@ -199,8 +201,9 @@ interface UniAIChatPost {
     top?: number
     temperature?: number
     model?: AIModelEnum
+    searchNum?: number
 }
-interface UniAIQueryResourcePost {
+interface UniAIResourcePost {
     prompts: UniAIChatPrompt[]
     model?: AIModelEnum
     resourceId?: number

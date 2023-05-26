@@ -4,6 +4,7 @@ import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBo
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
 import { IncomingMessage } from 'http'
 import $ from '@util/util'
+import { PassThrough } from 'stream'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -81,7 +82,8 @@ export default class UniAI {
             )) as IncomingMessage
 
             // parse stream data
-            const { parser, stream } = ctx.service.uniAI.streamParser(model)
+            const stream = new PassThrough()
+            const parser = ctx.service.uniAI.chatStreamParser(stream, model)
             if (!parser) throw new Error('Error to create parser')
 
             res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
@@ -102,7 +104,7 @@ export default class UniAI {
     }
 
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
-    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIQueryResourcePost) {
+    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIResourcePost) {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')

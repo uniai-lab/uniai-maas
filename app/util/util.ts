@@ -4,13 +4,12 @@ import axios, { AxiosRequestConfig } from 'axios'
 import crypto from 'crypto'
 import store from 'store2'
 import { sentences } from 'sbd'
-import { encode } from 'gpt-3-encoder'
+import { encode, decode } from 'gpt-3-encoder'
 import Mint from 'mint-filter'
 import COS from 'cos-nodejs-sdk-v5'
 import { fromBuffer } from 'file-type'
 import pdf from 'pdf-parse'
 import mammoth from 'mammoth'
-import cheerio from 'cheerio'
 import { google } from 'googleapis'
 import { convert } from 'html-to-text'
 import Redis from 'ioredis'
@@ -32,7 +31,11 @@ const customsearch = google.customsearch('v1')
 
 export default {
     // http get request
-    async get<RequestT, ResponseT>(url: string, params?: RequestT, config?: AxiosRequestConfig): Promise<ResponseT> {
+    async get<RequestT = any, ResponseT = any>(
+        url: string,
+        params?: RequestT,
+        config?: AxiosRequestConfig
+    ): Promise<ResponseT> {
         return (await axios.get(url, { params, ...config })).data
     },
     // http post request
@@ -114,6 +117,15 @@ export default {
     // count tokens in the text, by GPT2
     countTokens(text: string): number {
         return encode(text).length
+    },
+    subTokens(text: string, slice: number, from: number = 0) {
+        const tokens = encode(text)
+        const nTokens: number[] = []
+        for (let i = from; i < tokens.length; i++) {
+            if (nTokens.length >= slice) break
+            nTokens.push(tokens[i])
+        }
+        return decode(nTokens)
     },
     // extract text from file buffer
     async extractText(buffer: Buffer) {

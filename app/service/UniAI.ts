@@ -6,7 +6,7 @@ import { ChatCompletionRequestMessage, CreateChatCompletionResponse, CreateEmbed
 import { IncomingMessage } from 'http'
 import { WhereOptions, Op } from 'sequelize'
 import { PassThrough } from 'stream'
-import { createParser, EventSourceParser } from 'eventsource-parser'
+import { createParser } from 'eventsource-parser'
 import isJSON from '@stdlib/assert-is-json'
 import glm from '@util/glm'
 import vec from '@util/text2vec'
@@ -85,8 +85,8 @@ export default class UniAI extends Service {
     }
 
     // parse stream data to UniAIChatResponseData
-    streamParser(model: AIModelEnum) {
-        const stream = new PassThrough()
+    chatStreamParser(stream: PassThrough, model: AIModelEnum) {
+        // response data
         const res: StandardResponse<UniAIChatResponseData> = {
             status: 1,
             data: {
@@ -100,10 +100,9 @@ export default class UniAI extends Service {
             msg: ''
         }
 
-        let parser: EventSourceParser | null = null
-        // chat to GPT
+        // parser for GPT stream
         if (model === 'GPT')
-            parser = createParser(e => {
+            return createParser(e => {
                 if (e.type === 'event' && isJSON(e.data)) {
                     const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
                     res.data.content += data.choices[0].delta.content || ''
@@ -115,9 +114,9 @@ export default class UniAI extends Service {
                 }
             })
 
-        // chat to GLM
+        // parser for GLM stream
         if (model === 'GLM')
-            parser = createParser(e => {
+            return createParser(e => {
                 if (e.type === 'event' && isJSON(e.data)) {
                     const data = JSON.parse(e.data) as GLMChatResponse
                     res.data.content = data.content
@@ -130,7 +129,6 @@ export default class UniAI extends Service {
                     if (res.data.content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 }
             })
-        return { parser, stream }
     }
 
     // embed content
@@ -139,6 +137,7 @@ export default class UniAI extends Service {
         const userId = 0
         const typeId = 1
 
+        // embedding by GPT
         if (model === 'GPT') {
             // check same similarity for first one page, 1000 tokens
             const p: string[] = await $.splitPage(content, TOKEN_FIRST_PAGE)
@@ -179,6 +178,8 @@ export default class UniAI extends Service {
                 { include: ctx.model.Page }
             )
         }
+
+        // embedding by GLM vec
         if (model === 'GLM') {
             // check same similarity for first one page, 800 tokens
             const p: string[] = await $.splitPage(content, TOKEN_FIRST_PAGE)

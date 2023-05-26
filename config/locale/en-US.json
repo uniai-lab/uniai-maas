@@ -26,5 +26,8 @@
     "File content cannot be split": "File content cannot be split.",
     "Main content of this document, including the title, summary, abstract, and authors": "Main content of this document, the first page, including the title, summary, abstract, and authors:",
     "File not support": "File not support.",
-    "Feel free to chat with me": "Feel free to chat with me!"
+    "Feel free to chat with me": "Feel free to chat with me!",
+    "searching": "Searching",
+    "searched": "Searched",
+    "references": " The references are as follows:"
 }
