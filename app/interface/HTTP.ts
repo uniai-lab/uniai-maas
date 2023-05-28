@@ -51,13 +51,13 @@ interface UserinfoResponseData {
     id: number
     name: string
     username: string
-    phone: string
-    countryCode: number
+    phone?: string
+    countryCode?: number
     avatar: string
     token: string
     tokenTime: Date
-    wxOpenId: string
-    wxUnionId: string
+    wxOpenId?: string
+    wxUnionId?: string
     chance?: {
         level: number
         uploadSize: number
@@ -201,7 +201,7 @@ interface UniAIChatPost {
     top?: number
     temperature?: number
     model?: AIModelEnum
-    searchNum?: number
+    online?: boolean
 }
 interface UniAIResourcePost {
     prompts: UniAIChatPrompt[]

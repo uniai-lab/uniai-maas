@@ -1,14 +1,16 @@
 /** @format */
 
-import * as fs from 'fs'
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
+import { Service } from 'egg'
+import $ from '@util/util'
+import md5 from 'md5'
+import * as fs from 'fs'
 import {
     ChatCompletionRequestMessage,
     ChatCompletionRequestMessageRoleEnum,
     ChatCompletionResponseMessageRoleEnum,
     CreateChatCompletionResponse
 } from 'openai'
-import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
@@ -19,18 +21,128 @@ import isJSON from '@stdlib/assert-is-json'
 import gpt from '@util/openai' // OpenAI models
 import glm from '@util/glm' // GLM models
 import vec from '@util/text2vec'
-import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 3000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
-// const FIND_SIMILARITY = 0.23
 const CHAT_BACKTRACK = 3
 const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
-export default class Chat extends Service {
+export default class WeChat extends Service {
+    // use wechat to login, get code, return new user
+    async signIn(code: string) {
+        const { ctx } = this
+
+        const authURL = process.env.WX_APP_AUTH_URL // wx api, get login auth
+        const appId = process.env.WX_APP_ID // wx AppID
+        const appSecret = process.env.WX_APP_SECRET // wx AppSecret
+
+        // get access_token, openid, unionid
+        const url = `${authURL}?grant_type=authorization_code&appid=${appId}&secret=${appSecret}&js_code=${code}`
+        const res = await $.get<undefined, WXAuthCodeAPI>(url)
+        if (!res.openid || !res.session_key) throw new Error('Fail to get openid or session key')
+
+        const config = await ctx.service.user.getConfig()
+        // try to create user
+        const [user, created] = await ctx.model.User.findOrCreate({
+            where: {
+                wxOpenId: res.openid
+            },
+            defaults: {
+                chance: {
+                    level: 0,
+                    uploadSize: 5e6,
+                    chatChance: 0,
+                    chatChanceUpdateAt: new Date(),
+                    chatChanceFree: parseInt(config.DEFAULT_FREE_CHAT_CHANCE || '0'),
+                    chatChanceFreeUpdateAt: new Date(),
+                    uploadChance: 0,
+                    uploadChanceUpdateAt: new Date(),
+                    uploadChanceFree: parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0'),
+                    uploadChanceFreeUpdateAt: new Date()
+                }
+            },
+            include: ctx.model.UserChance
+        })
+
+        // first create, set default user info
+        if (created) {
+            user.avatar = config.DEFAULT_AVATAR_USER as string
+            user.name = `${ctx.__(config.DEFAULT_USERNAME as string)} NO.${user.id}`
+            // add default dialog resource
+            if (config.INIT_RESOURCE_ID) await this.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
+            await this.dialog(user.id) // add free chat dialog
+        }
+
+        // user is existed, update session key
+        user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
+        user.tokenTime = new Date()
+        user.wxSessionKey = res.session_key
+        return await user.save()
+    }
+
+    // user sign phone number
+    async signUp(code: string, openid: string, iv: string, encryptedData: string, fid?: number) {
+        const { ctx } = this
+
+        const user = await ctx.model.User.findOne({ where: { wxOpenId: openid }, include: ctx.model.UserChance })
+        if (!user || !user.wxSessionKey) throw new Error('Fail to find user')
+
+        if (user.phone && user.countryCode) {
+            // directly sign in
+            user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
+            user.tokenTime = new Date()
+        } else {
+            // sign up
+            const appId = process.env.WX_APP_ID
+            // decode user info
+            const res = $.decryptData(encryptedData, iv, user.wxSessionKey, appId)
+            if (res && res.phoneNumber && res.countryCode) {
+                user.phone = res.phoneNumber
+                user.countryCode = res.countryCode
+                user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
+                user.tokenTime = new Date()
+                if (fid) await this.shareReward(fid)
+            } else throw new Error('Error to decode wechat userinfo')
+        }
+
+        await user.save()
+        return user
+    }
+
+    // user share and another one sign up, add reward
+    async shareReward(userId: number) {
+        const { ctx } = this
+        const uc = await ctx.model.UserChance.findOne({ where: { userId } })
+        if (!uc) throw Error('Fail to reward')
+
+        const config = await ctx.service.user.getConfig()
+        uc.uploadChance += parseInt(config.SHARE_REWARD_UPLOAD_CHANCE || '0')
+        uc.chatChance += parseInt(config.SHARE_REWARD_CHAT_CHANCE || '0')
+        uc.uploadChanceUpdateAt = new Date()
+        uc.chatChanceUpdateAt = new Date()
+        return await uc.save()
+    }
+
+    // user follow wechat public account, add reward
+    async followReward(unionId: string, openId: string) {
+        const { ctx } = this
+        const user = await ctx.model.User.findOne({
+            where: { wxUnionId: unionId, wxPublicOpenId: null },
+            include: ctx.model.UserChance
+        })
+        if (!user || !user.chance) throw Error('Fail to reward')
+
+        const config = await ctx.service.user.getConfig()
+        user.chance.chatChance += parseInt(config.FOLLOW_REWARD_CHAT_CHANCE || '0')
+        user.chance.chatChanceUpdateAt = new Date()
+        user.wxPublicOpenId = openId // public open id
+        await user.chance.save()
+        return await user.save()
+    }
+
     // list all dialogs
     async listDialog(userId: number) {
         const { ctx } = this
@@ -289,7 +401,7 @@ export default class Chat extends Service {
             }
         }
     }
-    async streamEnd(userId: number, cache: ChatStreamCache, error?: Error) {
+    private async streamEnd(userId: number, cache: ChatStreamCache, error?: Error) {
         cache.end = true
         cache.error = error
         if (cache.content) {
@@ -304,7 +416,7 @@ export default class Chat extends Service {
     }
 
     // save chat
-    async saveChat(
+    private async saveChat(
         dialogId: number,
         role: ChatCompletionRequestMessageRoleEnum | ChatCompletionResponseMessageRoleEnum,
         content: string

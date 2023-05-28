@@ -13,7 +13,6 @@ export default {
         })
     },
     async embedding(prompt: CreateEmbeddingRequestInput) {
-        const url = process.env.GLM_API as string
-        return (await $.post(`${url}/embedding`, { prompt })) as Text2VecResponse
+        return (await $.post(`${process.env.GLM_API}/embedding`, { prompt })) as Text2VecResponse
     }
 }

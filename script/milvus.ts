@@ -6,7 +6,7 @@ import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { ResStatus } from '@zilliz/milvus2-sdk-node/dist/milvus/types'
 import { program } from 'commander'
 import { resource, page } from './collections'
-const milvusClient = new MilvusClient(process.env.MILVUS_ADDR as string)
+const milvusClient = new MilvusClient(process.env.MILVUS_ADDR)
 
 async function init(): Promise<void> {
     const extra_params = {

@@ -15,7 +15,7 @@ export default class Admin {
             if (!resourceTypeId) throw new Error('No resource type id')
             if (params.fileName) file.filename = params.fileName // use customize filename
 
-            const res = await ctx.service.chat.upload(file, 0, resourceTypeId)
+            const res = await ctx.service.weChat.upload(file, 0, resourceTypeId)
             const resource: UploadResponseData = {
                 id: res.id,
                 typeId: res.typeId,

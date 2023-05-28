@@ -24,7 +24,7 @@ export const resource: CreateCollectionReq = {
             name: 'embedding',
             data_type: DataType.FloatVector,
             type_params: {
-                dim: process.env.OPENAI_EMBED_DIM as string
+                dim: process.env.OPENAI_EMBED_DIM
             },
             description: 'Embedding of each resource'
         },
@@ -64,7 +64,7 @@ export const page: CreateCollectionReq = {
             name: 'embedding',
             data_type: DataType.FloatVector,
             type_params: {
-                dim: process.env.OPENAI_EMBED_DIM as string
+                dim: process.env.OPENAI_EMBED_DIM
             },
             description: 'Embedding of one page'
         },

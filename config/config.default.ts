@@ -33,7 +33,7 @@ export default (appInfo: EggAppInfo) => {
         dialect: 'postgres',
         host: process.env.POSTGRES_HOST,
         password: process.env.POSTGRES_PASSWORD,
-        port: parseInt(process.env.POSTGRES_PORT as string),
+        port: process.env.POSTGRES_PORT,
         username: process.env.POSTGRES_USER,
         database: process.env.POSTGRES_DB
     }

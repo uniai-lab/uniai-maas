@@ -30,7 +30,7 @@ export default class WeChat {
             const { code } = params
             if (!code) throw new Error('Code is null')
 
-            const user = await ctx.service.wechat.signIn(code)
+            const user = await ctx.service.weChat.signIn(code)
             const data: UserinfoResponseData = {
                 id: user.id,
                 username: user.username,
@@ -65,7 +65,7 @@ export default class WeChat {
             if (!iv) throw new Error('IV can not be null')
             if (!encryptedData) throw new Error('EncryptedData can not be null')
 
-            const user = await ctx.service.wechat.signUp(code, openid, iv, encryptedData, fid)
+            const user = await ctx.service.weChat.signUp(code, openid, iv, encryptedData, fid)
 
             const data: UserinfoResponseData = {
                 id: user.id,
@@ -98,7 +98,7 @@ export default class WeChat {
     async userInfo(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            const { user, config } = await ctx.service.chat.getUserResetChance(userId)
+            const { user, config } = await ctx.service.weChat.getUserResetChance(userId)
 
             const task: Array<UserTask> = []
             if (config.task)
@@ -145,8 +145,8 @@ export default class WeChat {
             const dialogId = params.dialogId
             const model = params.model
 
-            await ctx.service.chat.reduceChatChance(userId)
-            const res = await ctx.service.chat.chat(input, userId, dialogId, false, model)
+            await ctx.service.weChat.reduceChatChance(userId)
+            const res = await ctx.service.weChat.chat(input, userId, dialogId, false, model)
 
             if (!res) throw new Error('Fail to get sync response')
             const data: ChatResponseData = {
@@ -155,7 +155,7 @@ export default class WeChat {
                 dialogId: res.dialogId,
                 chatId: res.id,
                 userId,
-                avatar: process.env.DEFAULT_AVATAR_AI as string
+                avatar: process.env.DEFAULT_AVATAR_AI
             }
             ctx.service.res.success('Chat success result', data)
         } catch (e) {
@@ -163,7 +163,7 @@ export default class WeChat {
             ctx.service.res.success('Chat error result', {
                 type: false,
                 content: (e as Error).message,
-                avatar: process.env.DEFAULT_AVATAR_AI as string
+                avatar: process.env.DEFAULT_AVATAR_AI
             })
         }
     }
@@ -180,8 +180,8 @@ export default class WeChat {
             const dialogId = params.dialogId
             const model = params.model
 
-            await ctx.service.chat.reduceChatChance(userId)
-            await ctx.service.chat.chat(input, userId, dialogId, true, model)
+            await ctx.service.weChat.reduceChatChance(userId)
+            await ctx.service.weChat.chat(input, userId, dialogId, true, model)
             ctx.service.res.success('Success start chat stream', null)
         } catch (e) {
             console.error(e)
@@ -195,17 +195,19 @@ export default class WeChat {
     async getChatStream(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            const res = await ctx.service.chat.getChatStream(userId)
+            const res = await ctx.service.weChat.getChatStream(userId)
 
             if (!res) throw new Error('Chat not found or timeout')
             if (res.error) throw res.error
 
+            // filter sensitive
+            const content = await $.filterSensitive(res.content, ctx.__('Content contains non compliant information'))
             const data: ChatStreamResponseData = {
                 type: false,
-                content: await $.filterSensitive(res.content, ctx.__('Content contains non compliant information')),
-                userId: userId,
+                content,
+                userId,
                 dialogId: res.dialogId,
-                avatar: process.env.DEFAULT_AVATAR_AI as string,
+                avatar: process.env.DEFAULT_AVATAR_AI,
                 chatId: res.chatId,
                 end: res.end
             }
@@ -221,10 +223,9 @@ export default class WeChat {
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListPost) {
         try {
             const userId = ctx.userId as number
-            if (!userId) throw new Error('No user id')
-            const dialogId = params.dialogId as number
+            const dialogId = params.dialogId
 
-            const res = await ctx.service.chat.listChat(userId, dialogId, 20)
+            const res = await ctx.service.weChat.listChat(userId, dialogId, 20)
             if (!res) throw new Error('Dialog not found')
             const data: ChatResponseData[] = []
             for (const item of res.chats)
@@ -235,10 +236,7 @@ export default class WeChat {
                         item.content,
                         ctx.__('Content contains non compliant information')
                     ),
-                    avatar:
-                        item.role === 'user'
-                            ? (process.env.DEFAULT_AVATAR_USER as string)
-                            : (process.env.DEFAULT_AVATAR_AI as string),
+                    avatar: item.role === 'user' ? process.env.DEFAULT_AVATAR_USER : process.env.DEFAULT_AVATAR_AI,
                     dialogId: res.id,
                     userId: res.userId
                 })
@@ -254,14 +252,13 @@ export default class WeChat {
     async upload(@Context() ctx: UserContext, @HTTPBody() params: ResourceUploadPost) {
         try {
             const userId = ctx.userId as number
-            if (!userId) throw new Error('No user id')
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
             const resourceTypeId = params.resourceTypeId
             if (!resourceTypeId) throw new Error('No resource type id')
             if (params.fileName) file.filename = params.fileName // use customize filename
 
-            const res = await ctx.service.chat.upload(file, userId, resourceTypeId)
+            const res = await ctx.service.weChat.upload(file, userId, resourceTypeId)
             const resource: UploadResponseData = {
                 id: res.id,
                 typeId: res.typeId,
@@ -276,8 +273,8 @@ export default class WeChat {
                 updatedAt: res.updatedAt
             }
             // create dialog
-            const dialog = await ctx.service.chat.dialog(userId, res.id)
-            await ctx.service.chat.reduceUploadChance(userId)
+            const dialog = await ctx.service.weChat.dialog(userId, res.id)
+            await ctx.service.weChat.reduceUploadChance(userId)
 
             ctx.service.res.success('success to upload', { resource, dialog })
         } catch (e) {
@@ -291,7 +288,7 @@ export default class WeChat {
     async listDialogResource(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            const res = await ctx.service.chat.listDialog(userId)
+            const res = await ctx.service.weChat.listDialog(userId)
             const data: DialogResponseData[] = []
             for (const item of res)
                 data.push({

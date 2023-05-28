@@ -22,11 +22,9 @@ export default class LeChat {
                 name: res.name,
                 phone: res.phone,
                 countryCode: res.countryCode,
-                avatar: res.avatar,
+                avatar: res.avatar || process.env.DEFAULT_AVATAR_USER,
                 token: res.token,
-                tokenTime: res.tokenTime,
-                wxOpenId: res.wxOpenId,
-                wxUnionId: res.wxUnionId
+                tokenTime: res.tokenTime
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
@@ -38,17 +36,17 @@ export default class LeChat {
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: UniAIChatPost) {
         const model = params.model || 'GLM'
-        const searchNum = params.searchNum || 0
+        const online = params.online || false
         const prompts = params.prompts as ChatCompletionRequestMessage[]
         if (!prompts.length) throw new Error('Empty prompts')
         const query = prompts.pop() as ChatCompletionRequestMessage
         const stream = new PassThrough()
 
         ctx.service.leChat
-            .searchStream(query.content, searchNum, stream)
+            .searchStream(online ? query.content : '', stream)
             .then(res => {
-                if (res.length) prompts.push({ role: 'system', content: ctx.__('references') })
                 for (const content of res) prompts.push({ role: 'system', content })
+                if (res.length) prompts.push({ role: 'system', content: ctx.__('references') })
                 prompts.push(query)
                 console.log(prompts)
 
@@ -72,10 +70,8 @@ export default class LeChat {
                 res.on('close', () => stream.destroy())
             })
             .catch((e: Error) => {
-                console.error(e.message)
-                ctx.service.res.error(e as Error)
-                stream.end()
-                stream.destroy()
+                console.error(e)
+                stream.end().destroy(e)
             })
 
         ctx.set({
@@ -100,11 +96,9 @@ export default class LeChat {
                 name: res.name,
                 phone: res.phone,
                 countryCode: res.countryCode,
-                avatar: res.avatar,
+                avatar: res.avatar || process.env.DEFAULT_AVATAR_USER,
                 token: res.token,
-                tokenTime: res.tokenTime,
-                wxOpenId: res.wxOpenId,
-                wxUnionId: res.wxUnionId
+                tokenTime: res.tokenTime
             }
             ctx.service.res.success('User information', data)
         } catch (e) {

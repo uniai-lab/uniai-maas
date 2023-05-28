@@ -14,18 +14,17 @@ export default function auth() {
             attributes: ['id', 'tokenTime']
         })
 
-        // check user existed and login is expired
-        if (user && new Date().getTime() - user.tokenTime.getTime() < EXPIRE) {
-            ctx.userId = user.id
-            await next()
-        } else ctx.service.res.noAuth()
+        // check user existed and login if expired
+        if (user && new Date().getTime() - user.tokenTime.getTime() < EXPIRE) ctx.userId = user.id
+        else return ctx.service.res.noAuth()
+        await next()
     }
 }
 // check admin auth
 export function authAdmin() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
-        // check admin token, from header or body
-        const token: string = ctx.get('token') || ctx.request.body.token
+        // check admin token from header
+        const token: string = ctx.get('token')
         if (token === process.env.ADMIN_TOKEN) await next()
         else ctx.service.res.noAuth()
     }

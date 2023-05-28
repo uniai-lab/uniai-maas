@@ -44,16 +44,18 @@ export default {
     },
     // search online
     async search(prompt: string, num: number) {
-        return await customsearch.cse.list({
-            auth: process.env.GOOGLE_SEARCH_API_TOKEN,
-            cx: process.env.GOOGLE_SEARCH_ENGINE_ID,
-            q: prompt,
-            num // 返回搜索结果数量
-        })
+        return (
+            await customsearch.cse.list({
+                auth: process.env.GOOGLE_SEARCH_API_TOKEN,
+                cx: process.env.GOOGLE_SEARCH_ENGINE_ID,
+                q: prompt,
+                num // 返回搜索结果数量
+            })
+        ).data
     },
     // extract text from an URL
     async url2text(url: string) {
-        const html = await this.get<string, string>(url)
+        const html = (await this.get(url, undefined, { timeout: 5000 })) as string
         return this.html2text(html)
     },
     // extract text from HTML
@@ -169,8 +171,8 @@ export default {
     // upload to oss/cos
     async cosUpload(fileName: string, filePath: string) {
         return await cos.uploadFile({
-            Bucket: process.env.COS_BUCKET as string,
-            Region: process.env.COS_REGION as string,
+            Bucket: process.env.COS_BUCKET,
+            Region: process.env.COS_REGION,
             Key: fileName,
             FilePath: filePath
         })

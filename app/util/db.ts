@@ -4,16 +4,16 @@
  * @format
  */
 
-import {MutationResult, QueryResults} from '@zilliz/milvus2-sdk-node/dist/milvus/types'
-import {MilvusClient} from '@zilliz/milvus2-sdk-node'
+import { MutationResult, QueryResults } from '@zilliz/milvus2-sdk-node/dist/milvus/types'
+import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 
-const milvusClient = new MilvusClient(process.env.MILVUS_ADDR as string)
+const milvusClient = new MilvusClient(process.env.MILVUS_ADDR)
 
 export default {
     async insert(collection: string, data: Array<any>): Promise<MutationResult> {
         return await milvusClient.dataManager.insert({
             collection_name: collection,
-            fields_data: data,
+            fields_data: data
         })
     },
 
@@ -21,8 +21,8 @@ export default {
         const results = await milvusClient.dataManager.query({
             collection_name: collection,
             expr,
-            output_fields: output,
+            output_fields: output
         })
         return results
-    },
+    }
 }

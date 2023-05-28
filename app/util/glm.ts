@@ -32,7 +32,7 @@ export default {
                 prompt = ''
             } else prompt += `${item.content}\n`
 
-        const url = process.env.GLM_API as string
+        const url = process.env.GLM_API
         const params: GLMChatRequest = { prompt: prompt.trim(), temperature, top_p: top, max_length: maxLength }
         if (history.length) params.history = [history]
 
