@@ -87,7 +87,7 @@ export default class UniAI {
             if (!parser) throw new Error('Error to create parser')
 
             res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-            res.on('error', e => stream.destroy(e))
+            res.on('error', e => stream.end().destroy(e))
             res.on('end', () => stream.end())
             res.on('close', () => stream.destroy())
 

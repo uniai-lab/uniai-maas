@@ -30,28 +30,31 @@ export default class LeChat extends Service {
         }
 
         const { ctx } = this
-        // search on google
-        res.data.content += `🔍 ${ctx.__('searching')} ${query}\n`
-        stream?.write(`data: ${JSON.stringify(res)}\n\n`)
-        const data = await $.search(query, SEARCH_PAGE_NUM)
-        // crawler web page
-        for (const item of data.items || []) {
-            const url = item.link
-            const title = item.title
-            if (!url) continue
-            res.data.content += `${title} ${url}`
+        try {
+            // search on google
+            res.data.content += `🔍 ${ctx.__('searching')} ${query}\n`
             stream?.write(`data: ${JSON.stringify(res)}\n\n`)
-            await $.url2text(url)
-                .then((text: string) => {
-                    res.data.content += ' ✅\n'
-                    results.push($.subTokens($.tinyText(text), MAX_PAGE_TOKEN))
-                })
-                .catch((e: Error) => (res.data.content += ` ❌ ${e.message}\n`))
-                .finally(() => stream?.write(`data: ${JSON.stringify(res)}\n\n`))
-        }
-        res.data.content += `${ctx.__('searched')} ${query} ${ctx.__('done')} 👌\n`
-        stream?.write(`data: ${JSON.stringify(res)}\n\n`)
+            const data = await $.search(query, SEARCH_PAGE_NUM)
+            // crawler web page
+            for (const item of data.items || []) {
+                const url = item.link
+                const title = item.title
+                if (!url) continue
+                res.data.content += `${title} ${url} `
+                stream?.write(`data: ${JSON.stringify(res)}\n\n`)
+                const text = await $.url2text(url)
+                res.data.content += '✅\n'
+                results.push($.subTokens($.tinyText(text), MAX_PAGE_TOKEN))
+            }
+            res.data.content += `${ctx.__('searched')} ${query} ${ctx.__('done')} 👌\n`
+            stream?.write(`data: ${JSON.stringify(res)}\n\n`)
 
-        return results
+            return results
+        } catch (e) {
+            res.data.content += `❌ ${(e as Error).message}\n`
+            return []
+        } finally {
+            stream?.write(`data: ${JSON.stringify(res)}\n\n`)
+        }
     }
 }

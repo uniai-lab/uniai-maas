@@ -45,8 +45,14 @@ export default class LeChat {
         ctx.service.leChat
             .searchStream(online ? query.content : '', stream)
             .then(res => {
-                for (const content of res) prompts.push({ role: 'system', content })
-                if (res.length) prompts.push({ role: 'system', content: ctx.__('references') })
+                if (online) {
+                    prompts.push({ role: 'system', content: `${ctx.__('today')}${new Date().toLocaleString()}` })
+                    if (res.length) {
+                        prompts.push({ role: 'user', content: ctx.__('references') })
+                        for (const content of res) prompts.push({ role: 'system', content })
+                        prompts.push({ role: 'user', content: ctx.__('answer references') })
+                    }
+                }
                 prompts.push(query)
                 console.log(prompts)
 
@@ -65,7 +71,7 @@ export default class LeChat {
                 if (!parser) throw new Error('Error to create parser')
 
                 res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-                res.on('error', e => stream.destroy(e))
+                res.on('error', e => stream.end().destroy(e))
                 res.on('end', () => stream.end())
                 res.on('close', () => stream.destroy())
             })
