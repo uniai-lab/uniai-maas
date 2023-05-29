@@ -1,16 +1,27 @@
 /** @format */
 
-import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Inject } from '@eggjs/tegg'
+import {
+    HTTPController,
+    HTTPMethod,
+    HTTPMethodEnum,
+    Context,
+    EggContext,
+    HTTPBody,
+    Inject,
+    Middleware
+} from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
 import { IncomingMessage } from 'http'
 import $ from '@util/util'
 import { PassThrough } from 'stream'
+import { authAdmin } from '@middleware/auth'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
     @Inject()
     logger: EggContext
 
+    @Middleware(authAdmin())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
         try {
@@ -65,6 +76,7 @@ export default class UniAI {
         }
     }
 
+    @Middleware(authAdmin())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
         try {
@@ -103,6 +115,7 @@ export default class UniAI {
         }
     }
 
+    @Middleware(authAdmin())
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
     async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIResourcePost) {
         try {
@@ -128,6 +141,7 @@ export default class UniAI {
         }
     }
 
+    @Middleware(authAdmin())
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: UniAIEmbeddingPost) {
         try {
