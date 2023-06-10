@@ -3,8 +3,6 @@
  */
 
 import * as dotenv from 'dotenv'
-dotenv.config()
-import * as fs from 'fs'
 import { Sequelize } from 'sequelize-typescript'
 import { program } from 'commander'
 
@@ -23,11 +21,28 @@ import { Prompt } from '../app/model/Prompt'
 import { SensitiveWord } from '../app/model/SensitiveWord'
 
 // initial data source
-import openai from '../app/util/openai'
 import configs from './defaults/config'
 import resourceTypes from './defaults/resourceType'
-import prompts from './defaults/prompt'
 
+dotenv.config()
+
+// select models
+const models = [
+    Resource,
+    Page,
+    User,
+    PhoneCode,
+    Config,
+    ResourceType,
+    Chat,
+    OpenAILog,
+    Dialog,
+    UserChance,
+    Prompt,
+    SensitiveWord
+]
+
+// define db
 const db = new Sequelize({
     dialect: 'postgres',
     host: process.env.POSTGRES_HOST,
@@ -35,30 +50,18 @@ const db = new Sequelize({
     port: process.env.POSTGRES_PORT,
     username: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
-    models: [
-        Resource,
-        Page,
-        User,
-        PhoneCode,
-        Config,
-        ResourceType,
-        Chat,
-        OpenAILog,
-        Dialog,
-        UserChance,
-        Prompt,
-        SensitiveWord
-    ],
+    models,
     define: {
         underscored: true // 转换所有驼峰命名的字段为下划线
     }
 })
 
+// test connection
 async function connect(): Promise<void> {
     await db.authenticate()
     await db.close()
 }
-
+// init database
 async function init(force: boolean): Promise<void> {
     await db.query('CREATE EXTENSION if not exists vector')
     await db.sync({ force, alter: true })
@@ -69,21 +72,21 @@ async function init(force: boolean): Promise<void> {
     }
     await db.close()
 }
-
+// drop table
 async function drop(table?: string): Promise<void> {
     await db.authenticate()
     if (table) await db.models[table].drop()
     else await db.drop()
     await db.close()
 }
-
+// count rows
 async function count(table: string): Promise<void> {
     await db.authenticate()
     const res = await db.models[table].count()
     console.log(res)
     await db.close()
 }
-
+// qurty data by id
 async function query(table: string, id: number): Promise<void> {
     await db.authenticate()
     const res = await db.models[table].findByPk(id)
@@ -102,61 +105,23 @@ async function resourceType(): Promise<void> {
         updateOnDuplicate: ['description']
     })
 }
-// init prompt table
-async function prompt(): Promise<void> {
-    await db.authenticate()
-    for (const item of prompts) {
-        const res = await openai.embedding([item.content])
-        item.embedding = res.data[0].embedding
-    }
-    await db.models['prompt'].bulkCreate(prompts as any[])
-    await db.close()
-}
-//generate sensitive words dict
-async function sensitive() {
-    const type = {
-        porn: 1,
-        politics: 2,
-        violence: 3,
-        website: 4,
-        advertisement: 5
-    }
-    const data: any[] = []
-    for (const index in type) {
-        const arr = fs
-            .readFileSync(`${__dirname}/sensitive-words/${index}.txt`, 'utf-8')
-            .split('\n')
-            .filter(v => v.length > 0)
-        for (const item of [...new Set(arr)])
-            data.push({
-                content: item,
-                type: type[index]
-            })
-    }
-    await db.models['sensitive_word'].bulkCreate(data, {
-        updateOnDuplicate: ['content']
-    })
-    await db.close()
-}
 
-program.name('OpenAI App Sequelize CLI').description('CLI to operate database ORM').version('0.1.0')
-program.command('connect').description('Connect to database by sequelize ORM').action(connect)
+program.name('UniAI Database Sequelize CLI').description('A client to operate database').version('0.2.0')
+program.command('connect').description('Test connecting to database').action(connect)
 program
     .command('init')
-    .description('init tables')
-    .option('--force', 'force to init table (clear)')
+    .description('Init all the tables in database')
+    .option('--force', 'Force to init table')
     .action(options => init(options.force ? true : false))
 
-program.command('drop').argument('[table]', 'table name').description('drop tables in the ORM database').action(drop)
-program.command('count').argument('<table>', 'table name').description('count rows in table').action(count)
+program.command('drop').argument('[table]', 'table name').description('Drop tables in database').action(drop)
+program.command('count').argument('<table>', 'table name').description('Count rows in a table').action(count)
 program
     .command('query')
-    .argument('<table>', 'table name')
-    .argument('<id>', 'primary key')
-    .description('query data from table')
+    .argument('<table>', 'Table name')
+    .argument('<id>', 'Primary key')
+    .description('Query data from table by primary key id')
     .action(query)
-program.command('prompt').description('add to prompts template table').action(prompt)
-program.command('sensitive').description('add to sensitive words to table').action(sensitive)
-program.command('config').description('init config table').action(config)
-program.command('resource-type').description('init resource type table').action(resourceType)
+program.command('config').description('Init table of config').action(config)
+program.command('resource-type').description('Init table of resource type').action(resourceType)
 program.parse()
