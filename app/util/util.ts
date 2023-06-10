@@ -1,4 +1,10 @@
-/** @format */
+/**
+ * collection of utils for this project
+ *
+ * @format
+ * @devilyouwei
+ */
+
 import * as fs from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import crypto from 'crypto'
@@ -15,12 +21,11 @@ import { convert } from 'html-to-text'
 import Redis from 'ioredis'
 import { similarity } from 'ml-distance'
 
-const redis = new Redis()
-
 const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
 const ERR_CODE = 87014
 
+const redis = new Redis()
 // tencent cos service
 const cos = new COS({ SecretId: process.env.COS_SECRET_ID, SecretKey: process.env.COS_SECRET_KEY })
 // sensitive words
@@ -177,6 +182,7 @@ export default {
             FilePath: filePath
         })
     },
+    // get redis cache
     async getCache<V>(key: string | number) {
         try {
             const value = await redis.get(key.toString())
@@ -186,6 +192,7 @@ export default {
             return null
         }
     },
+    // set redis cache
     async setCache<V>(key: string | number, value: V) {
         await redis.set(key.toString(), JSON.stringify(value))
     },

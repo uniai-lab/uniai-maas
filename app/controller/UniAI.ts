@@ -15,6 +15,7 @@ import { IncomingMessage } from 'http'
 import $ from '@util/util'
 import { PassThrough } from 'stream'
 import { authAdmin } from '@middleware/auth'
+import { GLMChatResponse } from '@util/glm'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -111,6 +112,7 @@ export default class UniAI {
             })
             ctx.body = stream
         } catch (e) {
+            console.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -165,6 +167,43 @@ export default class UniAI {
                 page: res.page
             }
             ctx.service.res.success('Success to embed text', data)
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+    @Middleware(authAdmin())
+    @HTTPMethod({ path: '/txt-to-img', method: HTTPMethodEnum.POST })
+    async txt2img(@Context() ctx: EggContext, @HTTPBody() params: UniAITxt2ImgPost) {
+        try {
+            const res = await ctx.service.uniAI.txt2img(
+                params.prompt,
+                params.negativePrompt,
+                params.width,
+                params.height
+            )
+            const data: UniAITxt2ImgResponseData = {
+                images: res.images,
+                info: res.info
+            }
+            ctx.service.res.success('Success text to image', data)
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+    @Middleware(authAdmin())
+    @HTTPMethod({ path: '/img-progress', method: HTTPMethodEnum.POST })
+    async progress(@Context() ctx: EggContext) {
+        try {
+            const res = await ctx.service.uniAI.progress()
+            const data: UniAIImgProgressResponseData = {
+                progress: res.progress,
+                etaRelative: res.eta_relative,
+                image: res.current_image,
+                txt: res.textinfo
+            }
+            ctx.service.res.success('Image progress', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

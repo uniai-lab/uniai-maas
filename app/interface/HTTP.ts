@@ -217,6 +217,17 @@ interface UniAIEmbeddingPost {
     fileSize: number
     model?: AIModelEnum
 }
+interface UniAITxt2ImgPost {
+    prompt: string
+    negativePrompt: string
+    width: number
+    height: number
+    steps: number
+    batchSize: number
+    restoreFace: boolean
+    seed: number
+    denoising: number
+}
 interface UniAIChatResponseData {
     content: string
     promptTokens: number
@@ -230,4 +241,14 @@ interface UniAIEmbeddingResponseData {
     page: number
     promptTokens: number
     totalTokens: number
+}
+interface UniAITxt2ImgResponseData {
+    images: string[]
+    info: string
+}
+interface UniAIImgProgressResponseData {
+    progress: number
+    etaRelative: number
+    image: string | null
+    txt: string | null
 }

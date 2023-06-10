@@ -24,6 +24,7 @@ export default class Res extends Service {
         }
         this.ctx.body = response
     }
+    // error with no auth
     noAuth() {
         const response: StandardResponse<null> = {
             status: -1,

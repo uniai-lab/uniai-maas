@@ -1,13 +1,12 @@
 {
-    "name": "maas-app",
+    "name": "UniAI",
     "version": "1.0.0",
-    "description": "Model as a Service backend template, use egg typescript to create AI apps",
-    "private": true,
+    "description": "UniAI project is a plarform to integrate multiple AI models and provide model as a service APIs",
     "egg": {
         "typescript": true
     },
     "scripts": {
-        "start": "egg-scripts start --daemon --title=egg-server-openai-app --port 3000",
+        "start": "egg-scripts start --daemon --title=egg-server-openai-app --port 3300",
         "stop": "egg-scripts stop --title=egg-server-openai-app",
         "dev": "egg-bin dev --port 3300",
         "ets": "ets",
@@ -19,20 +18,17 @@
         "tsc": "tsc",
         "build": "tsc",
         "clean": "tsc -b --clean",
-        "milvus": "ts-node ./script/milvus.ts",
-        "sequelize": "ts-node ./script/sequelize.ts",
         "pg": "ts-node ./script/sequelize.ts",
-        "pgvector": "ts-node ./script/sequelize.ts",
         "docker": "ts-node ./docker/docker.ts"
     },
     "dependencies": {
-        "@eggjs/tegg": "^3.5.2",
-        "@eggjs/tegg-aop-plugin": "^3.5.2",
-        "@eggjs/tegg-config": "^3.2.3",
-        "@eggjs/tegg-controller-plugin": "^3.5.2",
-        "@eggjs/tegg-eventbus-plugin": "^3.5.2",
-        "@eggjs/tegg-plugin": "^3.5.2",
-        "@eggjs/tegg-schedule-plugin": "^3.5.2",
+        "@eggjs/tegg": "^3.8.0",
+        "@eggjs/tegg-aop-plugin": "^3.8.0",
+        "@eggjs/tegg-config": "^3.8.0",
+        "@eggjs/tegg-controller-plugin": "^3.8.0",
+        "@eggjs/tegg-eventbus-plugin": "^3.8.0",
+        "@eggjs/tegg-plugin": "^3.8.0",
+        "@eggjs/tegg-schedule-plugin": "^3.8.0",
         "@openai-link/egg-sequelize-ts": "^1.1.1",
         "@stdlib/assert-is-json": "^0.0.8",
         "@zilliz/milvus2-sdk-node": "^2.2.4",
@@ -41,12 +37,12 @@
         "cld": "^2.9.0",
         "cos-nodejs-sdk-v5": "^2.11.19",
         "dotenv": "^16.0.3",
-        "egg": "^3.15.0",
+        "egg": "^3.16.0",
         "egg-cors": "^2.2.3",
         "egg-multipart": "^3.3.0",
         "egg-scripts": "^2.17.0",
         "egg-sequelize": "^6.0.0",
-        "egg-tracer": "^2.0.0",
+        "egg-tracer": "^2.1.0",
         "egg-view-nunjucks": "^2.3.0",
         "eventsource": "^2.0.2",
         "eventsource-parser": "^1.0.0",
@@ -110,7 +106,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/openai-link/MaaS-egg"
+        "url": "https://github.com/uni-openai/MaaS"
     },
     "author": "devilyouwei",
     "license": "MIT"

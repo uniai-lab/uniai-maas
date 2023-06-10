@@ -36,6 +36,7 @@ declare global {
             ADMIN_TOKEN: string
             GOOGLE_SEARCH_API_TOKEN: string
             GOOGLE_SEARCH_ENGINE_ID: string
+            STABLE_DIFFUSION_API: string
         }
     }
 }

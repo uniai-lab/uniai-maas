@@ -1,12 +1,16 @@
 <!-- @format -->
 
-# Model as a Service
+# Uni-AI
 
-Create the applications with AI models, GPT-like models, or OpenAI APIs!
+GPT, GLM, Stable Diffusion
 
-This is just a backend template of AI apps.
+**MODELS ALL in ONE!!!**
+
+Create AI-based applications by integrating multiple models and expose consistent APIs.
 
 _Powered by [Egg.js](https://www.eggjs.org/) TypeScript_
+
+Our MaaS (model as a service) platform framework
 
 ![framework](./framework.png)
 
@@ -22,14 +26,18 @@ Create an `.env` file in the root path of this repo:
 touch ./.env
 ```
 
-Fill the following environment params:
+Fill the following environment params in `.env`:
 
 ```bash
-URL=[Your App Domain]
+APP_NAME=UniAI
+APP_URL=[Your App Domain]
 
 OPENAI_PROXY=[Your OpenAI proxy]
 OPENAI_API_KEY=[Your OpneAI API key]
 OPENAI_EMBED_DIM=1536
+
+GLM_API=http://10.144.1.7:8000
+TEXT2VEC_EMBED_DIM=1024
 
 SAVE_DOC_PATH=app/public/docs
 SAVE_MODEL_PATH=app/public/models
@@ -50,24 +58,35 @@ WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
 DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-ai.png
 DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
-DEFAULT_USERNAME=Reader
+DEFAULT_USERNAME=user
 
 COS_SECRET_ID=[Your Tencent COS service secret id]
 COS_SECRET_KEY=[Your Tencent COS service secret key]
 COS_BUCKET=[Your Tencent COS service bucket]
 COS_REGION=[Your Tencent COS service region]
 
-ADMIN_TOKEN=ReadingZhiDuJUN2023!
+ADMIN_TOKEN=[Your administrator token]
+
+GOOGLE_SEARCH_API_TOKEN=[Your Google API token]
+GOOGLE_SEARCH_ENGINE_ID=[Your Google engine ID]
+
+STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
 ```
 
 **Install libs**
+
+We recommend using `yarn` instead of `npm`
 
 ```bash
 npm -g install yarn
 yarn
 ```
 
+**Install database**
+
 If you don't have a vector database, e.g. milvus, PostgresSQL (pgvector), run:
+
+(Here, you need docker and docker-compose first)
 
 ```bash
 yarn docker up pgvector
@@ -78,36 +97,6 @@ yarn docker up pgvector
 ```bash
 yarn pg init --force
 ```
-
-Init database config table
-
-```bash
-yarn pg config
-```
-
-**Init database resource-type table**
-
-```bash
-yarn pg resource-type
-```
-
-**Init database sensitive word table**
-
-```bash
-yarn pg sensitive
-```
-
-**Add Guidebook**
-
-URL: https://localhost:3000/admin/add-resource
-
-Params:
-
-1. file
-1. resourceTypeId = 1
-1. token
-
-In this API, `userId = 0`
 
 ## Run
 
@@ -126,31 +115,10 @@ yarn tsc
 yarn start
 ```
 
-## Script Operation
-
--   Use `npm run lint` to check code style
--   Use `npm test` to run unit test
--   se `npm run clean` to clean compiled js at development mode once
-
-### Milvus Database Operation
-
-To operate the database in command line, such as shell/bash, use the following npm scripts:
+## Clean
 
 ```bash
-# init collections
-yarn milvus init
-
-# show all collections
-yarn milvus collections
-
-# load collection (before query, you need to load first)
-yarn milvus load [collection-name]
-
-# release collection
-yarn milvus release [collection-name]
-
-# query by id
-yarn milvus query [collection-name] [id]
+yarn clean
 ```
 
 ## Requirement
@@ -159,3 +127,20 @@ yarn milvus query [collection-name] [id]
 -   Typescript >= 4.x
 -   Docker
 -   Docker-compose
+
+## Models
+
+Continuously updating integrated models...
+
+Since **UniAI** is just a model integration and connection platform, you need to deploy the models you want to use on your own.
+
+We provide the download URLs and instructions for these models.
+
+### NLP Models
+
+-   OpenAI GPT [https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
+-   GLM/ChatGLM [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+
+### CV models
+
+-   Stable Diffusion [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)

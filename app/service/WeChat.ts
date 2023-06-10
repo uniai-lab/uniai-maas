@@ -18,9 +18,8 @@ import { Resource } from '@model/Resource'
 import { createParser, EventSourceParser } from 'eventsource-parser'
 import { IncomingMessage } from 'http'
 import isJSON from '@stdlib/assert-is-json'
-import gpt from '@util/openai' // OpenAI models
-import glm from '@util/glm' // GLM models
-import vec from '@util/text2vec'
+import gpt, { CreateChatCompletionStreamResponse } from '@util/openai' // OpenAI models
+import glm, { GLMChatResponse } from '@util/glm' // GLM models
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 3000
@@ -188,8 +187,8 @@ export default class WeChat extends Service {
         // check same similarity for first one page, 1000 tokens
         const p: string[] = await $.splitPage(file.text, 800)
         if (!p.length) throw new Error('File content cannot be split')
-        const embed = await vec.embedding([p[0]])
-        await vec.log(ctx, userId, embed, '[WeChat/upload]: check similarity for first page')
+        const embed = await glm.embedding([p[0]])
+        await glm.log(ctx, userId, embed, '[WeChat/upload]: check similarity for first page')
         const embedding = embed.data[0]
         const result = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
         if (result.length) return result[0]
@@ -198,8 +197,8 @@ export default class WeChat extends Service {
         const s: string[] = await $.splitPage(file.text, 400)
         s[0] = ctx.__('Main content of this document, including the title, summary, abstract, and authors') + s[0]
         if (!s.length) throw new Error('File content cannot be split')
-        const res = await vec.embedding(s)
-        await vec.log(ctx, userId, res, '[WeChat/upload]: embedding all pages')
+        const res = await glm.embedding(s)
+        await glm.log(ctx, userId, res, '[WeChat/upload]: embedding all pages')
 
         // save resource to cos
         const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${file.ext}`, file.path)
@@ -318,7 +317,7 @@ export default class WeChat extends Service {
         let prompt = input
         // find similar pages of the resource id
         if (resourceId) {
-            const embed = await vec.embedding([input])
+            const embed = await glm.embedding([input])
             const embedding = embed.data[0]
             const role = ChatCompletionRequestMessageRoleEnum.System
             prompts.push({ role, content: ctx.__('The content of document is as follows') })
@@ -401,7 +400,8 @@ export default class WeChat extends Service {
             }
         }
     }
-    private async streamEnd(userId: number, cache: ChatStreamCache, error?: Error) {
+
+    async streamEnd(userId: number, cache: ChatStreamCache, error?: Error) {
         cache.end = true
         cache.error = error
         if (cache.content) {
@@ -416,7 +416,7 @@ export default class WeChat extends Service {
     }
 
     // save chat
-    private async saveChat(
+    async saveChat(
         dialogId: number,
         role: ChatCompletionRequestMessageRoleEnum | ChatCompletionResponseMessageRoleEnum,
         content: string

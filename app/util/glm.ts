@@ -1,12 +1,19 @@
-/** @format */
+/**
+ * util for GLM model API connect
+ *
+ * @format
+ * @devilyouwei
+ */
 
 import { EggContext } from '@eggjs/tegg'
-import { ChatCompletionRequestMessage } from 'openai'
-import $ from '@util/util'
+import { ChatCompletionRequestMessage, CreateEmbeddingRequestInput } from 'openai'
 import { IncomingMessage } from 'http'
+import $ from '@util/util'
+
+const API = process.env.GLM_API
 
 export default {
-    async log(ctx: EggContext, userId: number, log: GLMChatResponse, message?: string) {
+    async log(ctx: EggContext, userId: number, log: GLMChatResponse | GLMEmbeddingResponse, message?: string) {
         return await ctx.model.OpenAILog.create({
             model: log.model,
             userId,
@@ -15,6 +22,9 @@ export default {
             totalTokens: log.total_tokens,
             message
         })
+    },
+    async embedding(prompt: CreateEmbeddingRequestInput) {
+        return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${API}/embedding`, { prompt })
     },
     async chat<T = GLMChatRequest | IncomingMessage>(
         messages: ChatCompletionRequestMessage[],
@@ -32,12 +42,37 @@ export default {
                 prompt = ''
             } else prompt += `${item.content}\n`
 
-        const url = process.env.GLM_API
         const params: GLMChatRequest = { prompt: prompt.trim(), temperature, top_p: top, max_length: maxLength }
         if (history.length) params.history = [history]
 
         return stream
-            ? await $.post<GLMChatRequest, T>(`${url}/chat-stream`, params, { responseType: 'stream' })
-            : await $.post<GLMChatRequest, T>(`${url}/chat`, params, { responseType: 'json' })
+            ? await $.post<GLMChatRequest, T>(`${API}/chat-stream`, params, { responseType: 'stream' })
+            : await $.post<GLMChatRequest, T>(`${API}/chat`, params, { responseType: 'json' })
     }
+}
+
+export interface GLMChatRequest {
+    prompt: string
+    history?: string[][]
+    max_length?: number
+    top_p?: number
+    temperature?: number
+}
+export interface GLMChatResponse {
+    content: string
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+    model: string
+    object: string
+}
+export interface GLMEmbeddingRequest {
+    prompt: CreateEmbeddingRequestInput
+}
+export interface GLMEmbeddingResponse {
+    model: string
+    object: string
+    data: number[][]
+    prompt_tokens: number
+    total_tokens: number
 }

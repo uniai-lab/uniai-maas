@@ -8,9 +8,9 @@ import { WhereOptions, Op } from 'sequelize'
 import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
 import isJSON from '@stdlib/assert-is-json'
-import glm from '@util/glm'
-import vec from '@util/text2vec'
-import gpt from '@util/openai'
+import glm, { GLMChatResponse, GLMEmbeddingResponse } from '@util/glm'
+import gpt, { CreateChatCompletionStreamResponse } from '@util/openai'
+import sd from '@util/sd'
 import $ from '@util/util'
 import { Page } from '@model/Page'
 
@@ -35,7 +35,7 @@ export default class UniAI extends Service {
         for (const item of prompts) userInput += `${item.content}\n`
         let pages: Page[] = []
         let embed: number[] = []
-        let res: CreateEmbeddingResponse | Text2VecResponse | undefined
+        let res: CreateEmbeddingResponse | GLMEmbeddingResponse | undefined
         const where: WhereOptions = {}
         if (model === 'GPT') {
             if (resourceId) {
@@ -57,7 +57,7 @@ export default class UniAI extends Service {
                 where.resourceId = resourceId
             }
             where.embedding2 = { [Op.ne]: null }
-            res = (await vec.embedding([userInput])) as Text2VecResponse
+            res = (await glm.embedding([userInput])) as GLMEmbeddingResponse
             embed = res.data[0]
             pages = await ctx.model.Page.similarFindAll2(embed, maxPage, where)
         }
@@ -184,8 +184,8 @@ export default class UniAI extends Service {
             // check same similarity for first one page, 800 tokens
             const p: string[] = await $.splitPage(content, TOKEN_FIRST_PAGE)
             if (!p.length) throw new Error('File content cannot be split')
-            const embed = await vec.embedding([p[0]])
-            await vec.log(ctx, userId, embed, '[AI/embedding]: check similarity for first page')
+            const embed = await glm.embedding([p[0]])
+            await glm.log(ctx, userId, embed, '[UniAI/embedding]: check similarity for first page')
             const embedding = embed.data[0]
             const result = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
             if (result.length) return result[0]
@@ -193,8 +193,8 @@ export default class UniAI extends Service {
             // embedding all pages, sentence-level, 400 token per page
             const s: string[] = await $.splitPage(content, TOKEN_ONE_PAGE)
             if (!s.length) throw new Error('File content cannot be split')
-            const res = await vec.embedding(s)
-            await vec.log(ctx, 0, res, '[AI/embedding]: embedding all pages (sentences)')
+            const res = await glm.embedding(s)
+            await glm.log(ctx, 0, res, '[UniAI/embedding]: embedding all pages (sentences)')
 
             // save resource + pages
             return await ctx.model.Resource.create(
@@ -220,5 +220,11 @@ export default class UniAI extends Service {
                 { include: ctx.model.Page }
             )
         }
+    }
+    async txt2img(prompt: string, nPrompt: string, width: number, height: number) {
+        return await sd.txt2img(prompt, nPrompt, width, height)
+    }
+    async progress() {
+        return await sd.progress()
     }
 }
