@@ -1,18 +1,14 @@
 <!-- @format -->
 
-# Uni-AI
+# <img src="./logo.png" width=33 height=33 /> UniAI
+# United Models of AI
 
-GPT, GLM, Stable Diffusion
+**TOO MANY MODELS ???**
 
-**MODELS ALL in ONE!!!**
+**MODELS ALL in ONE !!!**
 
-Create AI-based applications by integrating multiple models and expose consistent APIs.
-
-_Powered by [Egg.js](https://www.eggjs.org/) TypeScript_
-
-Our MaaS (model as a service) platform framework
-
-![framework](./framework.png)
+## Vision
+Create one united platform, integrate multiple AI models and utils.
 
 ## Prepare
 
@@ -20,7 +16,7 @@ Download Node.js (Version>=18)
 
 Install `docker` and `docker-compose`
 
-Create an `.env` file in the root path of this repo:
+Create an `.env` file in the root path:
 
 ```bash
 touch ./.env
@@ -75,7 +71,7 @@ STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
 
 **Install libs**
 
-We recommend using `yarn` instead of `npm`
+Recommend using `yarn` instead of `npm`
 
 ```bash
 npm -g install yarn
@@ -106,9 +102,9 @@ In development mode:
 yarn dev
 ```
 
-Don't tsc compile at development mode, if you had run `tsc` then you need to `yarn clean` before `yarn dev`.
-
 ## Deploy
+
+In production mode:
 
 ```bash
 yarn tsc
@@ -121,6 +117,8 @@ yarn start
 yarn clean
 ```
 
+Don't tsc compile at development mode, if you had run `tsc` then you need to `yarn clean` before `yarn dev`.
+
 ## Requirement
 
 -   Node.js >= 18.x
@@ -130,11 +128,13 @@ yarn clean
 
 ## Models
 
-Continuously updating integrated models...
+Continuously integrating more AI models and extend AI utils...
 
-Since **UniAI** is just a model integration and connection platform, you need to deploy the models you want to use on your own.
+**UniAI** is not only **UniAI**!!!
 
-We provide the download URLs and instructions for these models.
+Since **UniAI** is just an integration and connection of AI models, tools, plugins, you need to deploy the models you need on your own.
+
+We provide the download URLs and guides for these models.
 
 ### NLP Models
 
@@ -144,3 +144,16 @@ We provide the download URLs and instructions for these models.
 ### CV models
 
 -   Stable Diffusion [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+
+## Plans
+
+- Predicting Interface
+- Training Interface
+- Prompting Interface
+- Resource Interface
+
+## Contributors
+
+devilyouwei <huangyw@iict.ac.cn>
+
+_Powered by [Egg.js](https://www.eggjs.org/) TypeScript_
