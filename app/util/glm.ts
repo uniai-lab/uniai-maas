@@ -6,7 +6,7 @@
  */
 
 import { EggContext } from '@eggjs/tegg'
-import { ChatCompletionRequestMessage, CreateEmbeddingRequestInput } from 'openai'
+import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, CreateEmbeddingRequestInput } from 'openai'
 import { IncomingMessage } from 'http'
 import $ from '@util/util'
 
@@ -36,9 +36,9 @@ export default {
         let prompt = ''
         const history: string[] = []
         for (const item of messages)
-            if (item.role.toLowerCase() === 'assistant') {
+            if (item.role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.Assistant) {
                 history.push(prompt.trim()) // user message
-                history.push(item.content.trim()) // ai message
+                history.push((item.content as string).trim()) // ai message
                 prompt = ''
             } else prompt += `${item.content}\n`
 

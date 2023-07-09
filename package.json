@@ -57,7 +57,7 @@
         "md5": "^2.3.0",
         "mint-filter": "^4.0.2",
         "ml-distance": "^4.0.1",
-        "openai": "^3.2.1",
+        "openai": "^3.3.0",
         "pdf-parse": "^1.1.1",
         "pg": "^8.11.0",
         "pg-hstore": "^2.3.4",
