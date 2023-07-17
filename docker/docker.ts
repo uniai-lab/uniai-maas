@@ -1,4 +1,8 @@
-/** @format */
+/** @format
+ * Use this scripts to manage docker containers
+ * up - start up docker
+ * down - stop docker
+ */
 
 import * as dotenv from 'dotenv'
 dotenv.config()

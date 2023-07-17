@@ -1,8 +1,11 @@
 /** @format
  * Init and query database through sequelize
+ * init (--force) - init the database tables and data from app/model
+ * drop - drop all the data in database (danger)
  */
 
 import * as dotenv from 'dotenv'
+dotenv.config()
 import { Sequelize } from 'sequelize-typescript'
 import { program } from 'commander'
 
@@ -18,36 +21,20 @@ import { OpenAILog } from '../app/model/OpenAILog'
 import { Dialog } from '../app/model/Dialog'
 import { UserChance } from '../app/model/UserChance'
 import { Prompt } from '../app/model/Prompt'
-import { SensitiveWord } from '../app/model/SensitiveWord'
 
 // initial data source
-import configs from './defaults/config'
-import resourceTypes from './defaults/resourceType'
-
-dotenv.config()
+import configs from './data/config'
+import resourceTypes from './data/resourceType'
 
 // select models
-const models = [
-    Resource,
-    Page,
-    User,
-    PhoneCode,
-    Config,
-    ResourceType,
-    Chat,
-    OpenAILog,
-    Dialog,
-    UserChance,
-    Prompt,
-    SensitiveWord
-]
+const models = [Resource, Page, User, PhoneCode, Config, ResourceType, Chat, OpenAILog, Dialog, UserChance, Prompt]
 
 // define db
 const db = new Sequelize({
     dialect: 'postgres',
     host: process.env.POSTGRES_HOST,
     password: process.env.POSTGRES_PASSWORD,
-    port: process.env.POSTGRES_PORT,
+    port: parseInt(process.env.POSTGRES_PORT as string),
     username: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
     models,

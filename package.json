@@ -18,7 +18,7 @@
         "tsc": "tsc",
         "build": "tsc",
         "clean": "tsc -b --clean",
-        "pg": "ts-node ./script/sequelize.ts",
+        "pg": "ts-node ./docker/sequelize.ts",
         "docker": "ts-node ./docker/docker.ts"
     },
     "dependencies": {
