@@ -1,14 +1,18 @@
 <!-- @format -->
 
 # <img src="./logo.png" width=33 height=33 /> UniAI
-# United Models of AI
 
-**TOO MANY MODELS ???**
+## UniAI means everything about AI
 
-**MODELS ALL in ONE !!!**
+🤔 Are you still struggling with how to choose from a myriad of complex AI models?
+
+🤔 Are you still getting caught up in various technical details related to AI?
+
+🤗 From today onwards, we have open-sourced!
 
 ## Vision
-Create one united platform, integrate multiple AI models and utils.
+
+🎯 Hello! Our vision is to provide an API-based platform that integrates various AI models and utils.
 
 ## Prepare
 
@@ -25,26 +29,27 @@ touch ./.env
 Fill the following environment params in `.env`:
 
 ```bash
+# APP
 APP_NAME=UniAI
 APP_URL=[Your App Domain]
 
+# GPT
 OPENAI_PROXY=[Your OpenAI proxy]
 OPENAI_API_KEY=[Your OpneAI API key]
 OPENAI_EMBED_DIM=1536
 
-GLM_API=http://10.144.1.7:8000
+# GLM
+GLM_API=[Your GLM API]
 TEXT2VEC_EMBED_DIM=1024
 
-SAVE_DOC_PATH=app/public/docs
-SAVE_MODEL_PATH=app/public/models
-MILVUS_ADDR=localhost:19530
-
+# PostgreSQL database
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=openai
 
+# WeChat
 WX_APP_ID=[Your Wechat MiniApp app id]
 WX_APP_SECRET=[Your Wechat MiniApp app secret]
 WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
@@ -52,21 +57,24 @@ WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
 WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
-DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-ai.png
-DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
-DEFAULT_USERNAME=user
-
+# COS, OSS storage
 COS_SECRET_ID=[Your Tencent COS service secret id]
 COS_SECRET_KEY=[Your Tencent COS service secret key]
 COS_BUCKET=[Your Tencent COS service bucket]
 COS_REGION=[Your Tencent COS service region]
 
-ADMIN_TOKEN=[Your administrator token]
-
+# Google Search
 GOOGLE_SEARCH_API_TOKEN=[Your Google API token]
 GOOGLE_SEARCH_ENGINE_ID=[Your Google engine ID]
 
+# Stable Diffusion
 STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
+
+# Default config for the app
+ADMIN_TOKEN=[Your administrator token]
+DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-ai.png
+DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
+DEFAULT_USERNAME=user
 ```
 
 **Install libs**
@@ -78,7 +86,7 @@ npm -g install yarn
 yarn
 ```
 
-**Install database**
+**Start database**
 
 If you don't have a vector database, e.g. milvus, PostgresSQL (pgvector), run:
 
@@ -128,13 +136,13 @@ Don't tsc compile at development mode, if you had run `tsc` then you need to `ya
 
 ## Models
 
-Continuously integrating more AI models and extend AI utils...
+**UniAI**: Continuously integrating more AI models and extending AI utilities...
 
-**UniAI** is not only **UniAI**!!!
+**UniAI** is not just **UniAI**!
 
-Since **UniAI** is just an integration and connection of AI models, tools, plugins, you need to deploy the models you need on your own.
+Since **UniAI** is an integration and connection of AI models, tools, and plugins, you will need to deploy the specific models you require on your own.
 
-We provide the download URLs and guides for these models.
+We provide download URLs and guides for these models.
 
 ### NLP Models
 
@@ -145,15 +153,19 @@ We provide the download URLs and guides for these models.
 
 -   Stable Diffusion [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
 
-## Plans
+## Future Plans
 
-- Predicting Interface
-- Training Interface
-- Prompting Interface
-- Resource Interface
+The platform will provide more AI capabilities for the following four major modules.
+
+-   Predicting Interface
+-   Training Interface
+-   Prompting Interface
+-   Resource Interface
 
 ## Contributors
 
 devilyouwei <huangyw@iict.ac.cn>
+
+We need your support!
 
 _Powered by [Egg.js](https://www.eggjs.org/) TypeScript_
