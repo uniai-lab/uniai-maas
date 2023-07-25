@@ -20,6 +20,7 @@ declare global {
             POSTGRES_USER: string
             POSTGRES_PASSWORD: string
             POSTGRES_DB: string
+            REDIS_PORT: number
             WX_APP_ID: string
             WX_APP_SECRET: string
             WX_APP_AUTH_URL: string

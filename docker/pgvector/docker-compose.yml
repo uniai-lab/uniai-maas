@@ -13,11 +13,11 @@ services:
             - POSTGRES_PASSWORD
             - POSTGRES_DB
         ports:
-            - 5432:5432
+            - POSTGRES_PORT:5432
     cache:
         container_name: redis
         privileged: true
         image: redis:latest
         restart: always
         ports:
-            - 6379:6379
+            - REDIS_PORT:6379

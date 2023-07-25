@@ -25,7 +25,7 @@ const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
 const ERR_CODE = 87014
 
-const redis = new Redis()
+const redis = new Redis(process.env.REDIS_PORT)
 // tencent cos service
 const cos = new COS({ SecretId: process.env.COS_SECRET_ID, SecretKey: process.env.COS_SECRET_KEY })
 // sensitive words
