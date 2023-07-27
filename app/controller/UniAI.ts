@@ -12,10 +12,9 @@ import {
 } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
 import { IncomingMessage } from 'http'
-import $ from '@util/util'
-import { PassThrough } from 'stream'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
+import $ from '@util/util'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {

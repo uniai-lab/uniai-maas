@@ -22,21 +22,33 @@ async function images() {
 }
 
 async function config(app: string) {
-    const cwd = `${__dirname}/${app}`
-    const res = await compose.config({ cwd })
-    console.log(res.err)
+    try {
+        const cwd = `${__dirname}/${app}`
+        const res = await compose.config({ cwd })
+        console.log(res.err)
+    } catch (e) {
+        console.error(e)
+    }
 }
 
 async function up(app: string) {
-    const cwd = `${__dirname}/${app}`
-    const res = await compose.upAll({ cwd })
-    console.log(res.err)
+    try {
+        const cwd = `${__dirname}/${app}`
+        const res = await compose.upAll({ cwd })
+        console.log(res.err)
+    } catch (e) {
+        console.error(e)
+    }
 }
 
 async function down(app: string) {
-    const cwd = `${__dirname}/${app}`
-    const res = await compose.down({ cwd })
-    console.log(res.err)
+    try {
+        const cwd = `${__dirname}/${app}`
+        const res = await compose.down({ cwd })
+        console.log(res.err)
+    } catch (e) {
+        console.error(e)
+    }
 }
 
 program.name('OpenAI App Docker CLI').description('CLI to operate docker images').version('0.1.0')
