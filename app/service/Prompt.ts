@@ -1,10 +1,12 @@
 /** @format */
 
 import { Service } from 'egg'
+import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import glm from '@util/glm'
 import gpt from '@util/openai'
 import { IncomingMessage } from 'http'
 
+@SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Prompt extends Service {
     async outline(obj: {
         task: string

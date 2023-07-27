@@ -8,7 +8,6 @@
 import * as fs from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import crypto from 'crypto'
-import store from 'store2'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
 import Mint from 'mint-filter'
@@ -82,15 +81,16 @@ export default {
     },
     // get wechat access token for wx miniapp
     async getWxAccessToken(): Promise<string> {
-        const s = store.get('wx_access_token') as WXAccessTokenStore
-        if (s && new Date().getTime() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) return s.token
-        else {
+        const s = await this.getCache<WXAccessToken>('wx_access_token')
+        if (s && new Date().getTime() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) {
+            return s.token
+        } else {
             const url = `${process.env.WX_APP_ACCESS_TOKEN_URL}?grant_type=client_credential&appid=${process.env.WX_APP_ID}&secret=${process.env.WX_APP_SECRET}`
             const res: WXAccessTokenAPI = await this.get(url)
-            if (res && res.access_token)
-                store.set('wx_access_token', { time: new Date(), token: res.access_token } as WXAccessTokenStore)
-            else throw new Error('Fail to get wechat access token')
-            return res.access_token
+            if (res && res.access_token) {
+                await this.setCache<WXAccessToken>('wx_access_token', { time: new Date(), token: res.access_token })
+                return res.access_token
+            } else throw new Error(`${res.errcode}:${res.errmsg}`)
         }
     },
     // use wechat API to filter sensitive content

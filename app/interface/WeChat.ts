@@ -8,7 +8,7 @@ interface WXAuthCodeAPI {
     errmsg: string
 }
 
-interface WXAccessTokenStore {
+interface WXAccessToken {
     token: string
     time: Date
 }
