@@ -2,6 +2,8 @@
 
 [简体中文版](./README_CN.md)
 
+![Framework](./framework.png)
+
 ## About UniAI
 
 UniAI is designed to simplify your interactions with complex AI models. No more struggling to choose the right model or getting lost in technical details - we're open-source and ready to help.

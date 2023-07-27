@@ -2,6 +2,8 @@
 
 [English](./README.md)
 
+![Framework](https://file+.vscode-resource.vscode-cdn.net/home/devil/Pro/MaaS/framework.png)
+
 ## 关于 UniAI
 
 UniAI 旨在简化您与复杂 AI 模型的互动。没有更多为选择正确的模型而苦恼，或在技术细节中迷失的困扰，我们是开源的，准备帮助您。
