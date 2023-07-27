@@ -16,19 +16,19 @@ const plugin: EggPlugin = {
         package: '@eggjs/tegg-controller-plugin'
     },
     teggSchedule: {
-        enable: true,
+        enable: false,
         package: '@eggjs/tegg-schedule-plugin'
     },
     eventbusModule: {
-        enable: true,
+        enable: false,
         package: '@eggjs/tegg-eventbus-plugin'
     },
     aopModule: {
-        enable: true,
+        enable: false,
         package: '@eggjs/tegg-aop-plugin'
     },
     tracer: {
-        enable: true,
+        enable: false,
         package: 'egg-tracer'
     },
     sequelize: {

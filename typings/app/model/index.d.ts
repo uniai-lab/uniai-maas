@@ -12,7 +12,6 @@ import ExportPhoneCode from '../../../app/model/PhoneCode';
 import ExportPrompt from '../../../app/model/Prompt';
 import ExportResource from '../../../app/model/Resource';
 import ExportResourceType from '../../../app/model/ResourceType';
-import ExportSensitiveWord from '../../../app/model/SensitiveWord';
 import ExportUser from '../../../app/model/User';
 import ExportUserChance from '../../../app/model/UserChance';
 
@@ -27,7 +26,6 @@ declare module 'egg' {
     Prompt: ReturnType<typeof ExportPrompt>;
     Resource: ReturnType<typeof ExportResource>;
     ResourceType: ReturnType<typeof ExportResourceType>;
-    SensitiveWord: ReturnType<typeof ExportSensitiveWord>;
     User: ReturnType<typeof ExportUser>;
     UserChance: ReturnType<typeof ExportUserChance>;
   }

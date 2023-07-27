@@ -85,32 +85,16 @@ export default class UniAI {
             if (!params.prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
 
-            const res = (await ctx.service.uniAI.chat(
+            const res = await ctx.service.uniAI.chat(
                 prompts,
                 true,
                 model,
                 params.top,
                 params.temperature,
                 params.maxLength
-            )) as IncomingMessage
+            )
 
-            // parse stream data
-            const stream = new PassThrough()
-            const parser = ctx.service.uniAI.chatStreamParser(stream, model)
-            if (!parser) throw new Error('Error to create parser')
-
-            res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-            res.on('error', e => stream.end().destroy(e))
-            res.on('end', () => stream.end())
-            res.on('close', () => stream.destroy())
-
-            ctx.set({
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Access-Control-Allow-Origin': '*',
-                Connection: 'keep-alive'
-            })
-            ctx.body = stream
+            ctx.body = ctx.service.uniAI.chatStream(res as IncomingMessage, model)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

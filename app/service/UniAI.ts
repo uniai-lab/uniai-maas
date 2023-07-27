@@ -84,6 +84,25 @@ export default class UniAI extends Service {
         }
     }
 
+    chatStream(response: IncomingMessage, model: AIModelEnum) {
+        this.ctx.set({
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': '*',
+            Connection: 'keep-alive'
+        })
+        // parse stream data
+        const stream = new PassThrough()
+        const parser = this.chatStreamParser(stream, model)
+        if (!parser) throw new Error('Error to create parser')
+
+        response.on('data', (buff: Buffer) => parser.feed(buff.toString()))
+        response.on('error', e => stream.end().destroy(e))
+        response.on('end', () => stream.end())
+        response.on('close', () => stream.destroy())
+        return stream
+    }
+
     // parse stream data to UniAIChatResponseData
     chatStreamParser(stream: PassThrough, model: AIModelEnum) {
         // response data
