@@ -26,8 +26,6 @@ interface ChatStreamCache {
     content: string
     end: boolean
     time: number
-    chatId?: number
-    error?: Error
 }
 
 interface UserTask extends ConfigTask {

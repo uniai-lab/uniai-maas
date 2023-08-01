@@ -135,14 +135,14 @@ export default class WeChat {
     // send chat message and set stream
     @Middleware(auth())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
-    async chatStream(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
+    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
         try {
             const userId = ctx.userId
             if (!userId) throw new Error('No user id')
             const input = params.input.trim()
             if (!input) throw new Error('Input nothing')
             const dialogId = params.dialogId
-            const model = params.model
+            const model = params.model || 'GLM'
 
             await ctx.service.weChat.chat(input, userId, dialogId, model)
             await ctx.service.weChat.reduceChatChance(userId)
@@ -157,14 +157,11 @@ export default class WeChat {
     // get chat stream
     @Middleware(auth())
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.POST })
-    async getChatStream(@Context() ctx: UserContext) {
+    async getChat(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            const res = await ctx.service.weChat.getChatStream(userId)
-
+            const res = await ctx.service.weChat.getChat(userId)
             if (!res) throw new Error('Chat not found or timeout')
-            if (res.error) throw res.error
-
             // filter sensitive
             const content = $.filterSensitive(res.content, ctx.__('Content contains non compliant information'))
             const data: ChatStreamResponseData = {
@@ -173,7 +170,6 @@ export default class WeChat {
                 userId,
                 dialogId: res.dialogId,
                 avatar: process.env.DEFAULT_AVATAR_AI,
-                chatId: res.chatId,
                 end: res.end
             }
             ctx.service.res.success('Success get chat stream', data)

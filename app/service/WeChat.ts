@@ -24,7 +24,7 @@ const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 3000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
-const CHAT_BACKTRACK = 4
+const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -277,16 +277,16 @@ export default class WeChat extends Service {
         const { ctx } = this
 
         // check processing chat stream
-        const check = await this.getChatStream(userId)
+        const check = await this.getChat(userId)
         if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
             throw new Error('Another chat is processing')
 
+        // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
-            // dialogId ? dialog chat : free chat
             where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
             include: {
                 model: ctx.model.Chat,
-                limit: CHAT_BACKTRACK,
+                limit: model === 'GPT' ? CHAT_BACKTRACK : 2,
                 order: [['id', 'desc']]
             }
         })
@@ -318,6 +318,7 @@ export default class WeChat extends Service {
 
         prompts.push({ role: ChatCompletionRequestMessageRoleEnum.User, content: prompt })
 
+        // reset chat stream cache
         const cache: ChatStreamCache = {
             dialogId: dialog.id,
             content: '',
@@ -325,13 +326,10 @@ export default class WeChat extends Service {
             time: new Date().getTime()
         }
 
-        await $.setCache(userId, cache)
-
         // start chat stream
         let stream: IncomingMessage | undefined
         let parser: EventSourceParser | undefined
         if (model === 'GPT') {
-            stream = await gpt.chat<IncomingMessage>(prompts, true)
             parser = createParser(e => {
                 if (e.type === 'event')
                     if (isJSON(e.data)) {
@@ -340,9 +338,9 @@ export default class WeChat extends Service {
                         if (cache.content) $.setCache(userId, cache)
                     }
             })
+            stream = await gpt.chat<IncomingMessage>(prompts, true)
         }
         if (model === 'GLM') {
-            stream = await glm.chat<IncomingMessage>(prompts, true, 0.7, 0.1, 4096)
             parser = createParser(e => {
                 if (e.type === 'event') {
                     if (isJSON(e.data)) {
@@ -352,10 +350,24 @@ export default class WeChat extends Service {
                     }
                 }
             })
+            stream = await glm.chat<IncomingMessage>(prompts, true, 0.7, 0.1, 4096)
         }
 
         if (!stream) throw new Error('Error to get chat stream')
         if (!parser) throw new Error('Error to create stream parser')
+
+        // add listen stream
+        stream.on('data', (buff: Buffer) => parser?.feed(buff.toString()))
+        stream.on('close', () => {
+            cache.end = true
+            $.setCache(userId, cache)
+            if (cache.content)
+                ctx.model.Chat.create({
+                    dialogId: cache.dialogId,
+                    role: ChatCompletionResponseMessageRoleEnum.Assistant,
+                    content: cache.content
+                })
+        })
 
         // save user prompt
         await this.ctx.model.Chat.create({
@@ -363,30 +375,10 @@ export default class WeChat extends Service {
             role: ChatCompletionRequestMessageRoleEnum.User,
             content: input
         })
-
-        // reset chat stream cache
-
-        stream.on('data', (buff: Buffer) => parser?.feed(buff.toString()))
-        stream.on('error', e => this.streamEnd(userId, cache, e))
-        stream.on('end', () => this.streamEnd(userId, cache))
-    }
-
-    async streamEnd(userId: number, cache: ChatStreamCache, error?: Error) {
-        cache.end = true
-        cache.error = error
-        if (cache.content) {
-            const chat = await this.ctx.model.Chat.create({
-                dialogId: cache.dialogId,
-                role: ChatCompletionResponseMessageRoleEnum.Assistant,
-                content: cache.content
-            })
-            cache.chatId = chat.id
-        }
-        $.setCache(userId, cache)
     }
 
     // get current chat stream by userId
-    async getChatStream(userId: number) {
+    async getChat(userId: number) {
         return await $.getCache<ChatStreamCache>(userId)
     }
 
