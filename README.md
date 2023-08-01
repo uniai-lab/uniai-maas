@@ -4,6 +4,14 @@
 
 ![Framework](./framework.png)
 
+## Samples
+
+Who are using UniAI and where can I experience it?
+
+![wechat miniapps](./miniapp-qrcode.png)
+
+_Notice: All of the above mini app samples use GLM model by UniAI!_
+
 ## About UniAI
 
 UniAI is designed to simplify your interactions with complex AI models. No more struggling to choose the right model or getting lost in technical details - we're open-source and ready to help.
@@ -16,8 +24,10 @@ We aim to provide an API-based platform that integrates various AI models and ut
 
 Before you start, make sure you have:
 
-- Node.js (Version 18 or higher)
-- Docker and Docker-compose
+- Node.js >= 18.x
+- TypeScript >= 4.x
+- Docker
+- Docker-compose
 
 ## Getting Started
 
@@ -49,7 +59,7 @@ Before you start, make sure you have:
    POSTGRES_PORT=5432
    POSTGRES_USER=postgres
    POSTGRES_PASSWORD=postgres
-   POSTGRES_DB=openai
+   POSTGRES_DB=uniai
 
    # Redis cache
    REDIS_PORT=6379
@@ -91,7 +101,7 @@ npm -g install yarn
 yarn
 ```
 
-### Starting Database
+### Start Database
 
 If you don't already have a vector database such as Milvus or PostgresSQL (pgvector), you can start one using Docker and Docker-compose:
 
@@ -99,7 +109,7 @@ If you don't already have a vector database such as Milvus or PostgresSQL (pgvec
 yarn docker up pgvector
 ```
 
-### Database Initialization
+### Initialize Database
 
 ```bash
 yarn pg init --force
@@ -128,12 +138,12 @@ yarn start
 yarn clean
 ```
 
-## Required Software
+## Documentation
 
-- Node.js >= 18.x
-- TypeScript >= 4.x
-- Docker
-- Docker-compose
+UniAI's interfaces are all accessed through Web APIs.
+
+Please refer to the documentation at the following address:
+[https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J)
 
 ## Models
 
@@ -161,4 +171,4 @@ UniAI will evolve to offer more AI capabilities across the following key modules
 
 We welcome your contributions! Reach out to devilyouwei <huangyw@iict.ac.cn> for more information.
 
-_Powered by [Egg.js](https://www.eggjs.org/) TypeScript_ `<!-- @format -->`
+_Powered by [Egg.js](https://www.eggjs.org/) TypeScript_ 

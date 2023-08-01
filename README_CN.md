@@ -1,47 +1,60 @@
-# <img src="./logo.png" width=33 height=33 /> UniAI
+# <img src="./logo.png" width=33 height=33 /> UniAI 中文说明
 
-[English](./README.md)
+[English Version](./README.md)
 
-![Framework](https://file+.vscode-resource.vscode-cdn.net/home/devil/Pro/MaaS/framework.png)
+![Framework](./framework.png)
 
-## 关于 UniAI
+## 示范案例
 
-UniAI 旨在简化您与复杂 AI 模型的互动。没有更多为选择正确的模型而苦恼，或在技术细节中迷失的困扰，我们是开源的，准备帮助您。
+哪些软件正在使用UniAI？通过以下案例体验UniAI！
 
-## 我们的愿景
+![wechat miniapps](./miniapp-qrcode.png)
 
-我们的目标是提供一个基于 API 的平台，整合各种 AI 模型和工具。使用 UniAI，复杂的 AI 实现变得无需大费周章，更加简洁流畅。
+_注: 以上小程序示例均使用UniAI的GLM模型！_
 
-## 开始前准备
+## 关于
 
-在开始之前，请确保您已安装：
+UniAI旨在简化您与复杂AI模型的交互，不再为选择合适的模型而烦恼！
 
-- Node.js (版本 18 或更高)
-- Docker 和 Docker-compose
+我们是开源的，并准备帮助您。
 
-## 开始使用
+## 愿景
+
+我们的目标是提供一个基于API的平台，集成各种AI模型和工具。通过UniAI，复杂的AI实现变得轻松且流畅。
+
+## 前置环境
+
+在开始之前，请确保您已安装以下内容：
+
+- Node.js >= 18.x
+- TypeScript >= 4.x
+- Docker
+- Docker-compose
+
+## 入门指南
 
 ### 配置
 
-1. 在根目录下创建一个 `.env` 文件：
+1. 在根目录创建一个 `.env` 文件：
 
    ```bash
    touch ./.env
    ```
-2. 在 `.env` 文件中按照以下格式填写环境参数：
+
+2. 将环境参数填写到 `.env` 文件中，如下所示：
 
    ```bash
-   # APP
+   # 应用
    APP_NAME=UniAI
-   APP_URL=[您的应用域名]
+   APP_URL=[你的应用域名]
 
    # GPT
-   OPENAI_PROXY=[您的 OpenAI 代理]
-   OPENAI_API_KEY=[您的 OpenAI API 密钥]
+   OPENAI_PROXY=[你的OpenAI代理]
+   OPENAI_API_KEY=[你的OpenAI API密钥]
    OPENAI_EMBED_DIM=1536
 
    # GLM
-   GLM_API=[您的 GLM API]
+   GLM_API=[你的GLM API]
    TEXT2VEC_EMBED_DIM=1024
 
    # PostgreSQL 数据库
@@ -49,34 +62,34 @@ UniAI 旨在简化您与复杂 AI 模型的互动。没有更多为选择正确�
    POSTGRES_PORT=5432
    POSTGRES_USER=postgres
    POSTGRES_PASSWORD=postgres
-   POSTGRES_DB=openai
+   POSTGRES_DB=uniai
 
    # Redis 缓存
    REDIS_PORT=6379
 
    # 微信
-   WX_APP_ID=[您的微信小程序应用 id]
-   WX_APP_SECRET=[您的微信小程序应用密钥]
+   WX_APP_ID=[你的微信小程序AppID]
+   WX_APP_SECRET=[你的微信小程序App Secret]
    WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
    WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
    WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
    WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
-   # COS，OSS 存储
-   COS_SECRET_ID=[您的腾讯 COS 服务秘钥 id]
-   COS_SECRET_KEY=[您的腾讯 COS 服务秘钥]
-   COS_BUCKET=[您的腾讯 COS 服务桶名]
-   COS_REGION=[您的腾讯 COS 服务地区]
+   # COS, OSS 存储
+   COS_SECRET_ID=[你的腾讯云COS服务secret id]
+   COS_SECRET_KEY=[你的腾讯云COS服务secret key]
+   COS_BUCKET=[你的腾讯云COS服务bucket]
+   COS_REGION=[你的腾讯云COS服务region]
 
    # Google 搜索
-   GOOGLE_SEARCH_API_TOKEN=[您的 Google API 密钥]
-   GOOGLE_SEARCH_ENGINE_ID=[您的 Google 引擎 ID]
+   GOOGLE_SEARCH_API_TOKEN=[你的Google API token]
+   GOOGLE_SEARCH_ENGINE_ID=[你的Google引擎ID]
 
-   # 稳定扩散
+   # Stable Diffusion
    STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
 
-   # 应用默认配置
-   ADMIN_TOKEN=[您的管理员密钥]
+   # 应用的默认配置
+   ADMIN_TOKEN=[你的管理员令牌]
    DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-ai.png
    DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
    DEFAULT_USERNAME=user
@@ -84,7 +97,7 @@ UniAI 旨在简化您与复杂 AI 模型的互动。没有更多为选择正确�
 
 ### 安装
 
-我们建议使用 `yarn` 而不是 `npm`：
+我们建议使用 `yarn` 替代 `npm`：
 
 ```bash
 npm -g install yarn
@@ -93,13 +106,13 @@ yarn
 
 ### 启动数据库
 
-如果您尚未有向量数据库，例如 Milvus 或 PostgresSQL (pgvector)，您可以使用 Docker 和 Docker-compose 启动一个：
+如果您还没有类似Milvus或PostgresSQL（pgvector）的向量数据库，您可以使用Docker和Docker-compose启动一个：
 
 ```bash
 yarn docker up pgvector
 ```
 
-### 数据库初始化
+### 初始化数据库
 
 ```bash
 yarn pg init --force
@@ -120,7 +133,7 @@ yarn tsc
 yarn start
 ```
 
-⚠️ 在开发模式下，请不要编译 TypeScript 文件。如果您已运行过 `tsc`，在执行 `yarn dev` 前请先使用 `yarn clean`。
+⚠️ 在开发模式下不要编译TypeScript文件。如果已经使用 `tsc` 命令进行了编译，请在运行 `yarn dev` 之前使用 `yarn clean` 进行清理。
 
 ### 清理
 
@@ -128,12 +141,12 @@ yarn start
 yarn clean
 ```
 
-## 软件需求
+## 文档
 
-- Node.js >= 18.x
-- TypeScript >= 4.x
-- Docker
-- Docker-compose
+UniAI的接口全部采用Web API方式访问。
+
+请参阅以下文档：
+[https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf
 
 ## 模型
 
