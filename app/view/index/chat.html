@@ -6,12 +6,22 @@
 <head>
     <meta charset="UTF-8" />
     <title>SSE Test</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/markdown.js/0.5.0/markdown.min.js"></script>
 </head>
 
 <body>
     <h1>Server-Sent Events Test</h1>
     <textarea name="prompt" id="prompt" cols="30" rows="10" placeholder="Input something"></textarea>
-    <button id="submit">Run</button>
+    <div>
+        <select name="model" id="model">
+            <option value="GLM">GLM</option>
+            <option value="GPT">GPT</option>
+        </select>
+    </div>
+    <div>
+        <button id="submit">Run</button>
+    </div>
+    <br>
     <pre style="width: 500px" id="output"></pre>
 
     <script>
@@ -52,11 +62,12 @@
         window.onload = function () {
             const output = document.getElementById('output')
             const prompt = document.getElementById('prompt')
+            const model = document.getElementById('model')
             document.getElementById('submit').onclick = function () {
                 // 替换为您的 SSE 服务的 URL
                 const value = prompt.value
                 const json = {
-                    model: "GLM",
+                    model: model.value,
                     prompts: [
                         {
                             role: "user",
@@ -64,19 +75,21 @@
                         }
                     ]
                 }
-                const url = `http://localhost:3000/ai/chat-stream`
+                const url = `/ai/chat-stream`
                 fetchStream(url, {
                     method: 'POST',
                     body: JSON.stringify(json),
                     headers: {
                         'accept': 'text/event-stream',
                         'Content-Type': 'application/json',
+                        'token': 'ReadingZhiDuJUN2023!'
                     },
                     onmessage: (res) => {
+                        console.log(res)
                         // todo
                         res = res.replace(/^data: /, '')
                         res = jsonParse(res.trim())
-                        if (res && res.status === 1) output.innerText = res.data.content
+                        if (res && res.status === 1) output.innerHTML = markdown.toHTML(res.data.content)
                     },
                 });
 

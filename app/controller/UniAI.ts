@@ -27,8 +27,9 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
+            const model = params.model || 'GLM'
             // chat to GPT
-            if (params.model === 'GPT') {
+            if (model === 'GPT') {
                 const res = (await ctx.service.uniAI.chat(
                     prompts,
                     false,
@@ -43,13 +44,12 @@ export default class UniAI {
                         completionTokens: res.usage?.completion_tokens,
                         totalTokens: res.usage?.total_tokens,
                         model: res.model,
-                        object: res.object,
-                        prompts: params.prompts
+                        object: res.object
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to GPT')
             }
             // chat to GLM
-            if (params.model === 'GLM') {
+            if (model === 'GLM') {
                 const res = (await ctx.service.uniAI.chat(
                     prompts,
                     false,
@@ -65,8 +65,7 @@ export default class UniAI {
                         completionTokens: res.completion_tokens,
                         totalTokens: res.total_tokens,
                         model: res.model,
-                        object: res.object,
-                        prompts: params.prompts
+                        object: res.object
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to GLM')
             }
@@ -83,6 +82,7 @@ export default class UniAI {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
+            const chunk = params.chunk || false
 
             const res = await ctx.service.uniAI.chat(
                 prompts,
@@ -93,7 +93,7 @@ export default class UniAI {
                 params.maxLength
             )
 
-            ctx.body = ctx.service.uniAI.chatStream(res as IncomingMessage, model)
+            ctx.body = ctx.service.uniAI.parseStream(res as IncomingMessage, model, chunk)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -102,11 +102,11 @@ export default class UniAI {
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
-    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIResourcePost) {
+    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIQueryResourcePost) {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
-            const { pages, embed, model } = await ctx.service.uniAI.findResource(
+            const { pages, embed, model } = await ctx.service.uniAI.queryResource(
                 prompts,
                 params.resourceId,
                 params.maxPage,

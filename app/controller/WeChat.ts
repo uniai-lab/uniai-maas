@@ -15,8 +15,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.POST })
     async config(@Context() ctx: UserContext) {
         try {
-            const data = await ctx.service.user.getConfig()
-            ctx.service.res.success('Config list', data)
+            ctx.service.res.success('Config list', await ctx.service.user.getConfig())
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -133,41 +132,6 @@ export default class WeChat {
         }
     }
 
-    // send chat message
-    @Middleware(auth())
-    @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatPost) {
-        try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
-            const input = params.input.trim()
-            if (!input) throw new Error('Input nothing')
-            const dialogId = params.dialogId
-            const model = params.model
-
-            await ctx.service.weChat.reduceChatChance(userId)
-            const res = await ctx.service.weChat.chat(input, userId, dialogId, false, model)
-
-            if (!res) throw new Error('Fail to get sync response')
-            const data: ChatResponseData = {
-                type: false,
-                content: await $.filterSensitive(res.content, ctx.__('Content contains non compliant information')),
-                dialogId: res.dialogId,
-                chatId: res.id,
-                userId,
-                avatar: process.env.DEFAULT_AVATAR_AI
-            }
-            ctx.service.res.success('Chat success result', data)
-        } catch (e) {
-            console.error(e)
-            ctx.service.res.success('Chat error result', {
-                type: false,
-                content: (e as Error).message,
-                avatar: process.env.DEFAULT_AVATAR_AI
-            })
-        }
-    }
-
     // send chat message and set stream
     @Middleware(auth())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
@@ -180,8 +144,9 @@ export default class WeChat {
             const dialogId = params.dialogId
             const model = params.model
 
+            await ctx.service.weChat.chat(input, userId, dialogId, model)
             await ctx.service.weChat.reduceChatChance(userId)
-            await ctx.service.weChat.chat(input, userId, dialogId, true, model)
+
             ctx.service.res.success('Success start chat stream', null)
         } catch (e) {
             console.error(e)
@@ -201,7 +166,7 @@ export default class WeChat {
             if (res.error) throw res.error
 
             // filter sensitive
-            const content = await $.filterSensitive(res.content, ctx.__('Content contains non compliant information'))
+            const content = $.filterSensitive(res.content, ctx.__('Content contains non compliant information'))
             const data: ChatStreamResponseData = {
                 type: false,
                 content,

@@ -8,8 +8,7 @@ import * as fs from 'fs'
 import {
     ChatCompletionRequestMessage,
     ChatCompletionRequestMessageRoleEnum,
-    ChatCompletionResponseMessageRoleEnum,
-    CreateChatCompletionResponse
+    ChatCompletionResponseMessageRoleEnum
 } from 'openai'
 import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
@@ -25,7 +24,7 @@ const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 3000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
-const CHAT_BACKTRACK = 3
+const CHAT_BACKTRACK = 4
 const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -274,44 +273,32 @@ export default class WeChat extends Service {
     }
 
     // chat
-    async chat(
-        input: string,
-        userId: number,
-        dialogId: number = 0,
-        stream: boolean = false,
-        model: AIModelEnum = 'GLM'
-    ) {
+    async chat(input: string, userId: number, dialogId: number = 0, model: AIModelEnum = 'GLM') {
         const { ctx } = this
 
         // check processing chat stream
-        if (stream) {
-            const check = await this.getChatStream(userId)
-            if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
-                throw new Error('Another chat is processing')
-        }
+        const check = await this.getChatStream(userId)
+        if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
+            throw new Error('Another chat is processing')
 
-        // acquire dialog
-        const include: IncludeOptions = {
-            model: ctx.model.Chat,
-            limit: CHAT_BACKTRACK,
-            order: [['id', 'desc']]
-        }
-
-        const where = dialogId ? { id: dialogId, userId } : { resourceId: null, userId }
-        const dialog = await ctx.model.Dialog.findOne({ where, include })
+        const dialog = await ctx.model.Dialog.findOne({
+            // dialogId ? dialog chat : free chat
+            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            include: {
+                model: ctx.model.Chat,
+                limit: CHAT_BACKTRACK,
+                order: [['id', 'desc']]
+            }
+        })
         if (!dialog) throw new Error('Dialog is invalid')
-        dialog.chats?.reverse()
-        dialog.chats?.shift()
+        dialog.chats.reverse()
 
         const prompts: ChatCompletionRequestMessage[] = []
         // add user chat history
-        for (const item of dialog.chats)
-            prompts.push({ role: item.role as ChatCompletionRequestMessageRoleEnum, content: item.content })
+        for (const { role, content } of dialog.chats)
+            prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
 
-        prompts.push({
-            role: ChatCompletionRequestMessageRoleEnum.System,
-            content: ctx.__('Your English name is Reading Guy')
-        })
+        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
 
         const resourceId = dialog.resourceId
         let prompt = input
@@ -320,108 +307,82 @@ export default class WeChat extends Service {
             const embed = await glm.embedding([input])
             const embedding = embed.data[0]
             const role = ChatCompletionRequestMessageRoleEnum.System
-            prompts.push({ role, content: ctx.__('The content of document is as follows') })
+            prompts.push({ role, content: ctx.__('document content') })
             // find related pages
             const pages = await ctx.model.Page.similarFindAll2(embedding, PAGE_LIMIT, { resourceId })
             while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
             pages.sort((a, b) => a.id - b.id)
-            for (const item of pages) prompts.push({ role, content: item.content })
-            prompt = `${ctx.__('Answer according to the document')}${input}`
+            for (const { content } of pages) prompts.push({ role, content })
+            prompt = `${ctx.__('answer according to')}${input}`
         }
-        prompts.push({
-            role: ChatCompletionRequestMessageRoleEnum.User,
-            content: prompt
-        })
+
+        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.User, content: prompt })
+
+        const cache: ChatStreamCache = {
+            dialogId: dialog.id,
+            content: '',
+            end: false,
+            time: new Date().getTime()
+        }
+
+        await $.setCache(userId, cache)
+
+        // start chat stream
+        let stream: IncomingMessage | undefined
+        let parser: EventSourceParser | undefined
+        if (model === 'GPT') {
+            stream = await gpt.chat<IncomingMessage>(prompts, true)
+            parser = createParser(e => {
+                if (e.type === 'event')
+                    if (isJSON(e.data)) {
+                        const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
+                        cache.content += data.choices[0].delta.content || ''
+                        if (cache.content) $.setCache(userId, cache)
+                    }
+            })
+        }
+        if (model === 'GLM') {
+            stream = await glm.chat<IncomingMessage>(prompts, true, 0.7, 0.1, 4096)
+            parser = createParser(e => {
+                if (e.type === 'event') {
+                    if (isJSON(e.data)) {
+                        const data = JSON.parse(e.data) as GLMChatResponse
+                        cache.content = data.content
+                        if (cache.content) $.setCache(userId, cache)
+                    }
+                }
+            })
+        }
+
+        if (!stream) throw new Error('Error to get chat stream')
+        if (!parser) throw new Error('Error to create stream parser')
 
         // save user prompt
-        await this.saveChat(dialog.id, ChatCompletionRequestMessageRoleEnum.User, input)
+        await this.ctx.model.Chat.create({
+            dialogId: dialog.id,
+            role: ChatCompletionRequestMessageRoleEnum.User,
+            content: input
+        })
 
-        // stream mode
-        if (stream) {
-            // reset chat stream cache
-            const cache: ChatStreamCache = {
-                dialogId: dialog.id,
-                content: '',
-                end: false,
-                time: new Date().getTime()
-            }
+        // reset chat stream cache
 
-            let res: IncomingMessage | null = null
-            let parser: EventSourceParser
-            if (model === 'GPT') {
-                res = await gpt.chat<IncomingMessage>(prompts, true)
-                parser = createParser(e => {
-                    if (e.type === 'event')
-                        if (isJSON(e.data)) {
-                            const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
-                            cache.content += data.choices[0].delta.content || ''
-                            if (cache.content) $.setCache(userId, cache)
-                        }
-                })
-            }
-            if (model === 'GLM') {
-                res = await glm.chat<IncomingMessage>(prompts, true)
-                parser = createParser(e => {
-                    if (e.type === 'event') {
-                        if (isJSON(e.data)) {
-                            const data = JSON.parse(e.data) as GLMChatResponse
-                            cache.content = data.content
-                            if (cache.content) $.setCache(userId, cache)
-                        }
-                    }
-                })
-            }
-
-            if (!res) throw new Error('Error to get response from model')
-
-            await $.setCache(userId, cache)
-            res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-            res.on('error', e => this.streamEnd(userId, cache, e))
-            res.on('end', () => this.streamEnd(userId, cache))
-        }
-        // sync mode
-        else {
-            // request GPT
-            if (model === 'GPT') {
-                const res = await gpt.chat<CreateChatCompletionResponse>(prompts)
-                const content = res.choices[0].message?.content
-                if (!content) throw new Error('Fail to get GPT sync response')
-                await gpt.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
-                return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
-            }
-
-            // request GLM
-            if (model === 'GLM') {
-                const res = await glm.chat<GLMChatResponse>(prompts)
-                const content = res.content
-                if (!content) throw new Error('Fail to get GLM sync response')
-                await glm.log(ctx, userId, res, `[Chat/chat]: ${input}\n${content}`)
-                return await this.saveChat(dialog.id, ChatCompletionResponseMessageRoleEnum.Assistant, content)
-            }
-        }
+        stream.on('data', (buff: Buffer) => parser?.feed(buff.toString()))
+        stream.on('error', e => this.streamEnd(userId, cache, e))
+        stream.on('end', () => this.streamEnd(userId, cache))
     }
 
     async streamEnd(userId: number, cache: ChatStreamCache, error?: Error) {
         cache.end = true
         cache.error = error
         if (cache.content) {
-            const chat = await this.saveChat(
-                cache.dialogId,
-                ChatCompletionResponseMessageRoleEnum.Assistant,
-                cache.content
-            )
+            const chat = await this.ctx.model.Chat.create({
+                dialogId: cache.dialogId,
+                role: ChatCompletionResponseMessageRoleEnum.Assistant,
+                content: cache.content
+            })
             cache.chatId = chat.id
         }
         $.setCache(userId, cache)
-    }
-
-    // save chat
-    async saveChat(
-        dialogId: number,
-        role: ChatCompletionRequestMessageRoleEnum | ChatCompletionResponseMessageRoleEnum,
-        content: string
-    ) {
-        return await this.ctx.model.Chat.create({ dialogId, role, content })
     }
 
     // get current chat stream by userId

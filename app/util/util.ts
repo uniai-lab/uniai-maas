@@ -73,7 +73,7 @@ export default {
         })
     },
     // filter sensitive words and replace
-    async filterSensitive(content: string, replace: string = ''): Promise<string> {
+    filterSensitive(content: string, replace: string = '') {
         //content = await this.wxFilterSensitive(content, replace)
         content = this.jsonFilterSensitive(content, replace)
         if (/(?:GPT|OpenAI)/gi.test(content)) content = replace

@@ -33,60 +33,39 @@ export default class LeChat {
     }
 
     @Middleware(auth())
-    @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: UserContext, @HTTPBody() params: UniAIChatPost) {
-        const model = params.model || 'GLM'
-        const online = params.online || false
+    @HTTPMethod({ path: '/query-online', method: HTTPMethodEnum.POST })
+    async queryOnline(@Context() ctx: UserContext, @HTTPBody() params: UniAIQueryOnlinePost) {
         const prompts = params.prompts as ChatCompletionRequestMessage[]
         if (!prompts.length) throw new Error('Empty prompts')
         const query = prompts.pop() as ChatCompletionRequestMessage
         const stream = new PassThrough()
-
-        ctx.service.leChat
-            .searchStream(online ? query.content : '', stream)
-            .then(res => {
-                if (online) {
-                    prompts.push({ role: 'system', content: `${ctx.__('today')}${new Date().toLocaleString()}` })
-                    if (res.length) {
-                        prompts.push({ role: 'user', content: ctx.__('references') })
-                        for (const content of res) prompts.push({ role: 'system', content })
-                        prompts.push({ role: 'user', content: ctx.__('answer references') })
-                    }
-                }
-                prompts.push(query)
-                console.log(prompts)
-
-                return ctx.service.uniAI.chat(
-                    prompts,
-                    true,
-                    model,
-                    params.top,
-                    params.temperature,
-                    params.maxLength
-                ) as Promise<IncomingMessage>
-            })
-            .then(res => {
-                // parse stream data
-                const parser = ctx.service.uniAI.chatStreamParser(stream, model)
-                if (!parser) throw new Error('Error to create parser')
-
-                res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-                res.on('error', e => stream.end().destroy(e))
-                res.on('end', () => stream.end())
-                res.on('close', () => stream.destroy())
-            })
-            .catch((e: Error) => {
-                console.error(e)
-                stream.end().destroy(e)
-            })
-
-        ctx.set({
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Access-Control-Allow-Origin': '*',
-            Connection: 'keep-alive'
-        })
+        ctx.service.leChat.searchStream(query.content, stream)
         ctx.body = stream
+    }
+
+    @Middleware(auth())
+    @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
+    async chat(@Context() ctx: UserContext, @HTTPBody() params: UniAIChatPost) {
+        try {
+            const prompts = params.prompts as ChatCompletionRequestMessage[]
+            if (!params.prompts.length) throw new Error('Empty prompts')
+            const model = params.model || 'GLM'
+            const chunk = params.chunk || false
+
+            const res = await ctx.service.uniAI.chat(
+                prompts,
+                true,
+                model,
+                params.top,
+                params.temperature,
+                params.maxLength
+            )
+
+            ctx.body = ctx.service.uniAI.parseStream(res as IncomingMessage, model, chunk)
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
     }
 
     @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })

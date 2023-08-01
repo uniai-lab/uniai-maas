@@ -29,7 +29,7 @@ export default class LongText {
             params.language = params.language || ctx.__('chinese')
 
             const res = await ctx.service.prompt.outline({ ...params })
-            ctx.body = ctx.service.uniAI.chatStream(res, params.model)
+            ctx.body = ctx.service.uniAI.parseStream(res, params.model)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

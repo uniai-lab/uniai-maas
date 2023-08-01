@@ -6,7 +6,7 @@ import { ChatCompletionRequestMessage, CreateChatCompletionResponse, CreateEmbed
 import { IncomingMessage } from 'http'
 import { WhereOptions, Op } from 'sequelize'
 import { PassThrough } from 'stream'
-import { createParser } from 'eventsource-parser'
+import { EventSourceParser, createParser } from 'eventsource-parser'
 import isJSON from '@stdlib/assert-is-json'
 import glm, { GLMChatResponse, GLMEmbeddingResponse } from '@util/glm'
 import gpt, { CreateChatCompletionStreamResponse } from '@util/openai'
@@ -23,7 +23,7 @@ const TOKEN_ONE_PAGE = 400
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
     // query resource
-    async findResource(
+    async queryResource(
         prompts: ChatCompletionRequestMessage[],
         resourceId?: number,
         maxPage: number = MAX_PAGE,
@@ -84,28 +84,17 @@ export default class UniAI extends Service {
         }
     }
 
-    chatStream(response: IncomingMessage, model: AIModelEnum) {
+    // handle chat stream
+    parseStream(response: IncomingMessage, model: AIModelEnum, chunk: boolean = false) {
         this.ctx.set({
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
             'Access-Control-Allow-Origin': '*',
             Connection: 'keep-alive'
         })
-        // parse stream data
+        // input stream data
         const stream = new PassThrough()
-        const parser = this.chatStreamParser(stream, model)
-        if (!parser) throw new Error('Error to create parser')
-
-        response.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-        response.on('error', e => stream.end().destroy(e))
-        response.on('end', () => stream.end())
-        response.on('close', () => stream.destroy())
-        return stream
-    }
-
-    // parse stream data to UniAIChatResponseData
-    chatStreamParser(stream: PassThrough, model: AIModelEnum) {
-        // response data
+        // output response data
         const res: StandardResponse<UniAIChatResponseData> = {
             status: 1,
             data: {
@@ -118,24 +107,30 @@ export default class UniAI extends Service {
             },
             msg: ''
         }
+        // count tokens
+        let count = 0
+        let parser: EventSourceParser | undefined
 
-        // parser for GPT stream
+        // parse GPT stream
         if (model === 'GPT')
-            return createParser(e => {
+            parser = createParser(e => {
                 if (e.type === 'event' && isJSON(e.data)) {
                     const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
-                    res.data.content += data.choices[0].delta.content || ''
-                    res.data.completionTokens = $.countTokens(res.data.content)
+                    const content = data.choices[0].delta.content || ''
+                    count++
+                    if (chunk) res.data.content = content
+                    else res.data.content += content
+                    res.data.completionTokens = count
                     res.data.model = data.model
                     res.data.object = data.object
                     res.msg = 'success to get chat stream message from GPT'
-                    if (res.data.content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                    if (content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 }
             })
 
-        // parser for GLM stream
+        // parse GLM stream
         if (model === 'GLM')
-            return createParser(e => {
+            parser = createParser(e => {
                 if (e.type === 'event' && isJSON(e.data)) {
                     const data = JSON.parse(e.data) as GLMChatResponse
                     res.data.content = data.content
@@ -148,6 +143,14 @@ export default class UniAI extends Service {
                     if (res.data.content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 }
             })
+
+        if (!parser) throw new Error('Error to create parser')
+
+        response.on('data', (buff: Buffer) => parser?.feed(buff.toString()))
+        response.on('error', e => stream.end().destroy(e))
+        response.on('end', () => stream.end())
+        response.on('close', () => stream.destroy())
+        return stream
     }
 
     // embed content

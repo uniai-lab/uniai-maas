@@ -201,9 +201,12 @@ interface UniAIChatPost {
     top?: number
     temperature?: number
     model?: AIModelEnum
-    online?: boolean
+    chunk?: boolean
 }
-interface UniAIResourcePost {
+interface UniAIQueryOnlinePost {
+    prompts: UniAIChatPrompt[]
+}
+interface UniAIQueryResourcePost {
     prompts: UniAIChatPrompt[]
     model?: AIModelEnum
     resourceId?: number
