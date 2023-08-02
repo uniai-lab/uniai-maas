@@ -10,7 +10,7 @@ const EXPIRE = 1000 * 60 * 60 * 24 * 7
 export default function auth() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
         // find user by token
-        const id = parseInt(ctx.get('id'))
+        const id = parseInt(ctx.get('id')) || 0
         const token = ctx.get('token')
         const user = await $.getCache<UserTokenCache>(`token_${id}`)
         const now = new Date().getTime()
