@@ -287,7 +287,13 @@ export default class WeChat extends Service {
         // check processing chat stream
         const check = await this.getChat(userId)
         if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
-            throw new Error('Another chat is processing')
+            throw new Error('You have another processing chat')
+
+        // check user chat chance
+        const user = await ctx.model.UserChance.findOne({ where: { userId } })
+        if (!user) throw new Error('Fail to find user')
+        if (user.chatChanceFree <= 0 && user.chatChance <= 0)
+            throw new Error('Chance of chat not enough, waiting for one week')
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
@@ -355,12 +361,15 @@ export default class WeChat extends Service {
         stream.on('close', () => {
             cache.end = true
             $.setCache(`chat_${userId}`, cache)
-            if (cache.content)
+            if (cache.content) {
+                if (user.chatChanceFree > 0) user.decrement({ chatChanceFree: 1 })
+                else user.decrement({ chatChance: 1 })
                 ctx.model.Chat.create({
                     dialogId: cache.dialogId,
                     role: ChatCompletionResponseMessageRoleEnum.Assistant,
                     content: cache.content
                 })
+            }
         })
 
         // save user prompt
@@ -385,17 +394,6 @@ export default class WeChat extends Service {
         if (user.chance.uploadChanceFree > 0) await user.chance.decrement({ uploadChanceFree: 1 })
         else if (user.chance.uploadChance > 0) await user.chance.decrement({ uploadChance: 1 })
         else throw new Error('Chance of upload not enough, waiting for one week')
-    }
-
-    // reduce user chat chance
-    async reduceChatChance(userId: number) {
-        const { ctx } = this
-        const user = await ctx.model.User.findByPk(userId, { include: { model: ctx.model.UserChance } })
-        if (!user || !user.chance) throw new Error('Fail to find user')
-
-        if (user.chance.chatChanceFree > 0) await user.chance.decrement({ chatChanceFree: 1 })
-        else if (user.chance.chatChance > 0) await user.chance.decrement({ chatChance: 1 })
-        else throw new Error('Chance of chat not enough, waiting for one week')
     }
 
     // get user and reset free chat/upload chance

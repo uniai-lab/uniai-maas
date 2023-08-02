@@ -145,7 +145,6 @@ export default class WeChat {
             const model = params.model || 'GLM'
 
             await ctx.service.weChat.chat(input, userId, dialogId, model)
-            await ctx.service.weChat.reduceChatChance(userId)
 
             ctx.service.res.success('Success start chat stream', null)
         } catch (e) {
