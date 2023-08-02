@@ -14,9 +14,7 @@ import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
 import { Resource } from '@model/Resource'
-import { createParser, EventSourceParser } from 'eventsource-parser'
 import { IncomingMessage } from 'http'
-import isJSON from '@stdlib/assert-is-json'
 import gpt, { CreateChatCompletionStreamResponse } from '@util/openai' // OpenAI models
 import glm, { GLMChatResponse } from '@util/glm' // GLM models
 
@@ -78,6 +76,11 @@ export default class WeChat extends Service {
         user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
         user.tokenTime = new Date()
         user.wxSessionKey = res.session_key
+        await $.setCache<UserTokenCache>(`token_${user.id}`, {
+            id: user.id,
+            token: user.token,
+            time: user.tokenTime.getTime()
+        })
         return await user.save()
     }
 
@@ -106,6 +109,11 @@ export default class WeChat extends Service {
             } else throw new Error('Error to decode wechat userinfo')
         }
 
+        await $.setCache<UserTokenCache>(`token_${user.id}`, {
+            id: user.id,
+            token: user.token,
+            time: user.tokenTime.getTime()
+        })
         await user.save()
         return user
     }
@@ -318,7 +326,7 @@ export default class WeChat extends Service {
 
         prompts.push({ role: ChatCompletionRequestMessageRoleEnum.User, content: prompt })
 
-        // reset chat stream cache
+        // set chat stream cache
         const cache: ChatStreamCache = {
             dialogId: dialog.id,
             content: '',
@@ -328,39 +336,25 @@ export default class WeChat extends Service {
 
         // start chat stream
         let stream: IncomingMessage | undefined
-        let parser: EventSourceParser | undefined
-        if (model === 'GPT') {
-            parser = createParser(e => {
-                if (e.type === 'event')
-                    if (isJSON(e.data)) {
-                        const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
-                        cache.content += data.choices[0].delta.content || ''
-                        if (cache.content) $.setCache(userId, cache)
-                    }
-            })
-            stream = await gpt.chat<IncomingMessage>(prompts, true)
-        }
-        if (model === 'GLM') {
-            parser = createParser(e => {
-                if (e.type === 'event') {
-                    if (isJSON(e.data)) {
-                        const data = JSON.parse(e.data) as GLMChatResponse
-                        cache.content = data.content
-                        if (cache.content) $.setCache(userId, cache)
-                    }
-                }
-            })
-            stream = await glm.chat<IncomingMessage>(prompts, true, 0.7, 0.1, 4096)
-        }
+        if (model === 'GPT') stream = await gpt.chat<IncomingMessage>(prompts, true)
+        if (model === 'GLM') stream = await glm.chat<IncomingMessage>(prompts, true)
 
         if (!stream) throw new Error('Error to get chat stream')
-        if (!parser) throw new Error('Error to create stream parser')
 
         // add listen stream
-        stream.on('data', (buff: Buffer) => parser?.feed(buff.toString()))
+        stream.on('data', (buff: Buffer) => {
+            const data = buff
+                .toString()
+                .replace(/^data:/, '')
+                .trim()
+            if (model === 'GPT')
+                cache.content += $.json<CreateChatCompletionStreamResponse>(data)?.choices[0].delta.content || ''
+            if (model === 'GLM') cache.content = $.json<GLMChatResponse>(data)?.content || cache.content
+            $.setCache(`chat_${userId}`, cache)
+        })
         stream.on('close', () => {
             cache.end = true
-            $.setCache(userId, cache)
+            $.setCache(`chat_${userId}`, cache)
             if (cache.content)
                 ctx.model.Chat.create({
                     dialogId: cache.dialogId,
@@ -379,7 +373,7 @@ export default class WeChat extends Service {
 
     // get current chat stream by userId
     async getChat(userId: number) {
-        return await $.getCache<ChatStreamCache>(userId)
+        return await $.getCache<ChatStreamCache>(`chat_${userId}`)
     }
 
     // reduce user upload chance

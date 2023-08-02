@@ -27,6 +27,11 @@ interface ChatStreamCache {
     end: boolean
     time: number
 }
+interface UserTokenCache {
+    id: number
+    token: string
+    time: number
+}
 
 interface UserTask extends ConfigTask {
     flag?: boolean

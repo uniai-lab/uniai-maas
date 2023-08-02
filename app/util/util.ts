@@ -187,14 +187,22 @@ export default {
         try {
             const value = await redis.get(key.toString())
             if (value) return JSON.parse(value) as V
-            return null
+            return undefined
         } catch (e) {
-            return null
+            return undefined
         }
     },
     // set redis cache
-    async setCache<V>(key: string | number, value: V) {
-        await redis.set(key.toString(), JSON.stringify(value))
+    async setCache<V>(key: string | number, value: V, expire?: number) {
+        if (expire) await redis.setex(key.toString(), expire, JSON.stringify(value))
+        else await redis.set(key.toString(), JSON.stringify(value))
+    },
+    json<T>(str: string) {
+        try {
+            return JSON.parse(str) as T
+        } catch (e) {
+            return undefined
+        }
     },
     cosine(v1: number[], v2: number[]) {
         return similarity.cosine(v1, v2)
