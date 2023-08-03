@@ -199,7 +199,7 @@ export default {
     },
     json<T>(str: string) {
         try {
-            return JSON.parse(str) as T
+            return JSON.parse(str.trim()) as T
         } catch (e) {
             return undefined
         }

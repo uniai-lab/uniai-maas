@@ -6,8 +6,6 @@ import { ChatCompletionRequestMessage, CreateChatCompletionResponse, CreateEmbed
 import { IncomingMessage } from 'http'
 import { WhereOptions, Op } from 'sequelize'
 import { PassThrough } from 'stream'
-import { EventSourceParser, createParser } from 'eventsource-parser'
-import isJSON from '@stdlib/assert-is-json'
 import glm, { GLMChatResponse, GLMEmbeddingResponse } from '@util/glm'
 import gpt, { CreateChatCompletionStreamResponse } from '@util/openai'
 import sd from '@util/sd'
@@ -85,16 +83,14 @@ export default class UniAI extends Service {
     }
 
     // handle chat stream
-    parseStream(response: IncomingMessage, model: AIModelEnum, chunk: boolean = false) {
+    parseStream(message: IncomingMessage, model: AIModelEnum, chunk: boolean = false) {
         this.ctx.set({
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
             'Access-Control-Allow-Origin': '*',
             Connection: 'keep-alive'
         })
-        // input stream data
-        const stream = new PassThrough()
-        // output response data
+        // define return data
         const res: StandardResponse<UniAIChatResponseData> = {
             status: 1,
             data: {
@@ -109,47 +105,39 @@ export default class UniAI extends Service {
         }
         // count tokens
         let count = 0
-        let parser: EventSourceParser | undefined
+        const stream = new PassThrough()
 
-        // parse GPT stream
-        if (model === 'GPT')
-            parser = createParser(e => {
-                if (e.type === 'event' && isJSON(e.data)) {
-                    const data = JSON.parse(e.data) as CreateChatCompletionStreamResponse
-                    const content = data.choices[0].delta.content || ''
-                    count++
-                    if (chunk) res.data.content = content
-                    else res.data.content += content
-                    res.data.completionTokens = count
-                    res.data.model = data.model
-                    res.data.object = data.object
-                    res.msg = 'success to get chat stream message from GPT'
-                    if (content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
+        message.on('data', (buff: Buffer) => {
+            const data = buff.toString().split(/data: (.*)/)
+            for (const item of data) {
+                if (model === 'GPT') {
+                    const obj = $.json<CreateChatCompletionStreamResponse>(item)
+                    if (obj && obj.choices[0].delta.content) {
+                        if (chunk) res.data.content = obj.choices[0].delta.content
+                        else res.data.content += obj.choices[0].delta.content
+                        res.data.completionTokens = ++count
+                        res.data.model = obj.model
+                        res.data.object = obj.object
+                        res.msg = 'success to get chat stream message from GPT'
+                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                    }
                 }
-            })
-
-        // parse GLM stream
-        if (model === 'GLM')
-            parser = createParser(e => {
-                if (e.type === 'event' && isJSON(e.data)) {
-                    const data = JSON.parse(e.data) as GLMChatResponse
-                    res.data.content = data.content
-                    res.data.promptTokens = data.prompt_tokens
-                    res.data.completionTokens = data.completion_tokens
-                    res.data.totalTokens = data.total_tokens
-                    res.data.model = data.model
-                    res.data.object = data.object
-                    res.msg = 'success to get chat stream message from GLM'
-                    if (res.data.content) stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                if (model === 'GLM') {
+                    const obj = $.json<GLMChatResponse>(item)
+                    if (obj && obj.content) {
+                        res.data.content = obj.content
+                        res.data.completionTokens = ++count
+                        res.data.model = obj.model
+                        res.data.object = obj.object
+                        res.msg = 'success to get chat stream message from GLM'
+                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                    }
                 }
-            })
-
-        if (!parser) throw new Error('Error to create parser')
-
-        response.on('data', (buff: Buffer) => parser?.feed(buff.toString()))
-        response.on('error', e => stream.end().destroy(e))
-        response.on('end', () => stream.end())
-        response.on('close', () => stream.destroy())
+            }
+        })
+        message.on('error', e => stream.end(e))
+        message.on('end', () => stream.end())
+        message.on('close', () => stream.destroy())
         return stream
     }
 

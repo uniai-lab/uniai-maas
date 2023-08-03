@@ -74,7 +74,7 @@ export interface CreateChatCompletionStreamResponse {
     object: string
     created: number
     model: string
-    choices: Array<CreateChatCompletionStreamResponseChoicesInner>
+    choices: CreateChatCompletionStreamResponseChoicesInner[]
 }
 
 export interface CreateChatCompletionStreamResponseChoicesInner {
