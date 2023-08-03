@@ -339,6 +339,7 @@ export default class WeChat extends Service {
             end: false,
             time: new Date().getTime()
         }
+        await $.setCache(`chat_${userId}`, cache)
 
         // start chat stream
         let stream: IncomingMessage | undefined

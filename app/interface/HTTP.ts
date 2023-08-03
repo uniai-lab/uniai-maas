@@ -114,8 +114,7 @@ interface SimilarityPost {
 }
 
 interface ResourceUploadPost {
-    resourceTypeId: number
-    resourceTypeName: string
+    typeId: number
     fileName: string
 }
 

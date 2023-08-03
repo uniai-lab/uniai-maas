@@ -214,11 +214,11 @@ export default class WeChat {
             const userId = ctx.userId as number
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
-            const resourceTypeId = params.resourceTypeId
-            if (!resourceTypeId) throw new Error('No resource type id')
+            const typeId = params.typeId
+            if (!typeId) throw new Error('No resource type id')
             if (params.fileName) file.filename = params.fileName // use customize filename
 
-            const res = await ctx.service.weChat.upload(file, userId, resourceTypeId)
+            const res = await ctx.service.weChat.upload(file, userId, typeId)
             const resource: UploadResponseData = {
                 id: res.id,
                 typeId: res.typeId,
