@@ -74,10 +74,7 @@ export default {
     },
     // filter sensitive words and replace
     filterSensitive(content: string, replace: string = '') {
-        //content = await this.wxFilterSensitive(content, replace)
-        content = this.jsonFilterSensitive(content, replace)
-        if (/(?:GPT|OpenAI)/gi.test(content)) content = replace
-        return content
+        return this.jsonFilterSensitive(content, replace)
     },
     // get wechat access token for wx miniapp
     async getWxAccessToken(): Promise<string> {

@@ -34,16 +34,16 @@ export default {
         maxLength?: number
     ) {
         let prompt = ''
-        const history: string[] = []
+        let history = ''
         for (const item of messages)
             if (item.role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.Assistant) {
-                history.push(prompt.trim()) // user message
-                history.push((item.content as string).trim()) // ai message
+                history += prompt // user message
+                history += `${item.content}\n` // assistant message
                 prompt = ''
             } else prompt += `${item.content}\n`
 
         const params: GLMChatRequest = { prompt: prompt.trim(), temperature, top_p: top, max_length: maxLength }
-        if (history.length) params.history = [history]
+        if (history.length) params.history = [['', history.trim()]]
 
         return stream
             ? await $.post<GLMChatRequest, T>(`${API}/chat-stream`, params, { responseType: 'stream' })

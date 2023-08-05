@@ -300,7 +300,7 @@ export default class WeChat extends Service {
             where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
             include: {
                 model: ctx.model.Chat,
-                limit: model === 'GPT' ? CHAT_BACKTRACK : 2,
+                limit: CHAT_BACKTRACK,
                 order: [['id', 'desc']]
             }
         })
@@ -308,11 +308,12 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
 
         const prompts: ChatCompletionRequestMessage[] = []
+        // define character
+        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
+
         // add user chat history
         for (const { role, content } of dialog.chats)
             prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
-
-        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
 
         const resourceId = dialog.resourceId
         let prompt = input
