@@ -125,7 +125,8 @@ export default class UniAI extends Service {
                 if (model === 'GLM') {
                     const obj = $.json<GLMChatResponse>(item)
                     if (obj && obj.content) {
-                        res.data.content = obj.content
+                        if (chunk) res.data.content = obj.content
+                        else res.data.content += obj.content
                         res.data.completionTokens = ++count
                         res.data.model = obj.model
                         res.data.object = obj.object

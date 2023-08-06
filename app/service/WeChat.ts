@@ -359,7 +359,7 @@ export default class WeChat extends Service {
                 }
                 if (model === 'GLM') {
                     const obj = $.json<GLMChatResponse>(item)
-                    if (obj && obj.content) cache.content = obj.content
+                    if (obj && obj.content) cache.content += obj.content
                 }
             }
             $.setCache(`chat_${userId}`, cache)
