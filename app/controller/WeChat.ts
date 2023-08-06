@@ -200,7 +200,7 @@ export default class WeChat {
                 data.push({
                     chatId: item.id,
                     type: item.role === 'user',
-                    content: $.filterSensitive(item.content, ctx.__('Content contains non compliant information')),
+                    content: $.filterSensitive(item.content, ctx.__('non compliant information')),
                     avatar: item.role === 'user' ? process.env.DEFAULT_AVATAR_USER : process.env.DEFAULT_AVATAR_AI,
                     dialogId: res.id,
                     userId: res.userId
