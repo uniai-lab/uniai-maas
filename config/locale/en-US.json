@@ -40,5 +40,6 @@
     "topic": "Topic: ",
     "major": "Major: ",
     "prompt: document outline markdown": "Command: Output the document outline as a markdown, leave the content blank, add a numerical number before the title of each section, and nest up to a total of 3 layers of subsections",
-    "prompt: markdown to json": "Convert the above markdown to json format, with the chapter title as key, value as the sub chapter title, and the content as an empty string"
+    "prompt: markdown to json": "Convert the above markdown to json format, with the chapter title as key, value as the sub chapter title, and the content as an empty string",
+    "You have another processing chat": "You have another processing chat"
 }

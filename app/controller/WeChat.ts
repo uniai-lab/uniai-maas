@@ -144,9 +144,17 @@ export default class WeChat {
             const dialogId = params.dialogId
             const model = params.model || 'GLM'
 
-            await ctx.service.weChat.chat(input, userId, dialogId, model)
+            const res = await ctx.service.weChat.chat(input, userId, dialogId, model)
+            const data: ChatResponseData = {
+                type: true,
+                content: res.content,
+                userId,
+                dialogId: res.dialogId,
+                chatId: res.id,
+                avatar: process.env.DEFAULT_AVATAR_AI
+            }
 
-            ctx.service.res.success('Success start chat stream', null)
+            ctx.service.res.success('Success start chat stream', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -155,7 +163,7 @@ export default class WeChat {
 
     // get chat stream
     @Middleware(auth())
-    @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.POST })
+    @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
     async getChat(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
@@ -168,6 +176,7 @@ export default class WeChat {
                 content,
                 userId,
                 dialogId: res.dialogId,
+                chatId: res.chatId,
                 avatar: process.env.DEFAULT_AVATAR_AI,
                 end: res.end
             }
@@ -192,10 +201,7 @@ export default class WeChat {
                 data.push({
                     chatId: item.id,
                     type: item.role === 'user',
-                    content: await $.filterSensitive(
-                        item.content,
-                        ctx.__('Content contains non compliant information')
-                    ),
+                    content: $.filterSensitive(item.content, ctx.__('Content contains non compliant information')),
                     avatar: item.role === 'user' ? process.env.DEFAULT_AVATAR_USER : process.env.DEFAULT_AVATAR_AI,
                     dialogId: res.id,
                     userId: res.userId

@@ -22,6 +22,7 @@ interface ConfigTask {
 }
 
 interface ChatStreamCache {
+    chatId: number
     dialogId: number
     content: string
     end: boolean

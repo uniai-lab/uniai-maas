@@ -23,7 +23,7 @@ const MAX_TOKEN = 3000
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
 const CHAT_BACKTRACK = 10
-const CHAT_STREAM_EXPIRE = 1 * 60 * 1000
+const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -286,8 +286,7 @@ export default class WeChat extends Service {
 
         // check processing chat stream
         const check = await this.getChat(userId)
-        if (check && !check.end && new Date().getTime() - check.time < CHAT_STREAM_EXPIRE)
-            throw new Error('You have another processing chat')
+        if (check && !check.end) throw new Error('You have another processing chat')
 
         // check user chat chance
         const user = await ctx.model.UserChance.findOne({ where: { userId } })
@@ -335,6 +334,7 @@ export default class WeChat extends Service {
 
         // set chat stream cache
         const cache: ChatStreamCache = {
+            chatId: 0,
             dialogId: dialog.id,
             content: '',
             end: false,
@@ -351,31 +351,36 @@ export default class WeChat extends Service {
 
         // add listen stream
         stream.on('data', (buff: Buffer) => {
-            const data = buff
-                .toString()
-                .replace(/^data:/, '')
-                .trim()
-            if (model === 'GPT')
-                cache.content += $.json<CreateChatCompletionStreamResponse>(data)?.choices[0].delta.content || ''
-            if (model === 'GLM') cache.content = $.json<GLMChatResponse>(data)?.content || cache.content
+            const data = buff.toString().split(/data: (.*)/)
+            for (const item of data) {
+                if (model === 'GPT') {
+                    const obj = $.json<CreateChatCompletionStreamResponse>(item)
+                    if (obj && obj.choices[0].delta.content) cache.content += obj.choices[0].delta.content
+                }
+                if (model === 'GLM') {
+                    const obj = $.json<GLMChatResponse>(item)
+                    if (obj && obj.content) cache.content = obj.content
+                }
+            }
             $.setCache(`chat_${userId}`, cache)
         })
-        stream.on('close', () => {
+        stream.on('close', async () => {
             cache.end = true
-            $.setCache(`chat_${userId}`, cache)
             if (cache.content) {
                 if (user.chatChanceFree > 0) user.decrement({ chatChanceFree: 1 })
                 else user.decrement({ chatChance: 1 })
-                ctx.model.Chat.create({
+                const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
                     role: ChatCompletionResponseMessageRoleEnum.Assistant,
                     content: cache.content
                 })
+                cache.chatId = chat.id
             }
+            $.setCache(`chat_${userId}`, cache)
         })
 
         // save user prompt
-        await this.ctx.model.Chat.create({
+        return await this.ctx.model.Chat.create({
             dialogId: dialog.id,
             role: ChatCompletionRequestMessageRoleEnum.User,
             content: input
@@ -384,7 +389,13 @@ export default class WeChat extends Service {
 
     // get current chat stream by userId
     async getChat(userId: number) {
-        return await $.getCache<ChatStreamCache>(`chat_${userId}`)
+        const res = await $.getCache<ChatStreamCache>(`chat_${userId}`)
+        if (res && new Date().getTime() - res.time >= CHAT_STREAM_EXPIRE) {
+            // stream expire
+            res.end = true
+            await $.setCache(`chat_${userId}`, res)
+        }
+        return res
     }
 
     // reduce user upload chance
