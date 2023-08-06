@@ -29,10 +29,6 @@ interface ChatResponseData {
     chatId?: number
 }
 
-interface ChatStreamResponseData extends ChatResponseData {
-    end: boolean
-}
-
 interface UploadResponseData {
     id: number
     typeId: number

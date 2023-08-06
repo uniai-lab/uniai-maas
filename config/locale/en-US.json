@@ -13,7 +13,7 @@
     "You can ask me questions about this book": "You can ask me questions about this book.",
     "According to the above information": "According to the above information.",
     "Unknown": "Unknown",
-    "Content contains non compliant information": "Content contains non compliant information.",
+    "non compliant information": "Content contains non compliant information",
     "you are": "You are LeChat, a large language model (LLM), developed to answer according to the document context.",
     "document content": "Document content:",
     "answer according to": "Answer the question according to the information contained in the document. If you cannot answer the question based on the document content, please just reply 'The document does not contain the relevant information', question: ",

@@ -168,19 +168,18 @@ export default class WeChat {
         try {
             const userId = ctx.userId as number
             const res = await ctx.service.weChat.getChat(userId)
-            if (!res) throw new Error('Chat not found or timeout')
+            if (!res) return ctx.service.res.success('No chat stream', null)
             // filter sensitive
-            const content = $.filterSensitive(res.content, ctx.__('Content contains non compliant information'))
-            const data: ChatStreamResponseData = {
+            const content = $.filterSensitive(res.content, ctx.__('non compliant information'))
+            const data: ChatResponseData = {
                 type: false,
                 content,
                 userId,
                 dialogId: res.dialogId,
                 chatId: res.chatId,
-                avatar: process.env.DEFAULT_AVATAR_AI,
-                end: res.end
+                avatar: process.env.DEFAULT_AVATAR_AI
             }
-            ctx.service.res.success('Success get chat stream', data)
+            ctx.service.res.success('Get chat stream', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

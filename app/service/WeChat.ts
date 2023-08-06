@@ -286,7 +286,7 @@ export default class WeChat extends Service {
 
         // check processing chat stream
         const check = await this.getChat(userId)
-        if (check && !check.end) throw new Error('You have another processing chat')
+        if (check && !check.chatId) throw new Error('You have another processing chat')
 
         // check user chat chance
         const user = await ctx.model.UserChance.findOne({ where: { userId } })
@@ -337,7 +337,6 @@ export default class WeChat extends Service {
             chatId: 0,
             dialogId: dialog.id,
             content: '',
-            end: false,
             time: new Date().getTime()
         }
         await $.setCache(`chat_${userId}`, cache)
@@ -365,7 +364,6 @@ export default class WeChat extends Service {
             $.setCache(`chat_${userId}`, cache)
         })
         stream.on('close', async () => {
-            cache.end = true
             if (cache.content) {
                 if (user.chatChanceFree > 0) user.decrement({ chatChanceFree: 1 })
                 else user.decrement({ chatChance: 1 })
@@ -375,8 +373,8 @@ export default class WeChat extends Service {
                     content: cache.content
                 })
                 cache.chatId = chat.id
-            }
-            $.setCache(`chat_${userId}`, cache)
+                $.setCache(`chat_${userId}`, cache)
+            } else $.removeCache(`chat_${userId}`)
         })
 
         // save user prompt
@@ -390,11 +388,8 @@ export default class WeChat extends Service {
     // get current chat stream by userId
     async getChat(userId: number) {
         const res = await $.getCache<ChatStreamCache>(`chat_${userId}`)
-        if (res && new Date().getTime() - res.time >= CHAT_STREAM_EXPIRE) {
-            // stream expire
-            res.end = true
-            await $.setCache(`chat_${userId}`, res)
-        }
+        // expire, remove chat cache
+        if (res && new Date().getTime() - res.time > CHAT_STREAM_EXPIRE) return await $.removeCache(`chat_${userId}`)
         return res
     }
 

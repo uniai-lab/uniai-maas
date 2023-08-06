@@ -25,7 +25,6 @@ interface ChatStreamCache {
     chatId: number
     dialogId: number
     content: string
-    end: boolean
     time: number
 }
 interface UserTokenCache {

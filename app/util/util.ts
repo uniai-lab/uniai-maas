@@ -180,19 +180,24 @@ export default {
         })
     },
     // get redis cache
-    async getCache<V>(key: string | number) {
+    async getCache<T>(key: string | number) {
         try {
             const value = await redis.get(key.toString())
-            if (value) return JSON.parse(value) as V
-            return undefined
+            if (!value) return undefined
+            return this.json<T>(value)
         } catch (e) {
             return undefined
         }
     },
     // set redis cache
-    async setCache<V>(key: string | number, value: V, expire?: number) {
+    async setCache<T>(key: string | number, value: T, expire?: number) {
         if (expire) await redis.setex(key.toString(), expire, JSON.stringify(value))
         else await redis.set(key.toString(), JSON.stringify(value))
+    },
+    // set redis cache
+    async removeCache(key: string | number) {
+        await redis.del(key.toString())
+        return undefined
     },
     json<T>(str: string) {
         try {
