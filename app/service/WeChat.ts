@@ -309,11 +309,12 @@ export default class WeChat extends Service {
 
         const prompts: ChatCompletionRequestMessage[] = []
         // define character
-        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
 
         // add user chat history
         for (const { role, content } of dialog.chats)
             prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
+
+        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
 
         const resourceId = dialog.resourceId
         let prompt = input
