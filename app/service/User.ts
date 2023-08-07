@@ -9,7 +9,10 @@ import { Service } from 'egg'
 export default class User extends Service {
     // get app configs to user
     async getConfig() {
-        const res = await this.ctx.model.Config.findAll()
+        const res = await this.ctx.model.Config.findAll({
+            where: { isDel: false, isEffect: true },
+            attributes: ['key', 'value', 'isJson']
+        })
         const data: ConfigResponseData = {}
         for (const item of res) data[item.key] = item.isJson ? JSON.parse(item.value) : item.value
         return data

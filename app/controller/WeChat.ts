@@ -12,7 +12,7 @@ export default class WeChat {
     logger: EggLoader
 
     // app configs
-    @HTTPMethod({ path: '/config', method: HTTPMethodEnum.POST })
+    @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
     async config(@Context() ctx: UserContext) {
         try {
             ctx.service.res.success('Config list', await ctx.service.user.getConfig())
@@ -93,7 +93,7 @@ export default class WeChat {
 
     // get user info
     @Middleware(auth())
-    @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.POST })
+    @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
@@ -120,7 +120,7 @@ export default class WeChat {
                 wxUnionId: user.wxUnionId,
                 task,
                 chance: {
-                    ...user.chance,
+                    ...user.chance.dataValues,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 }
@@ -249,7 +249,7 @@ export default class WeChat {
     }
 
     @Middleware(auth())
-    @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.POST })
+    @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
     async listDialogResource(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number

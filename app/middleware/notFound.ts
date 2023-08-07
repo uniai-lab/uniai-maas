@@ -6,6 +6,9 @@ import { Context } from 'egg'
 export default function notFound() {
     return async (ctx: Context, next: () => Promise<any>) => {
         await next()
-        if (ctx.status === 404 && !ctx.body) await ctx.render('404.html')
+        if (ctx.status === 404) {
+            ctx.status = 404
+            ctx.body = `[${ctx.method}]\n${ctx.URL}\n404 Not Found`
+        }
     }
 }
