@@ -270,7 +270,7 @@ export default class WeChat extends Service {
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId: number = 0, limit: number = 15) {
+    async listChat(userId: number, dialogId: number = 0, limit: number = CHAT_BACKTRACK) {
         const { ctx } = this
         const include: IncludeOptions = { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
         const dialog = dialogId

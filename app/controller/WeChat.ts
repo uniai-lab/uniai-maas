@@ -193,7 +193,7 @@ export default class WeChat {
             const userId = ctx.userId as number
             const dialogId = params.dialogId
 
-            const res = await ctx.service.weChat.listChat(userId, dialogId, 20)
+            const res = await ctx.service.weChat.listChat(userId, dialogId)
             if (!res) throw new Error('Dialog not found')
             const data: ChatResponseData[] = []
             for (const item of res.chats)
