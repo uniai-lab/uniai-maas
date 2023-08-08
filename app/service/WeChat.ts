@@ -19,10 +19,10 @@ import gpt, { CreateChatCompletionStreamResponse } from '@util/openai' // OpenAI
 import glm, { GLMChatResponse } from '@util/glm' // GLM models
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
-const MAX_TOKEN = 3000
+const MAX_TOKEN = 2500
 const PAGE_LIMIT = 5
 const SAME_SIMILARITY = 0.01
-const CHAT_BACKTRACK = 10
+const CHAT_BACKTRACK = 8
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -310,11 +310,11 @@ export default class WeChat extends Service {
         const prompts: ChatCompletionRequestMessage[] = []
         // define character
 
+        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
+
         // add user chat history
         for (const { role, content } of dialog.chats)
             prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
-
-        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
 
         const resourceId = dialog.resourceId
         let prompt = input

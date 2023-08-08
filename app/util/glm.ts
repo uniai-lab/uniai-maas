@@ -34,16 +34,22 @@ export default {
         maxLength?: number
     ) {
         let prompt = ''
-        let history = ''
-        for (const item of messages)
-            if (item.role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.Assistant) {
-                history += prompt // user message
-                history += `${item.content}\n` // assistant message
+        const history: string[][] = []
+        for (const { role, content } of messages)
+            if (role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.System) history.push([content || '', 'yes'])
+            else if (role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.User) prompt += `${content}\n`
+            else {
+                history.push([prompt.trim(), content || ''])
                 prompt = ''
-            } else prompt += `${item.content}\n`
+            }
 
-        const params: GLMChatRequest = { prompt: prompt.trim(), temperature, top_p: top, max_length: maxLength }
-        if (history.length) params.history = [['', history.trim()]]
+        const params: GLMChatRequest = {
+            prompt: prompt.trim(),
+            history,
+            temperature,
+            top_p: top,
+            max_length: maxLength
+        }
 
         return stream
             ? await $.post<GLMChatRequest, T>(`${API}/chat-stream`, params, { responseType: 'stream' })
