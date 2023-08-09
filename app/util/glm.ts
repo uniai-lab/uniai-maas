@@ -5,7 +5,6 @@
  * @devilyouwei
  */
 
-import { EggContext } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, CreateEmbeddingRequestInput } from 'openai'
 import { IncomingMessage } from 'http'
 import $ from '@util/util'
@@ -13,20 +12,10 @@ import $ from '@util/util'
 const API = process.env.GLM_API
 
 export default {
-    async log(ctx: EggContext, userId: number, log: GLMChatResponse | GLMEmbeddingResponse, message?: string) {
-        return await ctx.model.OpenAILog.create({
-            model: log.model,
-            userId,
-            object: log.object,
-            promptTokens: log.prompt_tokens,
-            totalTokens: log.total_tokens,
-            message
-        })
-    },
     async embedding(prompt: CreateEmbeddingRequestInput) {
         return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${API}/embedding`, { prompt })
     },
-    async chat<T = GLMChatRequest | IncomingMessage>(
+    async chat<T = GLMChatResponse | IncomingMessage>(
         messages: ChatCompletionRequestMessage[],
         stream: boolean = false,
         top?: number,
@@ -57,12 +46,15 @@ export default {
     }
 }
 
-export interface GLMChatRequest {
+interface GLMChatRequest {
     prompt: string
     history?: string[][]
     max_length?: number
     top_p?: number
     temperature?: number
+}
+interface GLMEmbeddingRequest {
+    prompt: CreateEmbeddingRequestInput
 }
 export interface GLMChatResponse {
     content: string
@@ -71,9 +63,6 @@ export interface GLMChatResponse {
     total_tokens: number
     model: string
     object: string
-}
-export interface GLMEmbeddingRequest {
-    prompt: CreateEmbeddingRequestInput
 }
 export interface GLMEmbeddingResponse {
     model: string

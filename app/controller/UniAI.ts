@@ -14,7 +14,6 @@ import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'open
 import { IncomingMessage } from 'http'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
-import $ from '@util/util'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -104,22 +103,16 @@ export default class UniAI {
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
     async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIQueryResourcePost) {
         try {
-            const prompts = params.prompts as ChatCompletionRequestMessage[]
-            if (!params.prompts.length) throw new Error('Empty prompts')
-            const { pages, embed, model } = await ctx.service.uniAI.queryResource(
-                prompts,
-                params.resourceId,
-                params.maxPage,
-                params.maxToken,
-                params.model
+            const { prompts, resourceId, maxPage, model } = params
+            if (!prompts.length) throw new Error('Empty prompts')
+
+            const data = await ctx.service.uniAI.queryResource(
+                prompts as ChatCompletionRequestMessage[],
+                resourceId,
+                maxPage,
+                model
             )
-            const data = pages.map(v => {
-                let embedding = v.embedding2 // default text2vector (GLM)
-                if (params.model === 'GPT') embedding = v.embedding
-                if (params.model === 'GLM') embedding = v.embedding2
-                return { content: v.content, similar: $.cosine(embedding, embed), model }
-            })
-            ctx.service.res.success('Success to find resources content', data)
+            ctx.service.res.success('Success to find resources', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -130,18 +123,13 @@ export default class UniAI {
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: UniAIEmbeddingPost) {
         try {
-            if (!params.content) throw new Error('content is null')
-            if (!params.fileName) throw new Error('file name is null')
-            if (!params.filePath) throw new Error('file path is null')
-            if (!params.fileSize) throw new Error('file size is not valid')
+            const { content, fileName, filePath, fileSize, model, id } = params
+            if (!content) throw new Error('content is null')
+            if (!fileName) throw new Error('file name is null')
+            if (!filePath) throw new Error('file path is null')
+            if (!fileSize) throw new Error('file size is not valid')
 
-            const res = await ctx.service.uniAI.embedding(
-                params.content,
-                params.fileName,
-                params.filePath,
-                params.fileSize,
-                params.model
-            )
+            const res = await ctx.service.uniAI.embedding(content, fileName, filePath, fileSize, model, id)
             if (!res) throw new Error('Fail to embed text')
             const data: UniAIEmbeddingResponseData = {
                 id: res.id,
@@ -155,6 +143,7 @@ export default class UniAI {
             ctx.service.res.error(e as Error)
         }
     }
+
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/txt-to-img', method: HTTPMethodEnum.POST })
     async txt2img(@Context() ctx: EggContext, @HTTPBody() params: UniAITxt2ImgPost) {
@@ -175,6 +164,7 @@ export default class UniAI {
             ctx.service.res.error(e as Error)
         }
     }
+
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/img-progress', method: HTTPMethodEnum.POST })
     async progress(@Context() ctx: EggContext) {

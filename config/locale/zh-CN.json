@@ -23,7 +23,7 @@
     "User existed": "用户已存在",
     "File content is null": "文件为空",
     "File content cannot be split": "文件不可分页。",
-    "Main content of this document, including the title, summary, abstract, and authors": "以下是本文第一页，本文主要内容，包含标题，概述，摘要和作者：",
+    "title, copyright, abstract, authors": "开头，标题，版权，出版商，概述，摘要和作者等：",
     "File not support": "文件类型不支持",
     "Feel free to chat with me": "来和我随便聊聊吧！",
     "searching": "搜索中",

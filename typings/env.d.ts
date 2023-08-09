@@ -10,7 +10,7 @@ declare global {
             OPENAI_PROXY: string
             OPENAI_API_KEY: string
             OPENAI_EMBED_DIM: number
-            TEXT2VEC_EMBED_DIM: number
+            GLM_EMBED_DIM: number
             GLM_API: string
             SAVE_DOC_PATH: string
             SAVE_MODEL_PATH: string

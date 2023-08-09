@@ -2,9 +2,7 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import $ from '@util/util'
-import md5 from 'md5'
-import * as fs from 'fs'
+import { readFileSync } from 'fs'
 import {
     ChatCompletionRequestMessage,
     ChatCompletionRequestMessageRoleEnum,
@@ -17,10 +15,14 @@ import { Resource } from '@model/Resource'
 import { IncomingMessage } from 'http'
 import gpt, { CreateChatCompletionStreamResponse } from '@util/openai' // OpenAI models
 import glm, { GLMChatResponse } from '@util/glm' // GLM models
+import md5 from 'md5'
+import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2500
 const PAGE_LIMIT = 5
+const TOKEN_FIRST_PAGE = 800
+const TOKEN_SPLIT_PAGE = 400
 const SAME_SIMILARITY = 0.01
 const CHAT_BACKTRACK = 8
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
@@ -173,62 +175,60 @@ export default class WeChat extends Service {
     // user upload file
     async upload(file: EggFile, userId: number, typeId: number): Promise<Resource> {
         // detect file type from buffer
-        const buff = fs.readFileSync(file.filepath)
+        const buff = readFileSync(file.filepath)
         const { text, ext } = await $.extractText(buff)
-        if (!ext) throw new Error('Error to detect file type')
-        if (text) {
-            const resource: ResourceFile = {
-                text,
-                name: file.filename,
-                path: file.filepath,
-                ext,
-                size: buff.byteLength
-            }
-            return await this.saveDocument(resource, userId, typeId)
-        } else throw new Error('File not support')
-        /*else if (type.ext === 'png' || type.ext === 'jpg' || type.ext === 'gif' || type.ext === 'webp') { }*/
+        if (!ext) throw new Error('Fail to detect file type')
+        if (!text) throw new Error('Fail to extract content text')
+
+        const resource: ResourceFile = {
+            text,
+            name: file.filename,
+            path: file.filepath,
+            ext,
+            size: buff.byteLength
+        }
+        return await this.saveDocument(resource, userId, typeId)
     }
 
     async saveDocument(file: ResourceFile, userId: number, typeId: number) {
         const { ctx } = this
 
         // check same similarity for first one page, 1000 tokens
-        const p: string[] = await $.splitPage(file.text, 800)
-        if (!p.length) throw new Error('File content cannot be split')
-        const embed = await glm.embedding([p[0]])
-        await glm.log(ctx, userId, embed, '[WeChat/upload]: check similarity for first page')
-        const embedding = embed.data[0]
-        const result = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
-        if (result.length) return result[0]
+        const firstPage: string[] = $.splitPage(file.text, TOKEN_FIRST_PAGE)
+        const splitPage: string[] = $.splitPage(file.text, TOKEN_SPLIT_PAGE)
+        if (!firstPage.length || !splitPage.length) throw new Error('File content cannot be split')
+
+        const embed = await glm.embedding([firstPage[0]])
+        const embedding2 = embed.data[0]
+        const check = await ctx.model.Resource.similarFindAll2(embedding2, 1, SAME_SIMILARITY)
+        if (check.length) return check[0]
 
         // embedding all pages, sentence-level, 500 token per page
-        const s: string[] = await $.splitPage(file.text, 400)
-        s[0] = ctx.__('Main content of this document, including the title, summary, abstract, and authors') + s[0]
-        if (!s.length) throw new Error('File content cannot be split')
-        const res = await glm.embedding(s)
-        await glm.log(ctx, userId, res, '[WeChat/upload]: embedding all pages')
+        splitPage[0] = ctx.__('title, copyright, abstract, authors') + splitPage[0]
+        const res = await glm.embedding(splitPage)
 
         // save resource to cos
         const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${file.ext}`, file.path)
         // save resource + pages
-        const pages: any[] = res.data.map((v, i) => {
-            return {
-                page: i + 1,
-                embedding2: v,
-                content: s[i],
-                length: $.countTokens(s[i])
-            }
-        })
         return await ctx.model.Resource.create(
             {
-                page: s.length, // sentence num
+                page: splitPage.length, // sentence num
                 typeId,
                 userId,
-                embedding2: embedding,
+                embedding2,
                 filePath: `https://${upload.Location}`,
                 fileName: file.name,
                 fileSize: file.size,
-                pages
+                promptTokens: $.countTokens(file.text),
+                totalTokens: $.countTokens(file.text),
+                pages: res.data.map((v, i) => {
+                    return {
+                        page: i + 1,
+                        embedding2: v,
+                        content: splitPage[i],
+                        length: $.countTokens(splitPage[i])
+                    }
+                })
             },
             { include: ctx.model.Page }
         )

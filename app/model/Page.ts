@@ -14,6 +14,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
+const { GLM_EMBED_DIM, OPENAI_EMBED_DIM } = process.env
 
 @Table({ modelName: 'page' })
 export class Page extends Model {
@@ -32,15 +33,17 @@ export class Page extends Model {
     resourceId!: number
 
     @Column({
-        type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
-        get(): number[] {
-            return JSON.parse(this.getDataValue('embedding'))
+        type: `VECTOR(${OPENAI_EMBED_DIM})`,
+        get() {
+            const raw = this.getDataValue('embedding')
+            return raw ? JSON.parse(raw) : null
         },
-        set(value: number[]) {
-            this.setDataValue('embedding', JSON.stringify(value))
+        set(v: number[] | null) {
+            if (Array.isArray(v)) this.setDataValue('embedding', JSON.stringify([...v]))
+            else this.setDataValue('embedding', null)
         }
     })
-    embedding!: number[]
+    embedding: number[] | null
 
     static async similarFindAll(vector: number[], limit?: number, where?: WhereOptions) {
         const db = this.sequelize
@@ -52,15 +55,17 @@ export class Page extends Model {
     }
 
     @Column({
-        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
-        get(): number[] {
-            return JSON.parse(this.getDataValue('embedding2'))
+        type: `VECTOR(${GLM_EMBED_DIM})`,
+        get() {
+            const raw = this.getDataValue('embedding2')
+            return raw ? JSON.parse(raw) : null
         },
-        set(value: number[]) {
-            this.setDataValue('embedding2', JSON.stringify(value))
+        set(v: number[] | null) {
+            if (Array.isArray(v)) this.setDataValue('embedding2', JSON.stringify([...v]))
+            else this.setDataValue('embedding2', null)
         }
     })
-    embedding2!: number[]
+    embedding2: number[] | null
 
     static async similarFindAll2(vector: number[], limit?: number, where?: WhereOptions) {
         const db = this.sequelize

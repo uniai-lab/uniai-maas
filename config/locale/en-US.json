@@ -24,7 +24,7 @@
     "User existed": "User existed.",
     "File content is null": "File content is null.",
     "File content cannot be split": "File content cannot be split.",
-    "Main content of this document, including the title, summary, abstract, and authors": "Main content of this document, the first page, including the title, summary, abstract, and authors:",
+    "title, copyright, abstract, authors": "title, copyright, abstract, authors",
     "File not support": "File not support.",
     "Feel free to chat with me": "Feel free to chat with me!",
     "searching": "Searching",

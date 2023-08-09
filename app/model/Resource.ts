@@ -17,6 +17,7 @@ import { Dialog } from './Dialog'
 import { Page } from './Page'
 import { ResourceType } from './ResourceType'
 import { Chat } from './Chat'
+const { GLM_EMBED_DIM, OPENAI_EMBED_DIM } = process.env
 
 @Table({ modelName: 'resource' })
 export class Resource extends Model {
@@ -34,23 +35,18 @@ export class Resource extends Model {
     @Column(DataType.INTEGER)
     page!: number
 
-    /*
-    @Index({
-        name: 'resource-embedding-index',
-        using: 'ivfflat',
-        operator: 'vector_cosine_ops'
-    })
-    */
     @Column({
-        type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
-        get(): number[] {
-            return JSON.parse(this.getDataValue('embedding'))
+        type: `VECTOR(${OPENAI_EMBED_DIM})`,
+        get() {
+            const raw = this.getDataValue('embedding')
+            return raw ? JSON.parse(raw) : null
         },
-        set(value: number[]) {
-            this.setDataValue('embedding', JSON.stringify(value))
+        set(v: number[] | null) {
+            if (Array.isArray(v)) this.setDataValue('embedding', JSON.stringify([...v]))
+            else this.setDataValue('embedding', null)
         }
     })
-    embedding: number[]
+    embedding: number[] | null
 
     static async similarFindAll(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
         const db = this.sequelize
@@ -62,15 +58,17 @@ export class Resource extends Model {
     }
 
     @Column({
-        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
-        get(): number[] {
-            return JSON.parse(this.getDataValue('embedding2'))
+        type: `VECTOR(${GLM_EMBED_DIM})`,
+        get() {
+            const raw = this.getDataValue('embedding2')
+            return raw ? JSON.parse(raw) : null
         },
-        set(value: number[]) {
-            this.setDataValue('embedding2', JSON.stringify(value))
+        set(v: number[] | null) {
+            if (Array.isArray(v)) this.setDataValue('embedding2', JSON.stringify([...v]))
+            else this.setDataValue('embedding2', null)
         }
     })
-    embedding2: number[]
+    embedding2: number[] | null
 
     static async similarFindAll2(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
         const db = this.sequelize

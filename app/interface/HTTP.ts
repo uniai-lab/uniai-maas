@@ -213,6 +213,7 @@ interface UniAIEmbeddingPost {
     fileName: string
     filePath: string
     fileSize: number
+    id?: number
     model?: AIModelEnum
 }
 interface UniAITxt2ImgPost {

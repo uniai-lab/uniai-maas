@@ -1,35 +1,38 @@
 /**
- * collection of utils for this project
+ * Common utils for this project
  *
  * @format
  * @devilyouwei
  */
 
-import * as fs from 'fs'
-import axios, { AxiosRequestConfig } from 'axios'
 import crypto from 'crypto'
-import { sentences } from 'sbd'
-import { encode, decode } from 'gpt-3-encoder'
-import Mint from 'mint-filter'
-import COS from 'cos-nodejs-sdk-v5'
-import { fromBuffer } from 'file-type'
 import pdf from 'pdf-parse'
 import mammoth from 'mammoth'
+import { readFileSync } from 'fs'
+import axios, { AxiosRequestConfig } from 'axios'
+import { sentences } from 'sbd'
+import { encode, decode } from 'gpt-3-encoder'
+import { fromBuffer } from 'file-type'
 import { google } from 'googleapis'
 import { convert } from 'html-to-text'
-import Redis from 'ioredis'
 import { similarity } from 'ml-distance'
+import { path as ROOT_PATH } from 'app-root-path'
+import Filter from 'mint-filter'
+import COS from 'cos-nodejs-sdk-v5'
+import Redis from 'ioredis'
 
 const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
 const ERR_CODE = 87014
+const { REDIS_PORT, COS_SECRET_ID, COS_SECRET_KEY } = process.env
 
-const redis = new Redis(process.env.REDIS_PORT)
+// redis cache
+const redis = new Redis(REDIS_PORT)
 // tencent cos service
-const cos = new COS({ SecretId: process.env.COS_SECRET_ID, SecretKey: process.env.COS_SECRET_KEY })
-// sensitive words
-const json = JSON.parse(fs.readFileSync(`${__dirname}/sensitive.json`, 'utf-8'))
-const mint = new Mint(json)
+const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
+// sensitive words filter
+const json = JSON.parse(readFileSync(`${ROOT_PATH}/config/sensitive.json`, 'utf-8'))
+const filter = new Filter(json)
 // search engine API
 const customsearch = google.customsearch('v1')
 
@@ -100,7 +103,7 @@ export default {
     },
     // use local json to filter sensitive content
     jsonFilterSensitive(content: string, replace: string = ''): string {
-        return mint.verify(content) ? content : replace
+        return filter.verify(content) ? content : replace
     },
     // decrypt data from wechat phone API
     decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string): WXDecodedData {
@@ -148,7 +151,7 @@ export default {
         return text.trim()
     },
     // split a long document text into pages by sentences
-    async splitPage(text: string, min: number = MIN_SPLIT_SIZE) {
+    splitPage(text: string, min: number = MIN_SPLIT_SIZE) {
         const paragraph = this.tinyText(text)
             .split(/[。？！]/g)
             .filter(s => s.trim().length > 0)

@@ -139,10 +139,8 @@ export default class WeChat {
         try {
             const userId = ctx.userId
             if (!userId) throw new Error('No user id')
-            const input = params.input.trim()
+            const { input, dialogId, model } = params
             if (!input) throw new Error('Input nothing')
-            const dialogId = params.dialogId
-            const model = params.model || 'GLM'
 
             const res = await ctx.service.weChat.chat(input, userId, dialogId, model)
             const data: ChatResponseData = {

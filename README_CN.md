@@ -43,57 +43,55 @@ UniAI旨在简化您与复杂AI模型的交互，不再为选择合适的模型�
 
 2. 将环境参数填写到 `.env` 文件中，如下所示：
 
-   ```bash
-   # 应用
-   APP_NAME=UniAI
-   APP_URL=[你的应用域名]
+```bash
+# APP
+APP_NAME=UniAI
+APP_URL=https://www.uniai.us
+DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png
+DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
+DEFAULT_USERNAME=AI
+ADMIN_TOKEN=[Your Admin Token]
 
-   # GPT
-   OPENAI_PROXY=[你的OpenAI代理]
-   OPENAI_API_KEY=[你的OpenAI API密钥]
-   OPENAI_EMBED_DIM=1536
+# GPT
+OPENAI_API=http://8.214.93.3 # openai proxy
+OPENAI_API_KEY=[Your openAI key] # add your key
+OPENAI_EMBED_DIM=1536
 
-   # GLM
-   GLM_API=[你的GLM API]
-   TEXT2VEC_EMBED_DIM=1024
+# GLM
+GLM_API=http://10.144.1.7:8100 # your GLM deployed server
+GLM_EMBED_DIM=1024
 
-   # PostgreSQL 数据库
-   POSTGRES_HOST=localhost
-   POSTGRES_PORT=5432
-   POSTGRES_USER=postgres
-   POSTGRES_PASSWORD=postgres
-   POSTGRES_DB=uniai
+# PostgreSQL database
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=uniai
 
-   # Redis 缓存
-   REDIS_PORT=6379
+# Redis cache
+REDIS_PORT=6379
 
-   # 微信
-   WX_APP_ID=[你的微信小程序AppID]
-   WX_APP_SECRET=[你的微信小程序App Secret]
-   WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
-   WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
-   WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
-   WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
+# WeChat
+WX_APP_ID=[Wechat miniapp app id]
+WX_APP_SECRET=[Wechat miniapp app secret]
+WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
+WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
+WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
+WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
-   # COS, OSS 存储
-   COS_SECRET_ID=[你的腾讯云COS服务secret id]
-   COS_SECRET_KEY=[你的腾讯云COS服务secret key]
-   COS_BUCKET=[你的腾讯云COS服务bucket]
-   COS_REGION=[你的腾讯云COS服务region]
+# COS, OSS storage
+COS_SECRET_ID=[Tencent COS secret id]
+COS_SECRET_KEY=[Tencent COS secret key]
+COS_BUCKET=[Tencent COS bucket]
+COS_REGION=[Tencent COS region]
 
-   # Google 搜索
-   GOOGLE_SEARCH_API_TOKEN=[你的Google API token]
-   GOOGLE_SEARCH_ENGINE_ID=[你的Google引擎ID]
+# Google Search
+GOOGLE_SEARCH_API_TOKEN=[Google search API token]
+GOOGLE_SEARCH_ENGINE_ID=[Google search engine ID]
 
-   # Stable Diffusion
-   STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
-
-   # 应用的默认配置
-   ADMIN_TOKEN=[你的管理员令牌]
-   DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-ai.png
-   DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
-   DEFAULT_USERNAME=user
-   ```
+# Stable Diffusion
+STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
+```
 
 ### 安装
 
