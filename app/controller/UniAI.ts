@@ -124,20 +124,40 @@ export default class UniAI {
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: UniAIEmbeddingPost) {
         try {
             const { content, fileName, filePath, fileSize, model, id } = params
-            if (!content) throw new Error('content is null')
-            if (!fileName) throw new Error('file name is null')
-            if (!filePath) throw new Error('file path is null')
-            if (!fileSize) throw new Error('file size is not valid')
+            const userId = 0
+            const typeId = 1
+            if (id) {
+                // update
+                const res = await ctx.service.uniAI.updateEmbedding(id, model, userId)
+                if (!res) throw new Error('Fail to update resource embedding')
+                ctx.service.res.success('Success to embed text', {
+                    id: res.id,
+                    tokens: res.tokens,
+                    page: res.page
+                } as UniAIEmbeddingResponseData)
+            } else {
+                // insert
+                if (!content) throw new Error('content is null')
+                if (!fileName) throw new Error('file name is null')
+                if (!filePath) throw new Error('file path is null')
+                if (!fileSize) throw new Error('file size is not valid')
 
-            const res = await ctx.service.uniAI.embedding(content, fileName, filePath, fileSize, model, id)
-            if (!res) throw new Error('Fail to embed text')
-            const data: UniAIEmbeddingResponseData = {
-                id: res.id,
-                promptTokens: res.promptTokens,
-                totalTokens: res.totalTokens,
-                page: res.page
+                const res = await ctx.service.uniAI.createEmbedding(
+                    content,
+                    fileName,
+                    filePath,
+                    fileSize,
+                    model,
+                    userId,
+                    typeId
+                )
+                if (!res) throw new Error('Fail to create resource embedding')
+                ctx.service.res.success('Success to embed text', {
+                    id: res.id,
+                    tokens: res.tokens,
+                    page: res.page
+                } as UniAIEmbeddingResponseData)
             }
-            ctx.service.res.success('Success to embed text', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

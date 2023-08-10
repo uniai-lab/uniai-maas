@@ -166,7 +166,7 @@ export default class WeChat extends Service {
             order: [['id', 'DESC']],
             include: {
                 model: ctx.model.Resource,
-                attributes: ['id', 'page', 'totalTokens', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'typeId'],
+                attributes: ['id', 'page', 'tokens', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'typeId'],
                 include: [{ model: ctx.model.ResourceType, attributes: ['type', 'description'] }]
             }
         })
@@ -219,14 +219,14 @@ export default class WeChat extends Service {
                 filePath: `https://${upload.Location}`,
                 fileName: file.name,
                 fileSize: file.size,
-                promptTokens: $.countTokens(file.text),
-                totalTokens: $.countTokens(file.text),
+                content: file.text,
+                tokens: $.countTokens(file.text),
                 pages: res.data.map((v, i) => {
                     return {
                         page: i + 1,
                         embedding2: v,
                         content: splitPage[i],
-                        length: $.countTokens(splitPage[i])
+                        tokens: $.countTokens(splitPage[i])
                     }
                 })
             },

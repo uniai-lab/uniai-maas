@@ -14,6 +14,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
+
 const { GLM_EMBED_DIM, OPENAI_EMBED_DIM } = process.env
 
 @Table({ modelName: 'page' })
@@ -24,13 +25,14 @@ export class Page extends Model {
     id: number
 
     @AllowNull(false)
+    @Default(0)
     @Column(DataType.INTEGER)
-    page!: number
+    page: number
 
     @AllowNull(false)
     @ForeignKey(() => Resource)
     @Column(DataType.INTEGER)
-    resourceId!: number
+    resourceId: number
 
     @Column({
         type: `VECTOR(${OPENAI_EMBED_DIM})`,
@@ -77,23 +79,24 @@ export class Page extends Model {
     }
 
     @AllowNull(false)
+    @Default('')
     @Column(DataType.TEXT)
-    content!: string
+    content: string
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    length: number
+    tokens: number
 
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @AllowNull(false)
     @Default(true)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 
     @BelongsTo(() => Resource)
     resource: Resource

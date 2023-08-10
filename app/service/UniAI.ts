@@ -146,111 +146,151 @@ export default class UniAI extends Service {
         return stream
     }
 
-    // embed content
-    async embedding(
+    // create embedding
+    async createEmbedding(
         content: string,
         fileName: string,
         filePath: string,
         fileSize: number,
         model: AIModelEnum = 'GLM',
-        id: number = 0
+        userId: number = 0,
+        typeId: number = 1
     ) {
         const { ctx } = this
-        const userId = 0
-        const typeId = 1
+
+        // split pages
         const firstPage: string[] = $.splitPage(content, TOKEN_FIRST_PAGE)
         const splitPage: string[] = $.splitPage(content, TOKEN_SPLIT_PAGE)
-        if (!firstPage.length || !splitPage.length) throw new Error('File content cannot be split')
+        if (!firstPage.length || !splitPage.length) throw new Error('Content cannot be split')
 
-        const value: {
+        let embedding: null | number[] = null
+        let embedding2: null | number[] = null
+        const pages: {
             page: number
-            typeId: number
-            userId: number
-            embedding: number[] | null
-            embedding2: number[] | null
-            filePath: string
-            fileName: string
-            fileSize: number
-            promptTokens: number
-            totalTokens: number
-            pages: {
-                page: number
-                embedding: number[] | null
-                embedding2: number[] | null
-                content: string
-                length: number
-            }[]
-        } = {
-            page: splitPage.length,
-            typeId,
-            userId,
-            fileName,
-            filePath,
-            fileSize,
-            embedding: null,
-            embedding2: null,
-            promptTokens: $.countTokens(content),
-            totalTokens: $.countTokens(content),
-            pages: []
-        }
+            embedding?: number[]
+            embedding2?: number[]
+            content: string
+            tokens: number
+        }[] = []
 
         if (model === 'GPT') {
             const first = await gpt.embedding([firstPage[0]])
-            value.embedding = first.data[0].embedding
+            embedding = first.data[0].embedding
 
             // check similarity
-            const check = await ctx.model.Resource.similarFindAll(value.embedding, 1, SAME_SIMILARITY)
+            const check = await ctx.model.Resource.similarFindAll(embedding, 1, SAME_SIMILARITY)
             if (check.length) return check[0]
 
             const res = await gpt.embedding(splitPage)
             res.data.map((v, i) => {
-                value.pages.push({
+                pages.push({
                     page: i + 1,
                     embedding: v.embedding,
-                    embedding2: null,
                     content: splitPage[i],
-                    length: $.countTokens(splitPage[i])
+                    tokens: $.countTokens(splitPage[i])
                 })
             })
         } else if (model === 'GLM') {
             const first = await glm.embedding([firstPage[0]])
-            value.embedding2 = first.data[0]
+            embedding2 = first.data[0]
 
             // check similarity
-            const check = await ctx.model.Resource.similarFindAll2(value.embedding2, 1, SAME_SIMILARITY)
+            const check = await ctx.model.Resource.similarFindAll2(embedding2, 1, SAME_SIMILARITY)
             if (check.length) return check[0]
 
             const res = await glm.embedding(splitPage)
             res.data.map((v, i) => {
-                value.pages.push({
+                pages.push({
                     page: i + 1,
-                    embedding: null,
                     embedding2: v,
                     content: splitPage[i],
-                    length: $.countTokens(splitPage[i])
+                    tokens: $.countTokens(splitPage[i])
                 })
             })
         } else throw new Error('Model not found')
 
-        let resource = await ctx.model.Resource.findOne({ where: { id, userId }, include: ctx.model.Page })
-        if (!resource) resource = await ctx.model.Resource.create(value, { include: ctx.model.Page })
-        else {
-            resource.embedding = value.embedding || resource.embedding
-            resource.embedding2 = value.embedding2 || resource.embedding2
-            await resource.save()
-            for (const i in value.pages) {
-                const p = resource.pages[i]
-                const v = value.pages[i]
-                if (p) {
-                    p.embedding = v.embedding || p.embedding
-                    p.embedding2 = v.embedding2 || p.embedding2
-                    await p.save()
-                } else {
-                    await ctx.model.Page.create({ resourceId: resource.id, ...v })
-                }
-            }
+        return await ctx.model.Resource.create(
+            {
+                page: splitPage.length,
+                content,
+                typeId,
+                userId,
+                fileName,
+                filePath,
+                fileSize,
+                embedding,
+                embedding2,
+                tokens: $.countTokens(content),
+                pages
+            },
+            { include: ctx.model.Page }
+        )
+    }
+
+    // update embedding
+    async updateEmbedding(id: number, model: AIModelEnum = 'GLM', userId: number = 0) {
+        const { ctx } = this
+
+        // check resource is all right
+        const attributes = ['id', 'embedding', 'embedding2', 'content', 'tokens', 'page']
+        const resource = await ctx.model.Resource.findOne({
+            where: { id, userId },
+            attributes,
+            include: { model: ctx.model.Page, attributes }
+        })
+        if (!resource) throw new Error('Updating resource not found')
+
+        // split content
+        const content = resource.content
+        const firstPage: string[] = $.splitPage(content, TOKEN_FIRST_PAGE)
+        const splitPage: string[] = $.splitPage(content, TOKEN_SPLIT_PAGE)
+        if (!firstPage.length || !splitPage.length) throw new Error('Content cannot be split')
+
+        // number of pages changed
+        if (resource.pages.length !== splitPage.length) {
+            // remove old pages
+            await ctx.model.Page.destroy({ where: { resourceId: resource.id } })
+            const resourceId = resource.id
+            // create new pages
+            resource.pages = await ctx.model.Page.bulkCreate(
+                splitPage.map((v, i) => {
+                    return { resourceId, page: i + 1, content: v, tokens: $.countTokens(v) }
+                })
+            )
+            resource.page = splitPage.length
+            resource.embedding = null
+            resource.embedding2 = null
         }
-        return resource
+
+        // update embedding
+        if (model === 'GPT') {
+            // embedding first page
+            const first = await gpt.embedding([firstPage[0]])
+            resource.embedding = first.data[0].embedding
+
+            // check similarity
+            const check = await ctx.model.Resource.similarFindAll(resource.embedding, 1, SAME_SIMILARITY)
+            if (check.length) return check[0]
+
+            // embedding all pages
+            const res = await gpt.embedding(splitPage)
+            res.data.map((v, i) => (resource.pages[i].embedding = v.embedding))
+        } else if (model === 'GLM') {
+            // embedding first page
+            const first = await glm.embedding([firstPage[0]])
+            resource.embedding2 = first.data[0]
+
+            // check similarity
+            const check = await ctx.model.Resource.similarFindAll2(resource.embedding2, 1, SAME_SIMILARITY)
+            if (check.length) return check[0]
+
+            // embedding all pages
+            const res = await glm.embedding(splitPage)
+            res.data.map((v, i) => (resource.pages[i].embedding2 = v))
+        } else throw new Error('Model not found')
+
+        for (const item of resource.pages) await item.save()
+        return await resource.save()
     }
     async txt2img(prompt: string, nPrompt: string, width: number, height: number) {
         return await sd.txt2img(prompt, nPrompt, width, height)

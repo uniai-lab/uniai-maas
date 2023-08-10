@@ -33,8 +33,7 @@ interface UploadResponseData {
     id: number
     typeId: number
     page: number
-    promptTokens: number
-    totalTokens: number
+    tokens: number
     fileName: string
     fileSize: number
     filePath: string
@@ -209,11 +208,12 @@ interface UniAIQueryResourcePost {
     maxToken?: number
 }
 interface UniAIEmbeddingPost {
-    content: string
-    fileName: string
-    filePath: string
-    fileSize: number
     id?: number
+    content?: string
+    fileName?: string
+    filePath?: string
+    fileSize?: number
+    typeId?: number
     model?: AIModelEnum
 }
 interface UniAITxt2ImgPost {
@@ -238,8 +238,7 @@ interface UniAIChatResponseData {
 interface UniAIEmbeddingResponseData {
     id: number
     page: number
-    promptTokens: number
-    totalTokens: number
+    tokens: number
 }
 interface UniAITxt2ImgResponseData {
     images: string[]

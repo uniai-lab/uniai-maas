@@ -2,10 +2,10 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { UserContext } from '@interface/Context'
-import auth from 'app/middleware/auth'
 import { IncomingMessage } from 'http'
 import { ChatCompletionRequestMessage } from 'openai'
 import { PassThrough } from 'stream'
+import auth from 'app/middleware/auth'
 
 @HTTPController({ path: '/lechat' })
 export default class LeChat {
@@ -71,10 +71,11 @@ export default class LeChat {
     @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })
     async signIn(@Context() ctx: EggContext, @HTTPBody() params: SignInPost) {
         try {
-            if (!params.username.trim()) throw new Error('No username')
-            if (!params.password.trim()) throw new Error('No password')
+            const { username, password } = params
+            if (!username.trim()) throw new Error('No username')
+            if (!password.trim()) throw new Error('No password')
 
-            const res = await ctx.service.user.signIn(params.username, params.password)
+            const res = await ctx.service.user.signIn(username, password)
             const data: UserinfoResponseData = {
                 id: res.id,
                 username: res.username,

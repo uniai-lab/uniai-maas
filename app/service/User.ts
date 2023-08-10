@@ -50,9 +50,7 @@ export default class User extends Service {
     async signUp(username: string, password: string, phone: string) {
         const { ctx } = this
         // create user by username
-        const user = await ctx.model.User.create({
-            name: username
-        })
+        const user = await ctx.model.User.create({ name: username })
         user.password = md5(`${password}${user.id}`)
         user.phone = phone
         return await user.save()

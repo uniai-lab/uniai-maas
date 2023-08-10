@@ -15,7 +15,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
     async config(@Context() ctx: UserContext) {
         try {
-            ctx.service.res.success('Config list', await ctx.service.user.getConfig())
+            ctx.service.res.success('Success to list config', await ctx.service.user.getConfig())
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -42,7 +42,7 @@ export default class WeChat {
                 wxOpenId: user.wxOpenId,
                 wxUnionId: user.wxUnionId,
                 chance: {
-                    ...user.chance,
+                    ...user.chance.dataValues,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 }
@@ -78,7 +78,7 @@ export default class WeChat {
                 wxOpenId: user.wxOpenId,
                 wxUnionId: user.wxUnionId,
                 chance: {
-                    ...user.chance,
+                    ...user.chance.dataValues,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
@@ -226,8 +226,7 @@ export default class WeChat {
                 id: res.id,
                 typeId: res.typeId,
                 page: res.page,
-                promptTokens: res.promptTokens,
-                totalTokens: res.totalTokens,
+                tokens: res.tokens,
                 fileName: res.fileName,
                 fileSize: res.fileSize,
                 filePath: res.filePath,
@@ -258,7 +257,7 @@ export default class WeChat {
                     dialogId: item.id,
                     resourceId: item.resource.id,
                     page: item.resource.page,
-                    totalTokens: item.resource.totalTokens,
+                    totalTokens: item.resource.tokens,
                     fileName: item.resource.fileName,
                     fileSize: item.resource.fileSize,
                     filePath: item.resource.filePath,

@@ -29,11 +29,12 @@ export class Resource extends Model {
     @AllowNull(false)
     @ForeignKey(() => ResourceType)
     @Column(DataType.INTEGER)
-    typeId!: number
+    typeId: number
 
     @AllowNull(false)
+    @Default(0)
     @Column(DataType.INTEGER)
-    page!: number
+    page: number
 
     @Column({
         type: `VECTOR(${OPENAI_EMBED_DIM})`,
@@ -80,40 +81,40 @@ export class Resource extends Model {
     }
 
     @AllowNull(false)
-    @Default(0)
-    @Column(DataType.INTEGER)
-    promptTokens: number
+    @Default('')
+    @Column(DataType.TEXT)
+    content: string
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    totalTokens: number
+    tokens: number
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    fileName!: string
+    fileName: string
 
     @AllowNull(false)
     @Column(DataType.INTEGER)
-    fileSize!: number
+    fileSize: number
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    filePath!: string
+    filePath: string
 
     @AllowNull(false)
     @Column(DataType.INTEGER)
-    userId!: number
+    userId: number
 
     @Default(false)
     @AllowNull(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @Default(true)
     @AllowNull(false)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 
     @BelongsTo(() => ResourceType)
     type: ResourceType
