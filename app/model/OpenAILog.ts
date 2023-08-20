@@ -11,19 +11,19 @@ export class OpenAILog extends Model {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    object!: string
+    object: string
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    model!: string
+    model: string
 
     @AllowNull(false)
     @Column(DataType.INTEGER)
-    userId!: number
+    userId: number
 
     @AllowNull(false)
     @Column(DataType.TEXT)
-    message!: string
+    message: string
 
     @Default(0)
     @AllowNull(false)

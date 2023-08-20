@@ -27,7 +27,7 @@ export class Dialog extends Model {
     @AllowNull(false)
     @ForeignKey(() => User)
     @Column(DataType.INTEGER)
-    userId!: number
+    userId: number
 
     @ForeignKey(() => Resource)
     @Column(DataType.INTEGER)
@@ -36,12 +36,12 @@ export class Dialog extends Model {
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @AllowNull(false)
     @Default(true)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 
     @HasMany(() => Chat)
     chats: Chat[]

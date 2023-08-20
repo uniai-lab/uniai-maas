@@ -25,15 +25,15 @@ export class Chat extends Model {
     @AllowNull(false)
     @ForeignKey(() => Dialog)
     @Column(DataType.INTEGER)
-    dialogId!: number
+    dialogId: number
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    role!: string
+    role: string
 
     @AllowNull(false)
     @Column(DataType.TEXT)
-    content!: string
+    content: string
 
     @ForeignKey(() => Resource)
     @Column(DataType.INTEGER)
@@ -42,12 +42,12 @@ export class Chat extends Model {
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @AllowNull(false)
     @Default(true)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 
     @BelongsTo(() => Dialog)
     dialog: Dialog

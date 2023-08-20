@@ -67,8 +67,8 @@ export default class WeChat extends Service {
 
         // first create, set default user info
         if (created) {
-            user.avatar = config.DEFAULT_AVATAR_USER as string
-            user.name = `${ctx.__(config.DEFAULT_USERNAME as string)} NO.${user.id}`
+            user.avatar = config.DEFAULT_AVATAR_USER || ''
+            user.name = `${ctx.__(config.DEFAULT_USERNAME || 'Reader')} NO.${user.id}`
             // add default dialog resource
             if (config.INIT_RESOURCE_ID) await this.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
             await this.dialog(user.id) // add free chat dialog
@@ -259,13 +259,13 @@ export default class WeChat extends Service {
                        ${ctx.__('I have finished reading the file')} ${resource?.fileName}
                        ${ctx.__('You can ask me questions about this book')}`
             }
-            res.chats = [
-                await ctx.model.Chat.create({
+            res.chats = await ctx.model.Chat.bulkCreate([
+                {
                     dialogId: res.id,
                     role: ChatCompletionRequestMessageRoleEnum.Assistant,
                     content
-                })
-            ]
+                }
+            ])
         }
         return res
     }
@@ -275,7 +275,7 @@ export default class WeChat extends Service {
         const { ctx } = this
         const include: IncludeOptions = { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
         const dialog = dialogId
-            ? await ctx.model.Dialog.findByPk(dialogId, { include })
+            ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
             : await this.dialog(userId, undefined, include)
         dialog?.chats.reverse()
         return dialog

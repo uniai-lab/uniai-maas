@@ -23,7 +23,7 @@ export class Prompt extends Model {
 
     @AllowNull(false)
     @Column(DataType.TEXT)
-    content!: string
+    content: string
 
     @Column({
         type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,

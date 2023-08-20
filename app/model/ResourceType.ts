@@ -24,7 +24,7 @@ export class ResourceType extends Model {
     @Unique
     @AllowNull(false)
     @Column(DataType.STRING)
-    type!: string
+    type: string
 
     @Column(DataType.STRING)
     description: string
@@ -32,12 +32,12 @@ export class ResourceType extends Model {
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @AllowNull(false)
     @Default(true)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 
     @HasMany(() => Resource)
     resources: Resource[]

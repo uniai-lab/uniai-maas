@@ -12,11 +12,11 @@ export class PhoneCode extends Model {
     @AllowNull(false)
     @Unique
     @Column(DataType.STRING)
-    phone!: string
+    phone: string
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    code!: string
+    code: string
 }
 
 export default () => PhoneCode

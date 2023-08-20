@@ -22,11 +22,11 @@ export class Config extends Model {
     @Unique
     @AllowNull(false)
     @Column(DataType.STRING)
-    key!: string
+    key: string
 
     @AllowNull(false)
     @Column(DataType.TEXT)
-    value!: string
+    value: string
 
     @Column(DataType.TEXT)
     description: string
@@ -39,12 +39,12 @@ export class Config extends Model {
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @AllowNull(false)
     @Default(true)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 }
 
 export default () => Config
