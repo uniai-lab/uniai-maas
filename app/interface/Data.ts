@@ -40,5 +40,7 @@ interface UserTask extends ConfigTask {
 declare const AIModelEnum: {
     readonly GPT: 'GPT'
     readonly GLM: 'GLM'
+    readonly SD: 'SD'
+    readonly DALLE: 'DALLE'
 }
 declare type AIModelEnum = (typeof AIModelEnum)[keyof typeof AIModelEnum]

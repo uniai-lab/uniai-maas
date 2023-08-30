@@ -9,13 +9,18 @@ import {
     ChatCompletionRequestMessage,
     CreateEmbeddingRequestInput,
     CreateEmbeddingResponse,
-    ChatCompletionResponseMessage
+    ChatCompletionResponseMessage,
+    CreateImageRequest,
+    CreateImageRequestSizeEnum,
+    CreateImageRequestResponseFormatEnum,
+    ImagesResponse
 } from 'openai'
 import { IncomingMessage } from 'http'
 import $ from '@util/util'
 
 const API = process.env.OPENAI_API
 const KEY = process.env.OPENAI_API_KEY
+const API_VERSION = 'v1'
 const EMBEDDING_MODEL = 'text-embedding-ada-002'
 const CHAT_MODEL = 'gpt-4'
 
@@ -24,7 +29,7 @@ export default {
     api: API,
     async embedding(input: CreateEmbeddingRequestInput) {
         return await $.post<EmbeddingRequest, CreateEmbeddingResponse>(
-            `${this.api}/v1/embeddings`,
+            `${this.api}/${API_VERSION}/embeddings`,
             { model: EMBEDDING_MODEL, input },
             {
                 headers: { Authorization: `Bearer ${this.key}` },
@@ -40,11 +45,30 @@ export default {
         maxLength?: number
     ) {
         return await $.post<ChatRequest, T>(
-            `${this.api}/v1/chat/completions`,
+            `${this.api}/${API_VERSION}/chat/completions`,
             { model: CHAT_MODEL, messages, stream, temperature, top_p: top, max_tokens: maxLength },
             {
                 headers: { Authorization: `Bearer ${this.key}` },
                 responseType: stream ? 'stream' : 'json'
+            }
+        )
+    },
+    async text2img(
+        prompt: string,
+        num: number = 1,
+        size: CreateImageRequestSizeEnum = '1024x1024',
+        format: CreateImageRequestResponseFormatEnum = 'url'
+    ) {
+        return await $.post<CreateImageRequest, ImagesResponse>(
+            `${this.api}/${API_VERSION}/images/generations`,
+            {
+                prompt,
+                n: num,
+                size,
+                response_format: format
+            },
+            {
+                headers: { Authorization: `Bearer ${this.key}` }
             }
         )
     }

@@ -2,7 +2,12 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
+import {
+    ChatCompletionRequestMessage,
+    CreateChatCompletionResponse,
+    CreateImageRequestResponseFormatEnum,
+    CreateImageRequestSizeEnum
+} from 'openai'
 import { IncomingMessage } from 'http'
 import { WhereOptions, Op } from 'sequelize'
 import { PassThrough } from 'stream'
@@ -292,8 +297,19 @@ export default class UniAI extends Service {
         for (const item of resource.pages) await item.save()
         return await resource.save()
     }
-    async txt2img(prompt: string, nPrompt: string, width: number, height: number) {
-        return await sd.txt2img(prompt, nPrompt, width, height)
+    async txt2img(
+        prompt: string,
+        nPrompt: string = '',
+        num: number = 1,
+        width: number = 1024,
+        height: number = 1024,
+        format: CreateImageRequestResponseFormatEnum = 'url',
+        model: AIModelEnum = 'DALLE'
+    ) {
+        if (model === 'SD') return await sd.txt2img(prompt, nPrompt, num, width, height)
+        else if (model === 'DALLE')
+            return await gpt.text2img(prompt, num, `${width}x${height}` as CreateImageRequestSizeEnum, format)
+        else throw new Error('Model not found')
     }
     async progress() {
         return await sd.progress()

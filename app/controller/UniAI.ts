@@ -10,10 +10,16 @@ import {
     Inject,
     Middleware
 } from '@eggjs/tegg'
-import { ChatCompletionRequestMessage, CreateChatCompletionResponse } from 'openai'
+import {
+    ChatCompletionRequestMessage,
+    CreateChatCompletionResponse,
+    CreateImageRequestResponseFormatEnum,
+    ImagesResponse
+} from 'openai'
 import { IncomingMessage } from 'http'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
+import { Txt2ImgResponse } from '@util/sd'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -168,17 +174,31 @@ export default class UniAI {
     @HTTPMethod({ path: '/txt-to-img', method: HTTPMethodEnum.POST })
     async txt2img(@Context() ctx: EggContext, @HTTPBody() params: UniAITxt2ImgPost) {
         try {
+            if (!params.prompt) throw new Error('Prompt is empty')
+            params.model = params.model || 'DALLE'
+
             const res = await ctx.service.uniAI.txt2img(
                 params.prompt,
                 params.negativePrompt,
+                params.num,
                 params.width,
-                params.height
+                params.height,
+                params.format as CreateImageRequestResponseFormatEnum,
+                params.model
             )
-            const data: UniAITxt2ImgResponseData = {
-                images: res.images,
-                info: res.info
+            if (params.model === 'SD') {
+                const { images, info } = { ...(res as Txt2ImgResponse) }
+                ctx.service.res.success('Success text to image', { images, info } as UniAITxt2ImgResponseData)
+            } else if (params.model === 'DALLE') {
+                const { data, created } = { ...(res as ImagesResponse) }
+                const images: string[] = []
+                for (const item of data) {
+                    if (item.b64_json) images.push(item.b64_json)
+                    if (item.url) images.push(item.url)
+                }
+                const info = `${new Date(created * 1000)}: ${params.prompt}`
+                ctx.service.res.success('Success text to image', { images, info } as UniAITxt2ImgResponseData)
             }
-            ctx.service.res.success('Success text to image', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

@@ -8,7 +8,7 @@
 import $ from '@util/util'
 
 export default {
-    async txt2img(prompt: string, nPrompt: string, width: number, height: number) {
+    async txt2img(prompt: string, nPrompt: string, num: number = 1, width: number = 1024, height: number = 1024) {
         const data: Txt2ImgRequest = {
             prompt,
             width,
@@ -31,7 +31,7 @@ export default {
             seed_resize_from_w: -1,
             sampler_name: 'DPM++ SDE Karras',
             batch_size: 1,
-            n_iter: 1,
+            n_iter: num,
             steps: 50,
             cfg_scale: 7,
             restore_faces: false,

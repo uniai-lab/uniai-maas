@@ -217,15 +217,18 @@ interface UniAIEmbeddingPost {
     model?: AIModelEnum
 }
 interface UniAITxt2ImgPost {
+    model: AIModelEnum
     prompt: string
     negativePrompt: string
     width: number
     height: number
+    num: number
     steps: number
     batchSize: number
     restoreFace: boolean
     seed: number
     denoising: number
+    format: string
 }
 interface UniAIChatResponseData {
     content: string
