@@ -116,8 +116,12 @@ export default class UniAI extends Service {
         let count = 0
         const stream = new PassThrough()
 
+        let str = ''
         message.on('data', (buff: Buffer) => {
-            const data = buff.toString().split(/data: (.*)/)
+            str += buff.toString()
+            if (!str.endsWith('\n\n')) return console.log('不全')
+            const data = str.split(/data: (.*)\n\n/).filter(v => v !== '')
+            str = ''
             for (const item of data) {
                 if (model === 'GPT') {
                     const obj = $.json<CreateChatCompletionStreamResponse>(item)

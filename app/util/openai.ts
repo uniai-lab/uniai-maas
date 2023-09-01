@@ -22,7 +22,7 @@ const API = process.env.OPENAI_API
 const KEY = process.env.OPENAI_API_KEY
 const API_VERSION = 'v1'
 const EMBEDDING_MODEL = 'text-embedding-ada-002'
-const CHAT_MODEL = 'gpt-4'
+const CHAT_MODEL = 'gpt-3.5-turbo'
 
 export default {
     key: KEY,
