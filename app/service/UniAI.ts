@@ -119,16 +119,18 @@ export default class UniAI extends Service {
         let str = ''
         message.on('data', (buff: Buffer) => {
             str += buff.toString()
-            if (!str.endsWith('\n\n')) return console.log('不全')
-            const data = str.split(/data: (.*)\n\n/).filter(v => v !== '')
+            console.log(str)
+            if (!str.endsWith('\n\n') && !str.endsWith('\r\n\r\n')) return console.log('不全')
+            const data = str.split(/data: (.*)(\n\n|\r\n\r\n)/).filter(v => v !== '')
             str = ''
+            count++
             for (const item of data) {
                 if (model === 'GPT') {
                     const obj = $.json<CreateChatCompletionStreamResponse>(item)
                     if (obj && obj.choices[0].delta.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
-                        res.data.completionTokens = ++count
+                        res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
                         res.msg = 'success to get chat stream message from GPT'
@@ -140,7 +142,7 @@ export default class UniAI extends Service {
                     if (obj && obj.content) {
                         if (chunk) res.data.content = obj.content
                         else res.data.content += obj.content
-                        res.data.completionTokens = ++count
+                        res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
                         res.msg = 'success to get chat stream message from GLM'
