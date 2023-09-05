@@ -40,7 +40,9 @@ export default class UniAI {
                     false,
                     params.model,
                     params.top,
-                    params.temperature
+                    params.temperature,
+                    params.maxLength,
+                    params.subModel
                 )) as CreateChatCompletionResponse
                 if (res.choices[0].message?.content)
                     ctx.service.res.success('Success to chat to GPT', {
@@ -95,7 +97,8 @@ export default class UniAI {
                 model,
                 params.top,
                 params.temperature,
-                params.maxLength
+                params.maxLength,
+                params.subModel
             )
 
             ctx.body = ctx.service.uniAI.parseStream(res as IncomingMessage, model, chunk)

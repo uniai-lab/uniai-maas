@@ -195,6 +195,7 @@ interface UniAIChatPost {
     top?: number
     temperature?: number
     model?: AIModelEnum
+    subModel?: string
     chunk?: boolean
 }
 interface UniAIQueryOnlinePost {

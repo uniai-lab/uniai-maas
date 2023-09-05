@@ -22,7 +22,7 @@ const API = process.env.OPENAI_API
 const KEY = process.env.OPENAI_API_KEY
 const API_VERSION = 'v1'
 const EMBEDDING_MODEL = 'text-embedding-ada-002'
-const CHAT_MODEL = 'gpt-3.5-turbo'
+const DEFAULT_CHAT_MODEL = 'gpt-3.5-turbo'
 
 export default {
     key: KEY,
@@ -42,11 +42,12 @@ export default {
         stream: boolean = false,
         top?: number,
         temperature?: number,
-        maxLength?: number
+        maxLength?: number,
+        model: string = DEFAULT_CHAT_MODEL
     ) {
         return await $.post<ChatRequest, T>(
             `${this.api}/${API_VERSION}/chat/completions`,
-            { model: CHAT_MODEL, messages, stream, temperature, top_p: top, max_tokens: maxLength },
+            { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
             {
                 headers: { Authorization: `Bearer ${this.key}` },
                 responseType: stream ? 'stream' : 'json'
