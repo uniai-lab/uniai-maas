@@ -16,6 +16,7 @@ import gpt, { CreateChatCompletionStreamResponse } from '@util/openai'
 import { Page } from '@model/Page'
 import sd from '@util/sd'
 import $ from '@util/util'
+import { createParser, ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 
 const MAX_PAGE = 5
 const SAME_SIMILARITY = 0.01
@@ -125,18 +126,10 @@ export default class UniAI extends Service {
         // count tokens
         let count = 0
         const stream = new PassThrough()
-
-        let str = ''
-        message.on('data', (buff: Buffer) => {
-            str += buff.toString()
-            console.log(str)
-            if (!str.endsWith('\n\n') && !str.endsWith('\r\n\r\n')) return console.log('不全')
-            const data = str.split(/data: (.*)(\n\n|\r\n\r\n)/).filter(v => v !== '')
-            str = ''
-            count++
-            for (const item of data) {
+        const parser = createParser(event => {
+            if (event.type === 'event') {
                 if (model === 'GPT') {
-                    const obj = $.json<CreateChatCompletionStreamResponse>(item)
+                    const obj = $.json<CreateChatCompletionStreamResponse>(event.data)
                     if (obj && obj.choices[0].delta.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
@@ -148,7 +141,7 @@ export default class UniAI extends Service {
                     }
                 }
                 if (model === 'GLM') {
-                    const obj = $.json<GLMChatResponse>(item)
+                    const obj = $.json<GLMChatResponse>(event.data)
                     if (obj && obj.content) {
                         if (chunk) res.data.content = obj.content
                         else res.data.content += obj.content
@@ -161,6 +154,8 @@ export default class UniAI extends Service {
                 }
             }
         })
+
+        message.on('data', (buff: Buffer) => parser.feed(buff.toString()))
         message.on('error', e => stream.end(e))
         message.on('end', () => stream.end())
         message.on('close', () => stream.destroy())
