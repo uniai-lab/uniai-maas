@@ -11,12 +11,12 @@ import {
 import { IncomingMessage } from 'http'
 import { WhereOptions, Op } from 'sequelize'
 import { PassThrough } from 'stream'
+import { createParser } from 'eventsource-parser'
 import glm, { GLMChatResponse } from '@util/glm'
 import gpt, { CreateChatCompletionStreamResponse } from '@util/openai'
 import { Page } from '@model/Page'
 import sd from '@util/sd'
 import $ from '@util/util'
-import { createParser, ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 
 const MAX_PAGE = 5
 const SAME_SIMILARITY = 0.01
@@ -121,13 +121,14 @@ export default class UniAI extends Service {
                 model: '',
                 object: ''
             },
-            msg: ''
+            msg: 'success to get chat stream message'
         }
         // count tokens
         let count = 0
         const stream = new PassThrough()
         const parser = createParser(event => {
             if (event.type === 'event') {
+                count++
                 if (model === 'GPT') {
                     const obj = $.json<CreateChatCompletionStreamResponse>(event.data)
                     if (obj && obj.choices[0].delta.content) {
@@ -136,7 +137,6 @@ export default class UniAI extends Service {
                         res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
-                        res.msg = 'success to get chat stream message from GPT'
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
@@ -148,7 +148,6 @@ export default class UniAI extends Service {
                         res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
-                        res.msg = 'success to get chat stream message from GLM'
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
