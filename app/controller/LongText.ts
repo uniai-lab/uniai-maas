@@ -11,6 +11,7 @@ import {
     Inject
 } from '@eggjs/tegg'
 import { authAdmin } from '@middleware/auth'
+import { Stream } from 'stream'
 
 @HTTPController({ path: '/long' })
 export default class LongText {
@@ -29,7 +30,7 @@ export default class LongText {
             params.language = params.language || ctx.__('chinese')
 
             const res = await ctx.service.prompt.outline({ ...params })
-            ctx.body = ctx.service.uniAI.parseStream(res, params.model)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, params.model)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

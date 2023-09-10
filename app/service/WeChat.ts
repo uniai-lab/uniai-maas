@@ -12,11 +12,12 @@ import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
 import { Resource } from '@model/Resource'
-import { IncomingMessage } from 'http'
-import gpt, { CreateChatCompletionStreamResponse } from '@util/openai' // OpenAI models
+import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
 import glm, { GLMChatResponse } from '@util/glm' // GLM models
 import md5 from 'md5'
 import $ from '@util/util'
+import { Stream } from 'stream'
+import { createParser } from 'eventsource-parser'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2500
@@ -344,31 +345,28 @@ export default class WeChat extends Service {
         await $.setCache(`chat_${userId}`, cache)
 
         // start chat stream
-        let stream: IncomingMessage | undefined
-        if (model === 'GPT') stream = await gpt.chat<IncomingMessage>(prompts, true)
-        if (model === 'GLM') stream = await glm.chat<IncomingMessage>(prompts, true)
-
-        if (!stream) throw new Error('Error to get chat stream')
-
-        // add listen stream
-        stream.on('data', (buff: Buffer) => {
-            const data = buff.toString().split(/data: (.*)/)
-            for (const item of data) {
+        const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as Stream
+        const parser = createParser(event => {
+            if (event.type === 'event') {
                 if (model === 'GPT') {
-                    const obj = $.json<CreateChatCompletionStreamResponse>(item)
+                    const obj = $.json<GPTChatStreamResponse>(event.data)
                     if (obj && obj.choices[0].delta.content) cache.content += obj.choices[0].delta.content
                 }
                 if (model === 'GLM') {
-                    const obj = $.json<GLMChatResponse>(item)
+                    const obj = $.json<GLMChatResponse>(event.data)
                     if (obj && obj.content) cache.content += obj.content
                 }
+                $.setCache(`chat_${userId}`, cache)
             }
-            $.setCache(`chat_${userId}`, cache)
         })
+
+        // add listen stream
+        stream.on('data', (buff: Buffer) => parser.feed(buff.toString()))
         stream.on('close', async () => {
             if (cache.content) {
                 if (user.chatChanceFree > 0) user.decrement({ chatChanceFree: 1 })
                 else user.decrement({ chatChance: 1 })
+                // save assistant response
                 const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
                     role: ChatCompletionResponseMessageRoleEnum.Assistant,

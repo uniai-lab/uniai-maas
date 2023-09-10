@@ -7,14 +7,17 @@ declare global {
         interface ProcessEnv {
             APP_NAME: string
             URL: string
-            OPENAI_PROXY: string
+            OPENAI_API: string
             OPENAI_API_KEY: string
             OPENAI_EMBED_DIM: number
-            GLM_EMBED_DIM: number
             GLM_API: string
-            SAVE_DOC_PATH: string
-            SAVE_MODEL_PATH: string
-            MILVUS_ADDR: string
+            GLM_EMBED_DIM: number
+            SPARK_API: string
+            SPARK_API_KEY: string
+            SPARK_API_SECRET: string
+            SPARK_APP_ID: string
+            SPARK_API_VERSION: string
+            STABLE_DIFFUSION_API: string
             POSTGRES_HOST: string
             POSTGRES_PORT: number
             POSTGRES_USER: string
@@ -37,7 +40,6 @@ declare global {
             ADMIN_TOKEN: string
             GOOGLE_SEARCH_API_TOKEN: string
             GOOGLE_SEARCH_ENGINE_ID: string
-            STABLE_DIFFUSION_API: string
         }
     }
 }

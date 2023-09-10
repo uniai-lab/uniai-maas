@@ -9,14 +9,14 @@ import {
     ChatCompletionRequestMessage,
     CreateEmbeddingRequestInput,
     CreateEmbeddingResponse,
-    ChatCompletionResponseMessage,
     CreateImageRequest,
     CreateImageRequestSizeEnum,
     CreateImageRequestResponseFormatEnum,
-    ImagesResponse
+    ImagesResponse,
+    CreateChatCompletionResponse
 } from 'openai'
-import { IncomingMessage } from 'http'
 import $ from '@util/util'
+import { Stream } from 'stream'
 
 const API = process.env.OPENAI_API
 const KEY = process.env.OPENAI_API_KEY
@@ -37,7 +37,7 @@ export default {
             }
         )
     },
-    async chat<T = ChatCompletionResponseMessage | IncomingMessage>(
+    async chat(
         messages: ChatCompletionRequestMessage[],
         stream: boolean = false,
         top?: number,
@@ -45,7 +45,7 @@ export default {
         maxLength?: number,
         model: string = DEFAULT_CHAT_MODEL
     ) {
-        return await $.post<ChatRequest, T>(
+        return await $.post<ChatRequest, Stream | GPTChatResponse>(
             `${this.api}/${API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
             {
@@ -75,6 +75,20 @@ export default {
     }
 }
 
+interface EmbeddingRequest {
+    model: string
+    input: CreateEmbeddingRequestInput
+}
+
+interface ChatRequest {
+    model: string
+    messages: ChatCompletionRequestMessage[]
+    stream: boolean
+    temperature?: number
+    top_p?: number
+    max_tokens?: number
+}
+
 export interface CreateChatCompletionStreamResponse {
     id: string
     object: string
@@ -89,16 +103,5 @@ export interface CreateChatCompletionStreamResponseChoicesInner {
     finish_reason: string
 }
 
-interface EmbeddingRequest {
-    model: string
-    input: CreateEmbeddingRequestInput
-}
-
-interface ChatRequest {
-    model: string
-    messages: ChatCompletionRequestMessage[]
-    stream: boolean
-    temperature?: number
-    top_p?: number
-    max_tokens?: number
-}
+export type GPTChatResponse = CreateChatCompletionResponse
+export type GPTChatStreamResponse = CreateChatCompletionStreamResponse

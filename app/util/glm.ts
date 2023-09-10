@@ -6,7 +6,7 @@
  */
 
 import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, CreateEmbeddingRequestInput } from 'openai'
-import { IncomingMessage } from 'http'
+import { Stream } from 'stream'
 import $ from '@util/util'
 
 const API = process.env.GLM_API
@@ -15,7 +15,7 @@ export default {
     async embedding(prompt: CreateEmbeddingRequestInput) {
         return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${API}/embedding`, { prompt })
     },
-    async chat<T = GLMChatResponse | IncomingMessage>(
+    async chat(
         messages: ChatCompletionRequestMessage[],
         stream: boolean = false,
         top?: number,
@@ -41,8 +41,8 @@ export default {
         }
 
         return stream
-            ? await $.post<GLMChatRequest, T>(`${API}/chat-stream`, params, { responseType: 'stream' })
-            : await $.post<GLMChatRequest, T>(`${API}/chat`, params, { responseType: 'json' })
+            ? await $.post<GLMChatRequest, Stream>(`${API}/chat-stream`, params, { responseType: 'stream' })
+            : await $.post<GLMChatRequest, GLMChatResponse>(`${API}/chat`, params, { responseType: 'json' })
     }
 }
 

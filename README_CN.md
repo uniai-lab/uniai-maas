@@ -1,35 +1,43 @@
+<!-- @format -->
+
 # <img src="./logo.png" width=33 height=33 /> UniAI 中文说明
 
 [English Version](./README.md)
 
 ![Framework](./framework.png)
 
-## 示范案例
+## 关于
 
-哪些软件正在使用UniAI？通过以下案例体验UniAI！
+UniAI（统一的 AI）旨在简化您与复杂 AI 模型的交互，使得应用无缝切换各种模型，不再为选择模型而烦恼！
+
+**已支持的模型**
+
+-   OpenAI GPT
+-   OpenAI DALL-E
+-   智谱 AI/清华 GLM
+-   Stable Diffusion
+-   科大讯飞 星火
+
+## 哪些应用正在使用
+
+哪些软件正在使用 UniAI？通过以下案例体验 UniAI！
 
 ![wechat miniapps](./miniapp-qrcode.png)
 
-_注: 以上小程序示例均使用UniAI的GLM模型！_
-
-## 关于
-
-UniAI旨在简化您与复杂AI模型的交互，不再为选择合适的模型而烦恼！
-
-我们是开源的，并准备帮助您。
+_注: 以上小程序示例均使用 UniAI 的 GLM 模型！_
 
 ## 愿景
 
-我们的目标是提供一个基于API的平台，集成各种AI模型和工具。通过UniAI，复杂的AI实现变得轻松且流畅。
+我们的目标是提供一个基于 API 的平台，集成各种 AI 模型和工具。通过 UniAI，复杂的 AI 实现变得轻松且流畅。
 
 ## 前置环境
 
 在开始之前，请确保您已安装以下内容：
 
-- Node.js >= 18.x
-- TypeScript >= 4.x
-- Docker
-- Docker-compose
+-   Node.js >= 16.x
+-   TypeScript >= 4.x
+-   Docker
+-   Docker-compose
 
 ## 入门指南
 
@@ -37,9 +45,9 @@ UniAI旨在简化您与复杂AI模型的交互，不再为选择合适的模型�
 
 1. 在根目录创建一个 `.env` 文件：
 
-   ```bash
-   touch ./.env
-   ```
+    ```bash
+    touch ./.env
+    ```
 
 2. 将环境参数填写到 `.env` 文件中，如下所示：
 
@@ -53,13 +61,20 @@ DEFAULT_USERNAME=AI
 ADMIN_TOKEN=[Your Admin Token]
 
 # GPT
-OPENAI_API=http://8.214.93.3 # openai proxy
-OPENAI_API_KEY=[Your openAI key] # add your key
+OPENAI_API=[Your OpenAI proxy URL]
+OPENAI_API_KEY=[Your OpenAI key]
 OPENAI_EMBED_DIM=1536
 
 # GLM
-GLM_API=http://10.144.1.7:8100 # your GLM deployed server
+GLM_API=[Your ChatGLM model API URL]
 GLM_EMBED_DIM=1024
+
+# IFLYTEK
+SPARK_API=ws://spark-api.xf-yun.com
+SPARK_API_KEY=[IFLYTEK API key]
+SPARK_API_SECRET=[IFLYTEK API secret]
+SPARK_APP_ID=[IFLYTEK API ID]
+SPARK_API_VERSION=v2.1
 
 # PostgreSQL database
 POSTGRES_HOST=localhost
@@ -104,7 +119,7 @@ yarn
 
 ### 启动数据库
 
-如果您还没有类似Milvus或PostgresSQL（pgvector）的向量数据库，您可以使用Docker和Docker-compose启动一个：
+如果您还没有类似 Milvus 或 PostgresSQL（pgvector）的向量数据库，您可以使用 Docker 和 Docker-compose 启动一个：
 
 ```bash
 yarn docker up pgvector
@@ -131,7 +146,7 @@ yarn tsc
 yarn start
 ```
 
-⚠️ 在开发模式下不要编译TypeScript文件。如果已经使用 `tsc` 命令进行了编译，请在运行 `yarn dev` 之前使用 `yarn clean` 进行清理。
+⚠️ 在开发模式下不要编译 TypeScript 文件。如果已经使用 `tsc` 命令进行了编译，请在运行 `yarn dev` 之前使用 `yarn clean` 进行清理。
 
 ### 清理
 
@@ -141,7 +156,7 @@ yarn clean
 
 ## 文档
 
-UniAI的接口全部采用Web API方式访问。
+UniAI 的接口全部采用 Web API 方式访问。
 
 请参阅以下文档：
 [https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf
@@ -152,21 +167,21 @@ UniAI 不断整合更多的 AI 模型，扩展 AI 实用程序。然而，UniAI 
 
 ### NLP 模型
 
-- OpenAI GPT：[https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
-- GLM/ChatGLM：[https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+-   OpenAI GPT：[https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
+-   GLM/ChatGLM：[https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
 
 ### CV 模型
 
-- Stable Diffusion：[https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+-   Stable Diffusion：[https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
 
 ## 未来计划
 
 UniAI 将不断发展，为以下主要模块提供更多的 AI 能力：
 
-- 预测接口
-- 训练接口
-- 提示接口
-- 资源接口
+-   预测接口
+-   训练接口
+-   提示接口
+-   资源接口
 
 ## 贡献者
 

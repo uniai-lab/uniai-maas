@@ -2,9 +2,8 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { UserContext } from '@interface/Context'
-import { IncomingMessage } from 'http'
 import { ChatCompletionRequestMessage } from 'openai'
-import { PassThrough } from 'stream'
+import { PassThrough, Stream } from 'stream'
 import auth from 'app/middleware/auth'
 
 @HTTPController({ path: '/lechat' })
@@ -61,7 +60,7 @@ export default class LeChat {
                 params.maxLength
             )
 
-            ctx.body = ctx.service.uniAI.parseStream(res as IncomingMessage, model, chunk)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

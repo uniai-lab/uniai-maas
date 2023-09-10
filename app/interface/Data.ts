@@ -40,6 +40,7 @@ interface UserTask extends ConfigTask {
 declare const AIModelEnum: {
     readonly GPT: 'GPT'
     readonly GLM: 'GLM'
+    readonly SPARK: 'SPARK'
     readonly SD: 'SD'
     readonly DALLE: 'DALLE'
 }

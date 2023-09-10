@@ -2,19 +2,14 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import {
-    ChatCompletionRequestMessage,
-    CreateChatCompletionResponse,
-    CreateImageRequestResponseFormatEnum,
-    CreateImageRequestSizeEnum
-} from 'openai'
-import { IncomingMessage } from 'http'
+import { ChatCompletionRequestMessage, CreateImageRequestResponseFormatEnum, CreateImageRequestSizeEnum } from 'openai'
 import { WhereOptions, Op } from 'sequelize'
-import { PassThrough } from 'stream'
+import { PassThrough, Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
-import glm, { GLMChatResponse } from '@util/glm'
-import gpt, { CreateChatCompletionStreamResponse } from '@util/openai'
 import { Page } from '@model/Page'
+import glm, { GLMChatResponse } from '@util/glm'
+import gpt, { GPTChatStreamResponse } from '@util/openai'
+import fly, { SPKChatResponse } from '@util/fly'
 import sd from '@util/sd'
 import $ from '@util/util'
 
@@ -82,28 +77,23 @@ export default class UniAI extends Service {
         top?: number,
         temperature?: number,
         maxLength?: number,
-        modelName?: string
+        subModel?: string
     ) {
         if (stream) {
-            if (model === 'GPT')
-                return await gpt.chat<IncomingMessage>(prompts, true, top, temperature, maxLength, modelName)
-            if (model === 'GLM') return await glm.chat<IncomingMessage>(prompts, true, top, temperature, maxLength)
+            if (model === 'GPT') return await gpt.chat(prompts, true, top, temperature, maxLength, subModel)
+            else if (model === 'GLM') return await glm.chat(prompts, true, top, temperature, maxLength)
+            else if (model === 'SPARK') return await fly.chat(prompts, true, top, temperature, maxLength, subModel)
+            else throw new Error('Model for chat not found')
         } else {
-            if (model === 'GPT')
-                return await gpt.chat<CreateChatCompletionResponse>(
-                    prompts,
-                    false,
-                    top,
-                    temperature,
-                    maxLength,
-                    modelName
-                )
-            if (model === 'GLM') return await glm.chat<GLMChatResponse>(prompts, false, top, temperature, maxLength)
+            if (model === 'GPT') return await gpt.chat(prompts, false, top, temperature, maxLength, subModel)
+            else if (model === 'GLM') return await glm.chat(prompts, false, top, temperature, maxLength)
+            else if (model === 'SPARK') return await fly.chat(prompts, false, top, temperature, maxLength, subModel)
+            else throw new Error('Model for chat not found')
         }
     }
 
     // handle chat stream
-    parseStream(message: IncomingMessage, model: AIModelEnum, chunk: boolean = false) {
+    parseSSE(message: Stream, model: AIModelEnum, chunk: boolean = false) {
         this.ctx.set({
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
@@ -130,7 +120,7 @@ export default class UniAI extends Service {
             if (event.type === 'event') {
                 count++
                 if (model === 'GPT') {
-                    const obj = $.json<CreateChatCompletionStreamResponse>(event.data)
+                    const obj = $.json<GPTChatStreamResponse>(event.data)
                     if (obj && obj.choices[0].delta.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
@@ -145,9 +135,23 @@ export default class UniAI extends Service {
                     if (obj && obj.content) {
                         if (chunk) res.data.content = obj.content
                         else res.data.content += obj.content
-                        res.data.completionTokens = count
+                        res.data.completionTokens = obj.completion_tokens
+                        res.data.promptTokens = obj.prompt_tokens
+                        res.data.totalTokens = obj.total_tokens
                         res.data.model = obj.model
                         res.data.object = obj.object
+                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                    }
+                }
+                if (model === 'SPARK') {
+                    const obj = $.json<SPKChatResponse>(event.data)
+                    if (obj && obj.payload.choices.text[0].content) {
+                        const { payload } = obj
+                        if (chunk) res.data.content = payload.choices.text[0].content
+                        else res.data.content += payload.choices.text[0].content
+                        res.data.completionTokens = payload.usage?.text.completion_tokens
+                        res.data.promptTokens = payload.usage?.text.prompt_tokens
+                        res.data.totalTokens = payload.usage?.text.total_tokens
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
@@ -155,7 +159,7 @@ export default class UniAI extends Service {
         })
 
         message.on('data', (buff: Buffer) => parser.feed(buff.toString()))
-        message.on('error', e => stream.end(e))
+        message.on('error', e => stream.destroy(e))
         message.on('end', () => stream.end())
         message.on('close', () => stream.destroy())
         return stream

@@ -6,6 +6,14 @@
 
 ![Framework](./framework.png)
 
+## Integrated Models
+
+-   OpenAI GPT
+-   OpenAI DALL-E
+-   THUDM GLM
+-   Stable Diffusion
+-   IFLYTEK Spark
+
 ## Samples
 
 Who are using UniAI and where can I experience it?
@@ -53,13 +61,20 @@ DEFAULT_USERNAME=AI
 ADMIN_TOKEN=[Your Admin Token]
 
 # GPT
-OPENAI_API=http://8.214.93.3 # openai proxy
-OPENAI_API_KEY=[Your openAI key] # add your key
+OPENAI_API=[Your OpenAI proxy URL]
+OPENAI_API_KEY=[Your OpenAI key]
 OPENAI_EMBED_DIM=1536
 
 # GLM
-GLM_API=http://10.144.1.7:8100 # your GLM deployed server
+GLM_API=[Your ChatGLM model API URL]
 GLM_EMBED_DIM=1024
+
+# IFLYTEK
+SPARK_API=ws://spark-api.xf-yun.com
+SPARK_API_KEY=[IFLYTEK API key]
+SPARK_API_SECRET=[IFLYTEK API secret]
+SPARK_APP_ID=[IFLYTEK API ID]
+SPARK_API_VERSION=v2.1
 
 # PostgreSQL database
 POSTGRES_HOST=localhost
@@ -100,7 +115,7 @@ We recommend using `yarn` over `npm`:
 ```bash
 npm -g install yarn
 yarn
-````
+```
 
 ### Start Database
 

@@ -10,16 +10,13 @@ import {
     Inject,
     Middleware
 } from '@eggjs/tegg'
-import {
-    ChatCompletionRequestMessage,
-    CreateChatCompletionResponse,
-    CreateImageRequestResponseFormatEnum,
-    ImagesResponse
-} from 'openai'
-import { IncomingMessage } from 'http'
+import { ChatCompletionRequestMessage, CreateImageRequestResponseFormatEnum, ImagesResponse } from 'openai'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
 import { Txt2ImgResponse } from '@util/sd'
+import { GPTChatResponse } from '@util/openai'
+import { SPKChatResponse } from '@util/fly'
+import { Stream } from 'stream'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -33,48 +30,47 @@ export default class UniAI {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
+            const { top, temperature, maxLength, subModel } = params
+            const res = await ctx.service.uniAI.chat(prompts, false, model, top, temperature, maxLength, subModel)
+
             // chat to GPT
             if (model === 'GPT') {
-                const res = (await ctx.service.uniAI.chat(
-                    prompts,
-                    false,
-                    params.model,
-                    params.top,
-                    params.temperature,
-                    params.maxLength,
-                    params.subModel
-                )) as CreateChatCompletionResponse
-                if (res.choices[0].message?.content)
-                    ctx.service.res.success('Success to chat to GPT', {
-                        content: res.choices[0].message.content,
-                        promptTokens: res.usage?.prompt_tokens,
-                        completionTokens: res.usage?.completion_tokens,
-                        totalTokens: res.usage?.total_tokens,
-                        model: res.model,
-                        object: res.object
+                const { choices, model, object, usage } = res as GPTChatResponse
+                if (choices[0].message?.content)
+                    ctx.service.res.success('Success to chat to OpenAI GPT', {
+                        content: choices[0].message.content,
+                        promptTokens: usage?.prompt_tokens,
+                        completionTokens: usage?.completion_tokens,
+                        totalTokens: usage?.total_tokens,
+                        model,
+                        object
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to GPT')
             }
             // chat to GLM
             if (model === 'GLM') {
-                const res = (await ctx.service.uniAI.chat(
-                    prompts,
-                    false,
-                    params.model,
-                    params.top,
-                    params.temperature,
-                    params.maxLength
-                )) as GLMChatResponse
-                if (res.content)
+                const data = res as GLMChatResponse
+                if (data.content)
                     ctx.service.res.success('Success to chat to GLM', {
-                        content: res.content,
-                        promptTokens: res.prompt_tokens,
-                        completionTokens: res.completion_tokens,
-                        totalTokens: res.total_tokens,
-                        model: res.model,
-                        object: res.object
+                        content: data.content,
+                        promptTokens: data.prompt_tokens,
+                        completionTokens: data.completion_tokens,
+                        totalTokens: data.total_tokens,
+                        model: data.model,
+                        object: data.object
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to GLM')
+            }
+            if (model === 'SPARK') {
+                const { payload } = res as SPKChatResponse
+                if (payload.choices.text[0].content)
+                    ctx.service.res.success('Success to chat to IFLYTEK SPARK', {
+                        content: payload.choices.text[0].content,
+                        promptTokens: payload.usage?.text.prompt_tokens,
+                        completionTokens: payload.usage?.text.completion_tokens,
+                        totalTokens: payload.usage?.text.total_tokens
+                    } as UniAIChatResponseData)
+                else throw new Error('Error to chat to SPARK')
             }
         } catch (e) {
             console.error(e)
@@ -87,21 +83,14 @@ export default class UniAI {
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
-            if (!params.prompts.length) throw new Error('Empty prompts')
+            if (!prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
             const chunk = params.chunk || false
+            const { top, temperature, maxLength, subModel } = params
 
-            const res = await ctx.service.uniAI.chat(
-                prompts,
-                true,
-                model,
-                params.top,
-                params.temperature,
-                params.maxLength,
-                params.subModel
-            )
+            const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
-            ctx.body = ctx.service.uniAI.parseStream(res as IncomingMessage, model, chunk)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

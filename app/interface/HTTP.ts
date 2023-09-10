@@ -233,11 +233,11 @@ interface UniAITxt2ImgPost {
 }
 interface UniAIChatResponseData {
     content: string
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-    model: string
-    object: string
+    promptTokens?: number
+    completionTokens?: number
+    totalTokens?: number
+    model?: string
+    object?: string
 }
 interface UniAIEmbeddingResponseData {
     id: number
