@@ -145,7 +145,7 @@ export default class UniAI extends Service {
                 }
                 if (model === 'SPARK') {
                     const obj = $.json<SPKChatResponse>(event.data)
-                    if (obj && obj.payload.choices.text[0].content) {
+                    if (obj && obj.header.code === 0 && obj.payload.choices.text[0].content) {
                         const { payload } = obj
                         if (chunk) res.data.content = payload.choices.text[0].content
                         else res.data.content += payload.choices.text[0].content
