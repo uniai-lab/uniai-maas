@@ -5,12 +5,12 @@
  * devilyouwei
  */
 
+import os from 'os'
 import crypto from 'crypto'
 import WebSocket from 'ws'
-import os from 'os'
 import { ChatCompletionRequestMessage } from 'openai'
+import { PassThrough } from 'stream'
 import $ from '@util/util'
-import { PassThrough, Stream } from 'stream'
 
 // IFLYTEK spark model default API info
 const API = process.env.SPARK_API
@@ -35,19 +35,8 @@ export default {
 
         const input: SPKChatRequest = {
             header: { app_id: APP_ID },
-            parameter: {
-                chat: {
-                    domain,
-                    temperature,
-                    max_tokens: maxLength,
-                    top_k: top
-                }
-            },
-            payload: {
-                message: {
-                    text: messages
-                }
-            }
+            parameter: { chat: { domain, temperature, max_tokens: maxLength, top_k: top } },
+            payload: { message: { text: messages } }
         }
 
         ws.on('open', () => ws.send(JSON.stringify(input)))
@@ -55,16 +44,29 @@ export default {
         if (stream) {
             const stream = new PassThrough()
             ws.on('error', e => stream.destroy(e))
-            ws.on('message', (e: Buffer) => stream.write(`data: ${e.toString('utf8')}\n\n`)) // simulate sse data format
+            ws.on('message', (e: Buffer) => {
+                try {
+                    const res = $.json<SPKChatResponse>(e.toString())
+                    if (!res) throw new Error('Response data is not JSON')
+                    if (res.header.code !== 0) throw new Error(res.header.message)
+                    res.payload.model = `spark-${version}`
+                    res.payload.object = `chat.completion.chunk`
+                    // simulate SSE data stream
+                    stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                } catch (e) {
+                    stream.end().destroy(e as Error)
+                    ws.close()
+                }
+            })
             ws.on('close', () => stream.end().destroy())
-            return stream as Stream
+            return stream
         } else {
             return new Promise<SPKChatResponse>((resolve, reject) => {
                 let res: SPKChatResponse | null = null
                 ws.on('error', e => reject(e))
                 ws.on('message', (e: Buffer) => {
                     const data = $.json<SPKChatResponse>(e.toString('utf8'))
-                    if (!data) return reject(new Error('response data is not JSON'))
+                    if (!data) return reject(new Error('Response data is not JSON'))
                     if (data.header.code !== 0) return reject(new Error(data.header.message))
                     if (res) {
                         res.payload.choices.text[0].content += data.payload.choices.text[0].content
@@ -73,6 +75,8 @@ export default {
                 })
                 ws.on('close', () => {
                     if (!res) return reject(new Error('response data is null'))
+                    res.payload.model = `spark-${version}`
+                    res.payload.object = `chat.completion`
                     resolve(res)
                 })
             })
@@ -91,7 +95,7 @@ function getURL(version: string) {
     const signature = Buffer.from(signatureSha, 'hex').toString('base64')
     const authorizationOrigin = `api_key="${API_KEY}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`
     const authorization = Buffer.from(authorizationOrigin).toString('base64')
-    return `${API}/${VERSION}/chat?authorization=${authorization}&date=${date}&host=${host}`
+    return `${API}/${version}/chat?authorization=${authorization}&date=${date}&host=${host}`
 }
 
 // spark chat model request interface
@@ -143,5 +147,7 @@ export interface SPKChatResponse {
                 total_tokens: number
             }
         }
+        model?: string
+        object?: string
     }
 }

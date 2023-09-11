@@ -103,14 +103,7 @@ export default class UniAI extends Service {
         // define return data
         const res: StandardResponse<UniAIChatResponseData> = {
             status: 1,
-            data: {
-                content: '',
-                promptTokens: 0,
-                completionTokens: 0,
-                totalTokens: 0,
-                model: '',
-                object: ''
-            },
+            data: { content: '', promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             msg: 'success to get chat stream message'
         }
         // count tokens
@@ -145,13 +138,15 @@ export default class UniAI extends Service {
                 }
                 if (model === 'SPARK') {
                     const obj = $.json<SPKChatResponse>(event.data)
-                    if (obj && obj.header.code === 0 && obj.payload.choices.text[0].content) {
+                    if (obj && obj.payload.choices.text[0].content) {
                         const { payload } = obj
                         if (chunk) res.data.content = payload.choices.text[0].content
                         else res.data.content += payload.choices.text[0].content
                         res.data.completionTokens = payload.usage?.text.completion_tokens
                         res.data.promptTokens = payload.usage?.text.prompt_tokens
                         res.data.totalTokens = payload.usage?.text.total_tokens
+                        res.data.model = payload.model
+                        res.data.object = payload.object
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }

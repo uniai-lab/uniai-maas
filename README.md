@@ -1,6 +1,6 @@
 <!-- @format -->
 
-# <img src="./logo.png" width=33 height=33 /> UniAI
+# <img src="./logo.png" width=31 height=31 /> UniAI
 
 [简体中文版](./README_CN.md)
 
@@ -8,11 +8,11 @@
 
 ## Integrated Models
 
--   OpenAI GPT
--   OpenAI DALL-E
--   THUDM GLM
--   Stable Diffusion
--   IFLYTEK Spark
+- [OpenAI GPT](https://platform.openai.com/)
+- [OpenAI DALL-E](https://platform.openai.com/)
+- [THUDM GLM](https://github.com/THUDM/ChatGLM-6B)
+- [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+- [IFLYTEK Spark](https://xinghuo.xfyun.cn/)
 
 ## Samples
 
@@ -20,24 +20,22 @@ Who are using UniAI and where can I experience it?
 
 ![wechat miniapps](./miniapp-qrcode.png)
 
-_Notice: All of the above mini app samples use GLM model by UniAI!_
+_Notice: All of the above mini app samples depend on GLM model by UniAI!_
 
 ## About UniAI
 
-UniAI is designed to simplify your interactions with complex AI models. No more struggling to choose the right model or getting lost in technical details - we're open-source and ready to help.
+UniAI is designed to simplify your interactions with mutiple and complex AI models.
 
-## Our Vision
+We aim to provide an API-based platform that integrates various AI models and utilities.
 
-We aim to provide an API-based platform that integrates various AI models and utilities. With UniAI, complex AI implementation becomes hassle-free and streamlined.
-
-## Prerequisites
+## Requirements
 
 Before you start, make sure you have:
 
--   Node.js >= 18.x
--   TypeScript >= 4.x
--   Docker
--   Docker-compose
+- Node.js >= 18.x
+- TypeScript >= 4.x
+- Docker
+- Docker-compose
 
 ## Getting Started
 
@@ -110,7 +108,7 @@ STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
 
 ### Installation
 
-We recommend using `yarn` over `npm`:
+We recommend using `yarn` instead of `npm`:
 
 ```bash
 npm -g install yarn
@@ -119,7 +117,7 @@ yarn
 
 ### Start Database
 
-If you don't already have a vector database such as Milvus or PostgresSQL (pgvector), you can start one using Docker and Docker-compose:
+If you don't have a vector database such as PostgresSQL (pgvector), you can start one using Docker and Docker-compose:
 
 ```bash
 yarn docker up pgvector
@@ -146,7 +144,7 @@ yarn tsc
 yarn start
 ```
 
-⚠️ Do not compile TypeScript files in development mode. If you have run `tsc`, use `yarn clean` before `yarn dev`.
+**⚠️ Do not compile TypeScript files in development mode. If you have run `tsc`, use `yarn clean` before `yarn dev`.**
 
 ### Cleaning Up
 
@@ -156,7 +154,7 @@ yarn clean
 
 ## Documentation
 
-UniAI's interfaces are all accessed through Web APIs.
+UniAI's APIs are all accessed through Web HTTP methods including SSE.
 
 Please refer to the documentation at the following address:
 [https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J)
@@ -167,24 +165,26 @@ UniAI continues to integrate more AI models and extend AI utilities. However, Un
 
 ### NLP Models
 
--   OpenAI GPT: [https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
--   GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+- OpenAI GPT: [https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
+- GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
 
 ### CV Models
 
--   Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+- Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
 
 ## Future Plans
 
 UniAI will evolve to offer more AI capabilities across the following key modules:
 
--   Prediction Interface
--   Training Interface
--   Prompting Interface
--   Resource Interface
+- Prediction APIs
+- Training APIs
+- Prompting APIs
+- Resource APIs
 
 ## Contributors
 
-We welcome your contributions! Reach out to devilyouwei <huangyw@iict.ac.cn> for more information.
+We welcome your contributions!
+
+Reach out to devilyouwei <huangyw@iict.ac.cn> for more information.
 
 _Powered by [Egg.js](https://www.eggjs.org/) TypeScript_
