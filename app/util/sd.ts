@@ -8,8 +8,8 @@
 import $ from '@util/util'
 
 export default {
-    async txt2img(prompt: string, nPrompt: string, num: number = 1, width: number = 1024, height: number = 1024) {
-        const data: Txt2ImgRequest = {
+    async imagine(prompt: string, nPrompt: string, num: number = 1, width: number = 1024, height: number = 1024) {
+        const data: SDImagineRequest = {
             prompt,
             width,
             height,
@@ -52,14 +52,14 @@ export default {
             save_images: false
         }
 
-        return await $.post<Txt2ImgRequest, Txt2ImgResponse>(`${process.env.STABLE_DIFFUSION_API}/txt2img`, data)
+        return await $.post<SDImagineRequest, SDImagineResponse>(`${process.env.STABLE_DIFFUSION_API}/txt2img`, data)
     },
-    async progress() {
-        return await $.get<undefined, progressResponse>(`${process.env.STABLE_DIFFUSION_API}/progress`)
+    async task() {
+        return await $.get<null, SDTaskResponse>(`${process.env.STABLE_DIFFUSION_API}/progress`)
     }
 }
 
-export interface Txt2ImgRequest {
+export interface SDImagineRequest {
     enable_hr: boolean
     denoising_strength: number
     firstphase_width: number
@@ -102,13 +102,13 @@ export interface Txt2ImgRequest {
     override_settings_restore_afterwards: boolean
 }
 
-export interface Txt2ImgResponse {
+export interface SDImagineResponse {
     images: string[]
     info: string
     parameters: {}
 }
 
-export interface progressResponse {
+export interface SDTaskResponse {
     progress: number
     eta_relative: number
     state: {

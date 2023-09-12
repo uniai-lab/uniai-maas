@@ -11,7 +11,6 @@ import {
     CreateEmbeddingResponse,
     CreateImageRequest,
     CreateImageRequestSizeEnum,
-    CreateImageRequestResponseFormatEnum,
     ImagesResponse,
     CreateChatCompletionResponse
 } from 'openai'
@@ -54,23 +53,11 @@ export default {
             }
         )
     },
-    async text2img(
-        prompt: string,
-        num: number = 1,
-        size: CreateImageRequestSizeEnum = '1024x1024',
-        format: CreateImageRequestResponseFormatEnum = 'url'
-    ) {
+    async imagine(prompt: string, n: number = 1, size: CreateImageRequestSizeEnum = '1024x1024') {
         return await $.post<CreateImageRequest, ImagesResponse>(
             `${this.api}/${API_VERSION}/images/generations`,
-            {
-                prompt,
-                n: num,
-                size,
-                response_format: format
-            },
-            {
-                headers: { Authorization: `Bearer ${this.key}` }
-            }
+            { prompt, n, size },
+            { headers: { Authorization: `Bearer ${this.key}` } }
         )
     }
 }

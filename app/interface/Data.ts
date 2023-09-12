@@ -43,5 +43,16 @@ declare const AIModelEnum: {
     readonly SPARK: 'SPARK'
     readonly SD: 'SD'
     readonly DALLE: 'DALLE'
+    readonly MJ: 'MJ'
 }
 declare type AIModelEnum = (typeof AIModelEnum)[keyof typeof AIModelEnum]
+
+declare const MJTaskEnum: {
+    readonly IMAGINE: 'IMAGINE'
+    readonly UPSCALE: 'UPSCALE'
+    readonly VARIATION: 'VARIATION'
+    readonly REROLL: 'REROLL'
+    readonly DESCRIBE: 'DESCRIBE'
+    readonly BLEND: 'BLEND'
+}
+declare type MJTaskEnum = (typeof MJTaskEnum)[keyof typeof MJTaskEnum]

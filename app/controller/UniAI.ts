@@ -13,10 +13,11 @@ import {
 import { ChatCompletionRequestMessage, CreateImageRequestResponseFormatEnum, ImagesResponse } from 'openai'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
-import { Txt2ImgResponse } from '@util/sd'
+import { SDImagineResponse, SDTaskResponse } from '@util/sd'
 import { GPTChatResponse } from '@util/openai'
 import { SPKChatResponse } from '@util/fly'
 import { Stream } from 'stream'
+import { MJImagineResponse, MJTaskResponse } from '@util/mj'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -163,33 +164,38 @@ export default class UniAI {
     }
 
     @Middleware(authAdmin())
-    @HTTPMethod({ path: '/txt-to-img', method: HTTPMethodEnum.POST })
-    async txt2img(@Context() ctx: EggContext, @HTTPBody() params: UniAITxt2ImgPost) {
+    @HTTPMethod({ path: '/imagine', method: HTTPMethodEnum.POST })
+    async imagine(@Context() ctx: EggContext, @HTTPBody() params: UniAIImaginePost) {
         try {
             if (!params.prompt) throw new Error('Prompt is empty')
-            params.model = params.model || 'DALLE'
+            const model = params.model || 'DALLE'
 
-            const res = await ctx.service.uniAI.txt2img(
+            const res = await ctx.service.uniAI.imagine(
                 params.prompt,
                 params.negativePrompt,
                 params.num,
                 params.width,
                 params.height,
-                params.format as CreateImageRequestResponseFormatEnum,
-                params.model
+                model
             )
-            if (params.model === 'SD') {
-                const { images, info } = { ...(res as Txt2ImgResponse) }
-                ctx.service.res.success('Success text to image', { images, info } as UniAITxt2ImgResponseData)
-            } else if (params.model === 'DALLE') {
-                const { data, created } = { ...(res as ImagesResponse) }
+            if (model === 'SD') {
+                const { images, info } = res as SDImagineResponse
+                ctx.service.res.success('Success text to image by stable diffusion', {
+                    images,
+                    info
+                } as UniAIImagineResponseData)
+            } else if (model === 'DALLE') {
+                const { data } = res as ImagesResponse
                 const images: string[] = []
-                for (const item of data) {
-                    if (item.b64_json) images.push(item.b64_json)
-                    if (item.url) images.push(item.url)
-                }
-                const info = `${new Date(created * 1000)}: ${params.prompt}`
-                ctx.service.res.success('Success text to image', { images, info } as UniAITxt2ImgResponseData)
+                for (const item of data) if (item.url) images.push(item.url)
+                ctx.service.res.success('Success text to image by DALL-E', { images } as UniAIImagineResponseData)
+            } else {
+                const { result, description } = res as MJImagineResponse
+                ctx.service.res.success('Success text to image by MidJourney', {
+                    images: [],
+                    taskId: result,
+                    info: description
+                } as UniAIImagineResponseData)
             }
         } catch (e) {
             console.error(e)
@@ -198,17 +204,26 @@ export default class UniAI {
     }
 
     @Middleware(authAdmin())
-    @HTTPMethod({ path: '/img-progress', method: HTTPMethodEnum.POST })
-    async progress(@Context() ctx: EggContext) {
+    @HTTPMethod({ path: '/task', method: HTTPMethodEnum.POST })
+    async task(@Context() ctx: EggContext, @HTTPBody() params: UniAITaskPost) {
         try {
-            const res = await ctx.service.uniAI.progress()
-            const data: UniAIImgProgressResponseData = {
-                progress: res.progress,
-                etaRelative: res.eta_relative,
-                image: res.current_image,
-                txt: res.textinfo
+            const { model, id } = params
+            const res = await ctx.service.uniAI.task(id, model)
+            if (model === 'MJ') {
+                const data = res as MJTaskResponse
+                ctx.service.res.success('Image progress', {
+                    progress: data.progress,
+                    image: data.imageUrl,
+                    info: data.failReason || data.description
+                } as UniAITaskResponseData)
+            } else if (model === 'SD') {
+                const data = res as SDTaskResponse
+                ctx.service.res.success('Image progress', {
+                    progress: data.progress.toString(),
+                    image: data.current_image,
+                    info: data.textinfo
+                } as UniAITaskResponseData)
             }
-            ctx.service.res.success('Image progress', data)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)

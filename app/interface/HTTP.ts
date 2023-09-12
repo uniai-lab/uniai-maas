@@ -217,7 +217,7 @@ interface UniAIEmbeddingPost {
     typeId?: number
     model?: AIModelEnum
 }
-interface UniAITxt2ImgPost {
+interface UniAIImaginePost {
     model: AIModelEnum
     prompt: string
     negativePrompt: string
@@ -230,6 +230,10 @@ interface UniAITxt2ImgPost {
     seed: number
     denoising: number
     format: string
+}
+interface UniAITaskPost {
+    model: AIModelEnum
+    id: string
 }
 interface UniAIChatResponseData {
     content: string
@@ -244,13 +248,13 @@ interface UniAIEmbeddingResponseData {
     page: number
     tokens: number
 }
-interface UniAITxt2ImgResponseData {
+interface UniAIImagineResponseData {
     images: string[]
-    info: string
+    info?: string
+    taskId?: string
 }
-interface UniAIImgProgressResponseData {
-    progress: number
-    etaRelative: number
-    image: string | null
-    txt: string | null
+interface UniAITaskResponseData {
+    progress: string
+    image?: string
+    info?: string
 }

@@ -54,7 +54,7 @@ export default {
                     // simulate SSE data stream
                     stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 } catch (e) {
-                    stream.end().destroy(e as Error)
+                    stream.destroy(e as Error)
                     ws.close()
                 }
             })

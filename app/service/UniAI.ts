@@ -11,6 +11,7 @@ import glm, { GLMChatResponse } from '@util/glm'
 import gpt, { GPTChatStreamResponse } from '@util/openai'
 import fly, { SPKChatResponse } from '@util/fly'
 import sd from '@util/sd'
+import mj from '@util/mj'
 import $ from '@util/util'
 
 const MAX_PAGE = 5
@@ -88,7 +89,7 @@ export default class UniAI extends Service {
             if (model === 'GPT') return await gpt.chat(prompts, false, top, temperature, maxLength, subModel)
             else if (model === 'GLM') return await glm.chat(prompts, false, top, temperature, maxLength)
             else if (model === 'SPARK') return await fly.chat(prompts, false, top, temperature, maxLength, subModel)
-            else throw new Error('Model for chat not found')
+            else throw new Error('Chat model not found')
         }
     }
 
@@ -221,7 +222,7 @@ export default class UniAI extends Service {
                     tokens: $.countTokens(splitPage[i])
                 })
             })
-        } else throw new Error('Model not found')
+        } else throw new Error('Embedding model not found')
 
         return await ctx.model.Resource.create(
             {
@@ -301,26 +302,27 @@ export default class UniAI extends Service {
             // embedding all pages
             const res = await glm.embedding(splitPage)
             res.data.map((v, i) => (resource.pages[i].embedding2 = v))
-        } else throw new Error('Model not found')
+        } else throw new Error('Embedding model not found')
 
         for (const item of resource.pages) await item.save()
         return await resource.save()
     }
-    async txt2img(
+    imagine(
         prompt: string,
         nPrompt: string = '',
         num: number = 1,
         width: number = 1024,
         height: number = 1024,
-        format: CreateImageRequestResponseFormatEnum = 'url',
         model: AIModelEnum = 'DALLE'
     ) {
-        if (model === 'SD') return await sd.txt2img(prompt, nPrompt, num, width, height)
-        else if (model === 'DALLE')
-            return await gpt.text2img(prompt, num, `${width}x${height}` as CreateImageRequestSizeEnum, format)
-        else throw new Error('Model not found')
+        if (model === 'SD') return sd.imagine(prompt, nPrompt, num, width, height)
+        else if (model === 'DALLE') return gpt.imagine(prompt, num, `${width}x${height}` as CreateImageRequestSizeEnum)
+        else if (model === 'MJ') return mj.imagine(prompt)
+        else throw new Error('Image model not found')
     }
-    async progress() {
-        return await sd.progress()
+    task(id: string, model: AIModelEnum = 'MJ') {
+        if (model === 'MJ') return mj.task(id)
+        else if (model === 'SD') return sd.task()
+        else throw new Error('Image model not found')
     }
 }
