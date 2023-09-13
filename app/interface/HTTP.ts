@@ -218,18 +218,12 @@ interface UniAIEmbeddingPost {
     model?: AIModelEnum
 }
 interface UniAIImaginePost {
-    model: AIModelEnum
     prompt: string
-    negativePrompt: string
-    width: number
-    height: number
-    num: number
-    steps: number
-    batchSize: number
-    restoreFace: boolean
-    seed: number
-    denoising: number
-    format: string
+    negativePrompt?: string
+    width?: number
+    height?: number
+    num?: number
+    model?: AIModelEnum
 }
 interface UniAITaskPost {
     model: AIModelEnum

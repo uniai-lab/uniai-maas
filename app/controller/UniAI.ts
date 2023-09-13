@@ -10,7 +10,7 @@ import {
     Inject,
     Middleware
 } from '@eggjs/tegg'
-import { ChatCompletionRequestMessage, CreateImageRequestResponseFormatEnum, ImagesResponse } from 'openai'
+import { ChatCompletionRequestMessage, ImagesResponse } from 'openai'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
 import { SDImagineResponse, SDTaskResponse } from '@util/sd'
@@ -167,28 +167,22 @@ export default class UniAI {
     @HTTPMethod({ path: '/imagine', method: HTTPMethodEnum.POST })
     async imagine(@Context() ctx: EggContext, @HTTPBody() params: UniAIImaginePost) {
         try {
-            if (!params.prompt) throw new Error('Prompt is empty')
             const model = params.model || 'DALLE'
+            const { prompt, negativePrompt, num, width, height } = params
+            if (!prompt) throw new Error('Prompt is empty')
 
-            const res = await ctx.service.uniAI.imagine(
-                params.prompt,
-                params.negativePrompt,
-                params.num,
-                params.width,
-                params.height,
-                model
-            )
-            if (model === 'SD') {
+            const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)
+            if (model === 'DALLE') {
+                const { data } = res as ImagesResponse
+                const images: string[] = []
+                for (const item of data) if (item.url) images.push(item.url)
+                ctx.service.res.success('Success text to image by DALL-E', { images } as UniAIImagineResponseData)
+            } else if (model === 'SD') {
                 const { images, info } = res as SDImagineResponse
                 ctx.service.res.success('Success text to image by stable diffusion', {
                     images,
                     info
                 } as UniAIImagineResponseData)
-            } else if (model === 'DALLE') {
-                const { data } = res as ImagesResponse
-                const images: string[] = []
-                for (const item of data) if (item.url) images.push(item.url)
-                ctx.service.res.success('Success text to image by DALL-E', { images } as UniAIImagineResponseData)
             } else {
                 const { result, description } = res as MJImagineResponse
                 ctx.service.res.success('Success text to image by MidJourney', {
@@ -211,14 +205,14 @@ export default class UniAI {
             const res = await ctx.service.uniAI.task(id, model)
             if (model === 'MJ') {
                 const data = res as MJTaskResponse
-                ctx.service.res.success('Image progress', {
+                ctx.service.res.success('MidJourney task progress', {
                     progress: data.progress,
                     image: data.imageUrl,
                     info: data.failReason || data.description
                 } as UniAITaskResponseData)
             } else if (model === 'SD') {
                 const data = res as SDTaskResponse
-                ctx.service.res.success('Image progress', {
+                ctx.service.res.success('Stable Diffusion task progress', {
                     progress: data.progress.toString(),
                     image: data.current_image,
                     info: data.textinfo

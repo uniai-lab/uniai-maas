@@ -104,6 +104,9 @@ GOOGLE_SEARCH_ENGINE_ID=[Google search engine ID]
 
 # Stable Diffusion
 STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
+# MidJourney proxy https://github.com/novicezk/midjourney-proxy
+MID_JOURNEY_API=[Your midjourney-proxy address]
+MID_JOURNEY_TOKEN=[Your midjourney-proxy app-secret-key]
 ```
 
 ### Installation
@@ -144,7 +147,8 @@ yarn tsc
 yarn start
 ```
 
-**⚠️ Do not compile TypeScript files in development mode. If you have run `tsc`, use `yarn clean` before `yarn dev`.**
+**⚠️ Do not compile TypeScript files in development mode.**
+**If you have run `tsc`, use `yarn clean` before `yarn dev`.**
 
 ### Cleaning Up
 
@@ -154,37 +158,42 @@ yarn clean
 
 ## Documentation
 
-UniAI's APIs are all accessed through Web HTTP methods including SSE.
+UniAI's APIs are accessed through the common Web HTTP methods including SSE.
 
 Please refer to the documentation at the following address:
 [https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J)
 
 ## Models
 
-UniAI continues to integrate more AI models and extend AI utilities. However, UniAI is not a standalone entity. Since it serves as an integration and connection point for AI models, tools, and plugins, you'll need to deploy specific models you require on your own. We provide download URLs and guides for these models.
+UniAI continues to integrate more AI models and extend AI utilities. However, UniAI is not a standalone entity. Since it serves as an integration and connection point for various AI models, tools, and plugins, you'll need to deploy specific models you require on your own. We provide download URLs and guides for these models.
 
 ### NLP Models
 
-- OpenAI GPT: [https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
+- OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
 - GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+- IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
 
 ### CV Models
 
+- OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
 - Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+- MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
 
 ## Future Plans
 
-UniAI will evolve to offer more AI capabilities across the following key modules:
+UniAI will offer more AI capabilities across the following key features:
 
 - Prediction APIs
 - Training APIs
 - Prompting APIs
 - Resource APIs
 
+![future features](./future.png)
+
 ## Contributors
 
-We welcome your contributions!
+Welcome your contributions!
 
-Reach out to devilyouwei <huangyw@iict.ac.cn> for more information.
+Reach out to Youwei <huangyw@iict.ac.cn> for more development information.
 
 _Powered by [Egg.js](https://www.eggjs.org/) TypeScript_

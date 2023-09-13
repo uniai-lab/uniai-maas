@@ -102,6 +102,9 @@ GOOGLE_SEARCH_ENGINE_ID=[Google搜索引擎ID]
 
 # Stable Diffusion
 STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
+# MidJourney proxy https://github.com/novicezk/midjourney-proxy
+MID_JOURNEY_API=[Your midjourney-proxy address]
+MID_JOURNEY_TOKEN=[Your midjourney-proxy app-secret-key]
 ```
 
 ### 安装
@@ -163,26 +166,31 @@ UniAI将继续集成更多的AI模型并扩展AI工具。但是，UniAI不是一
 
 ### 自然语言处理模型
 
-- OpenAI GPT: [https://www.npmjs.com/package/openai](https://www.npmjs.com/package/openai)
+- OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
 - GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+- IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
 
 ### 计算机视觉模型
 
+- OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
 - Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+- MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
 
 ## 未来计划
 
 UniAI将不断发展，提供更多的AI能力，包括以下关键模块：
 
-- 预测API
-- 训练API
-- 提示API
-- 资源API
+- 预测 API
+- 训练 API
+- 提示 API
+- 资源 API
+
+![future features](./future.png)
 
 ## 贡献者
 
 我们欢迎您的贡献！
 
-联系devilyouwei <huangyw@iict.ac.cn> 获取更多信息。
+联系Youwei <huangyw@iict.ac.cn> 获取更多信息。
 
 _由 [Egg.js](https://www.eggjs.org/) TypeScript 驱动_`<!-- @format -->`

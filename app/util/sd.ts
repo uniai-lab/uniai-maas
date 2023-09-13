@@ -8,7 +8,7 @@
 import $ from '@util/util'
 
 export default {
-    async imagine(prompt: string, nPrompt: string, num: number = 1, width: number = 1024, height: number = 1024) {
+    async imagine(prompt: string, nPrompt: string = '', num: number = 1, width: number = 1024, height: number = 1024) {
         const data: SDImagineRequest = {
             prompt,
             width,
@@ -49,13 +49,13 @@ export default {
             sampler_index: 'DPM++ SDE Karras',
             script_name: '',
             send_images: true,
-            save_images: false
+            save_images: true
         }
 
-        return await $.post<SDImagineRequest, SDImagineResponse>(`${process.env.STABLE_DIFFUSION_API}/txt2img`, data)
+        return await $.post<SDImagineRequest, SDImagineResponse>(`${process.env.STABLE_DIFFUSION_API}/sdapi/v1/txt2img`, data)
     },
     async task() {
-        return await $.get<null, SDTaskResponse>(`${process.env.STABLE_DIFFUSION_API}/progress`)
+        return await $.get<null, SDTaskResponse>(`${process.env.STABLE_DIFFUSION_API}/sdapi/v1/progress`)
     }
 }
 
