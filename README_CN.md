@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # <img src="./logo.png" width=31 height=31 /> UniAI
 
 [简体中文版](./README_CN.md)
@@ -6,34 +8,34 @@
 
 ## 已支持模型
 
-- [OpenAI GPT](https://platform.openai.com/)
-- [OpenAI DALL-E](https://platform.openai.com/)
-- [THUDM GLM](https://github.com/THUDM/ChatGLM-6B)
-- [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
-- [IFLYTEK Spark](https://xinghuo.xfyun.cn/)
+-   [OpenAI GPT](https://platform.openai.com/)
+-   [OpenAI DALL-E](https://platform.openai.com/)
+-   [THUDM GLM](https://github.com/THUDM/ChatGLM-6B)
+-   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+-   [IFLYTEK Spark](https://xinghuo.xfyun.cn/)
 
 ## 示例
 
-谁在使用UniAI，我在哪里可以体验它？
+谁在使用 UniAI，我在哪里可以体验它？
 
 ![微信小程序](./miniapp-qrcode.png)
 
-_注意：上述所有小程序示例都依赖于UniAI的GLM模型！_
+_注意：上述所有小程序示例都依赖于 UniAI 的 GLM 模型！_
 
-## 关于UniAI
+## 关于 UniAI
 
-UniAI旨在简化您与多个复杂AI模型的交互。
+UniAI 旨在简化您与多个复杂 AI 模型的交互。
 
-我们旨在提供一个基于API的平台，集成了各种AI模型和实用工具。
+我们旨在提供一个基于 API 的平台，集成了各种 AI 模型和实用工具。
 
 ## 环境要求
 
 在开始之前，请确保您具备以下条件：
 
-- Node.js >= 18.x
-- TypeScript >= 4.x
-- Docker
-- Docker-compose
+-   Node.js >= 18.x
+-   TypeScript >= 4.x
+-   Docker
+-   Docker-compose
 
 ## 入门指南
 
@@ -101,7 +103,8 @@ GOOGLE_SEARCH_API_TOKEN=[Google搜索API令牌]
 GOOGLE_SEARCH_ENGINE_ID=[Google搜索引擎ID]
 
 # Stable Diffusion
-STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
+STABLE_DIFFUSION_API=http://10.144.1.7:3400
+
 # MidJourney proxy https://github.com/novicezk/midjourney-proxy
 MID_JOURNEY_API=[Your midjourney-proxy address]
 MID_JOURNEY_TOKEN=[Your midjourney-proxy app-secret-key]
@@ -118,7 +121,7 @@ yarn
 
 ### 启动数据库
 
-如果您没有矢量数据库（如PostgresSQL pgvector），可以使用Docker和Docker-compose启动一个：
+如果您没有矢量数据库（如 PostgresSQL pgvector），可以使用 Docker 和 Docker-compose 启动一个：
 
 ```bash
 yarn docker up pgvector
@@ -130,7 +133,7 @@ yarn docker up pgvector
 yarn pg init --force
 ```
 
-## 运行UniAI
+## 运行 UniAI
 
 ### 开发模式
 
@@ -145,7 +148,7 @@ yarn tsc
 yarn start
 ```
 
-**⚠️ 在开发模式下不要编译TypeScript文件。如果已经运行了 `tsc`，请在 `yarn dev`之前使用 `yarn clean`。**
+**⚠️ 在开发模式下不要编译 TypeScript 文件。如果已经运行了 `tsc`，请在 `yarn dev`之前使用 `yarn clean`。**
 
 ### 清理
 
@@ -155,35 +158,35 @@ yarn clean
 
 ## 文档
 
-UniAI的API都是通过Web HTTP方法（包括SSE）访问的。
+UniAI 的 API 都是通过 Web HTTP 方法（包括 SSE）访问的。
 
 请参阅以下地址的文档：
 [https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J)
 
 ## 模型
 
-UniAI将继续集成更多的AI模型并扩展AI工具。但是，UniAI不是一个独立的实体。由于它充当了AI模型、工具和插件的集成和连接点，您需要自己部署您需要的具体模型。我们提供了这些模型的下载URL和指南。
+UniAI 将继续集成更多的 AI 模型并扩展 AI 工具。但是，UniAI 不是一个独立的实体。由于它充当了 AI 模型、工具和插件的集成和连接点，您需要自己部署您需要的具体模型。我们提供了这些模型的下载 URL 和指南。
 
 ### 自然语言处理模型
 
-- OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
-- GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
-- IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
+-   OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
+-   GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+-   IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
 
 ### 计算机视觉模型
 
-- OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
-- Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
-- MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
+-   OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
+-   Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+-   MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
 
 ## 未来计划
 
-UniAI将不断发展，提供更多的AI能力，包括以下关键模块：
+UniAI 将不断发展，提供更多的 AI 能力，包括以下关键模块：
 
-- 预测 API
-- 训练 API
-- 提示 API
-- 资源 API
+-   预测 API
+-   训练 API
+-   提示 API
+-   资源 API
 
 ![future features](./future.png)
 
@@ -191,6 +194,6 @@ UniAI将不断发展，提供更多的AI能力，包括以下关键模块：
 
 我们欢迎您的贡献！
 
-联系Youwei <huangyw@iict.ac.cn> 获取更多信息。
+联系 Youwei <huangyw@iict.ac.cn> 获取更多信息。
 
 _由 [Egg.js](https://www.eggjs.org/) TypeScript 驱动_`<!-- @format -->`

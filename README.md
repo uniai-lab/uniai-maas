@@ -8,11 +8,11 @@
 
 ## Integrated Models
 
-- [OpenAI GPT](https://platform.openai.com/)
-- [OpenAI DALL-E](https://platform.openai.com/)
-- [THUDM GLM](https://github.com/THUDM/ChatGLM-6B)
-- [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
-- [IFLYTEK Spark](https://xinghuo.xfyun.cn/)
+-   [OpenAI GPT](https://platform.openai.com/)
+-   [OpenAI DALL-E](https://platform.openai.com/)
+-   [THUDM GLM](https://github.com/THUDM/ChatGLM-6B)
+-   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+-   [IFLYTEK Spark](https://xinghuo.xfyun.cn/)
 
 ## Samples
 
@@ -32,10 +32,10 @@ We aim to provide an API-based platform that integrates various AI models and ut
 
 Before you start, make sure you have:
 
-- Node.js >= 18.x
-- TypeScript >= 4.x
-- Docker
-- Docker-compose
+-   Node.js >= 18.x
+-   TypeScript >= 4.x
+-   Docker
+-   Docker-compose
 
 ## Getting Started
 
@@ -103,7 +103,8 @@ GOOGLE_SEARCH_API_TOKEN=[Google search API token]
 GOOGLE_SEARCH_ENGINE_ID=[Google search engine ID]
 
 # Stable Diffusion
-STABLE_DIFFUSION_API=http://10.144.1.7:3400/sdapi/v1
+STABLE_DIFFUSION_API=http://10.144.1.7:3400
+
 # MidJourney proxy https://github.com/novicezk/midjourney-proxy
 MID_JOURNEY_API=[Your midjourney-proxy address]
 MID_JOURNEY_TOKEN=[Your midjourney-proxy app-secret-key]
@@ -169,24 +170,24 @@ UniAI continues to integrate more AI models and extend AI utilities. However, Un
 
 ### NLP Models
 
-- OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
-- GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
-- IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
+-   OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
+-   GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
+-   IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
 
 ### CV Models
 
-- OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
-- Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
-- MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
+-   OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
+-   Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
+-   MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
 
 ## Future Plans
 
 UniAI will offer more AI capabilities across the following key features:
 
-- Prediction APIs
-- Training APIs
-- Prompting APIs
-- Resource APIs
+-   Prediction APIs
+-   Training APIs
+-   Prompting APIs
+-   Resource APIs
 
 ![future features](./future.png)
 
