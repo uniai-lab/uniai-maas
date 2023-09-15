@@ -211,5 +211,18 @@ export default {
     },
     cosine(v1: number[], v2: number[]) {
         return similarity.cosine(v1, v2)
+    },
+    getGCD(a: number, b: number): number {
+        if (b === 0) return a
+        return this.getGCD(b, a % b)
+    },
+    getAspect(width: number, height: number) {
+        if (!width || !height) return '1:1'
+
+        const gcd = this.getGCD(width, height)
+        const aspectRatioWidth = width / gcd
+        const aspectRatioHeight = height / gcd
+
+        return `${aspectRatioWidth}:${aspectRatioHeight}`
     }
 }

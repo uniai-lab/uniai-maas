@@ -10,15 +10,15 @@ const API = process.env.MID_JOURNEY_API
 const TOKEN = process.env.MID_JOURNEY_TOKEN
 
 export default {
-    imagine(prompt: string) {
+    imagine(prompt: string, nPrompt: string = '', width: number = 1, height: number = 1) {
+        const aspect = $.getAspect(width, height)
         return $.post<MJImagineRequest, MJImagineResponse>(
             `${API}/mj/submit/imagine`,
-            { prompt },
+            { prompt: `${prompt} --ar ${aspect} ${nPrompt ? '--no ' + nPrompt : ''}` },
             { headers: { 'mj-api-secret': TOKEN } }
         )
     },
     task(id: string) {
-        console.log(id)
         return $.get<null, MJTaskResponse>(`${API}/mj/task/${id}/fetch`, null, { headers: { 'mj-api-secret': TOKEN } })
     }
 }

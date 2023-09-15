@@ -53,10 +53,14 @@ export default {
             }
         )
     },
-    async imagine(prompt: string, n: number = 1, size: CreateImageRequestSizeEnum = '1024x1024') {
+    async imagine(prompt: string, nPrompt: string = '', width: number = 1024, height: number = 1024, n: number = 1) {
         return await $.post<CreateImageRequest, ImagesResponse>(
             `${this.api}/${API_VERSION}/images/generations`,
-            { prompt, n, size },
+            {
+                prompt: `Positive prompt: ${prompt}\nNegative prompt: ${nPrompt}`,
+                n,
+                size: `${width}x${height}` as CreateImageRequestSizeEnum
+            },
             { headers: { Authorization: `Bearer ${this.key}` } }
         )
     }

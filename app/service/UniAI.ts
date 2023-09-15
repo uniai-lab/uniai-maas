@@ -2,7 +2,7 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { ChatCompletionRequestMessage, CreateImageRequestResponseFormatEnum, CreateImageRequestSizeEnum } from 'openai'
+import { ChatCompletionRequestMessage } from 'openai'
 import { WhereOptions, Op } from 'sequelize'
 import { PassThrough, Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
@@ -313,11 +313,11 @@ export default class UniAI extends Service {
         num: number = 1,
         width: number = 1024,
         height: number = 1024,
-        model: AIModelEnum = 'DALLE'
+        model: AIModelEnum = 'MJ'
     ) {
-        if (model === 'SD') return sd.imagine(prompt, nPrompt, num, width, height)
-        else if (model === 'DALLE') return gpt.imagine(prompt, num, `${width}x${height}` as CreateImageRequestSizeEnum)
-        else if (model === 'MJ') return mj.imagine(prompt)
+        if (model === 'SD') return sd.imagine(prompt, nPrompt, width, height, num)
+        else if (model === 'DALLE') return gpt.imagine(prompt, nPrompt, width, height, num)
+        else if (model === 'MJ') return mj.imagine(prompt, nPrompt, width, height)
         else throw new Error('Image model not found')
     }
     task(id: string, model: AIModelEnum = 'MJ') {
