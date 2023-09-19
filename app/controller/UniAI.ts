@@ -201,8 +201,9 @@ export default class UniAI {
     @HTTPMethod({ path: '/task', method: HTTPMethodEnum.POST })
     async task(@Context() ctx: EggContext, @HTTPBody() params: UniAITaskPost) {
         try {
-            const { model, id } = params
-            const res = await ctx.service.uniAI.task(id, model)
+            if (!params.taskId) throw new Error('Param taskId is null')
+            const model = params.model || 'MJ'
+            const res = await ctx.service.uniAI.task(params.taskId, model)
             if (model === 'MJ') {
                 const data = res as MJTaskResponse
                 ctx.service.res.success('MidJourney task progress', {
@@ -217,6 +218,27 @@ export default class UniAI {
                     image: data.current_image,
                     info: data.textinfo
                 } as UniAITaskResponseData)
+            }
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+    @Middleware(authAdmin())
+    @HTTPMethod({ path: '/change', method: HTTPMethodEnum.POST })
+    async change(@Context() ctx: EggContext, @HTTPBody() params: UniAIChangePost) {
+        try {
+            const { action, index, taskId } = params
+            if (!taskId) throw new Error('Param taskId is null')
+            if (!action) throw new Error('Param action is null')
+            const model = params.model || 'MJ'
+            const res = await ctx.service.uniAI.change(taskId, action, index, model)
+            if (model === 'MJ') {
+                ctx.service.res.success('Success text to image by MidJourney', {
+                    images: [],
+                    taskId: res.result,
+                    info: res.description
+                } as UniAIImagineResponseData)
             }
         } catch (e) {
             console.error(e)

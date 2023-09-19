@@ -227,7 +227,13 @@ interface UniAIImaginePost {
 }
 interface UniAITaskPost {
     model: AIModelEnum
-    id: string
+    taskId: string
+}
+interface UniAIChangePost {
+    model: AIModelEnum
+    taskId: string
+    action: string
+    index?: number
 }
 interface UniAIChatResponseData {
     content: string

@@ -8,6 +8,7 @@
 import $ from './util'
 const API = process.env.MID_JOURNEY_API
 const TOKEN = process.env.MID_JOURNEY_TOKEN
+const headers = { 'mj-api-secret': TOKEN }
 
 export default {
     imagine(prompt: string, nPrompt: string = '', width: number = 1, height: number = 1) {
@@ -15,17 +16,31 @@ export default {
         return $.post<MJImagineRequest, MJImagineResponse>(
             `${API}/mj/submit/imagine`,
             { prompt: `${prompt} --ar ${aspect} ${nPrompt ? '--no ' + nPrompt : ''}` },
-            { headers: { 'mj-api-secret': TOKEN } }
+            { headers }
         )
     },
     task(id: string) {
         return $.get<null, MJTaskResponse>(`${API}/mj/task/${id}/fetch`, null, { headers: { 'mj-api-secret': TOKEN } })
+    },
+    change(taskId: string, action: MJTaskEnum, index?: number) {
+        return $.post<MJChangeRequest, MJImagineResponse>(
+            `${API}/mj/submit/change`,
+            { taskId, action, index },
+            { headers }
+        )
     }
 }
 
 interface MJImagineRequest {
     prompt: string
     base64Array?: string[]
+    notifyHook?: string
+    state?: string
+}
+interface MJChangeRequest {
+    taskId: string
+    action: MJTaskEnum
+    index?: number
     notifyHook?: string
     state?: string
 }

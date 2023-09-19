@@ -318,11 +318,15 @@ export default class UniAI extends Service {
         if (model === 'SD') return sd.imagine(prompt, nPrompt, width, height, num)
         else if (model === 'DALLE') return gpt.imagine(prompt, nPrompt, width, height, num)
         else if (model === 'MJ') return mj.imagine(prompt, nPrompt, width, height)
-        else throw new Error('Image model not found')
+        else throw new Error('Image imagine model not found')
     }
     task(id: string, model: AIModelEnum = 'MJ') {
         if (model === 'MJ') return mj.task(id)
         else if (model === 'SD') return sd.task()
-        else throw new Error('Image model not found')
+        else throw new Error('Image task model not found')
+    }
+    change(id: string, action: string, index?: number, model: AIModelEnum = 'MJ') {
+        if (model === 'MJ') return mj.change(id, action as MJTaskEnum, index)
+        else throw new Error('Image change model not found')
     }
 }
