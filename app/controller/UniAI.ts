@@ -184,7 +184,8 @@ export default class UniAI {
                     info
                 } as UniAIImagineResponseData)
             } else {
-                const { result, description } = res as MJImagineResponse
+                const { result, description, code } = res as MJImagineResponse
+                if (code !== 1) throw new Error(description)
                 ctx.service.res.success('Success text to image by MidJourney', {
                     images: [],
                     taskId: result,
