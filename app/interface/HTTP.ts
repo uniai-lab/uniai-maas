@@ -197,7 +197,6 @@ interface UniAIChatPost {
     model?: AIModelEnum
     subModel?: string
     chunk?: boolean
-    format?: boolean
 }
 interface UniAIQueryOnlinePost {
     prompts: UniAIChatPrompt[]

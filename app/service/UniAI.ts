@@ -74,7 +74,7 @@ export default class UniAI extends Service {
     async chat(
         prompts: ChatCompletionRequestMessage[],
         stream: boolean = false,
-        model: AIModelEnum = 'GLM',
+        model: AIModelEnum,
         top?: number,
         temperature?: number,
         maxLength?: number,
@@ -94,7 +94,7 @@ export default class UniAI extends Service {
     }
 
     // handle chat stream
-    parseSSE(message: Stream, model: AIModelEnum, chunk: boolean = false, format: boolean = true) {
+    parseSSE(message: Stream, model: AIModelEnum, chunk: boolean = false) {
         this.ctx.set({
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
@@ -121,6 +121,7 @@ export default class UniAI extends Service {
                         res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
+                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
                 if (model === 'GLM') {
@@ -133,6 +134,7 @@ export default class UniAI extends Service {
                         res.data.totalTokens = obj.total_tokens
                         res.data.model = obj.model
                         res.data.object = obj.object
+                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
                 if (model === 'SPARK') {
@@ -146,10 +148,9 @@ export default class UniAI extends Service {
                         res.data.totalTokens = payload.usage?.text.total_tokens
                         res.data.model = payload.model
                         res.data.object = payload.object
+                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
-                if (format) stream.write(`data: ${JSON.stringify(res)}\n\n`)
-                else stream.write(JSON.stringify(res))
             }
         })
 

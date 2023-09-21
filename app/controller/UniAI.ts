@@ -86,11 +86,11 @@ export default class UniAI {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
-            const { top, temperature, maxLength, subModel, chunk, format } = params
+            const { top, temperature, maxLength, subModel, chunk } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
-            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk, format)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
