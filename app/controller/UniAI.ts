@@ -246,4 +246,16 @@ export default class UniAI {
             ctx.service.res.error(e as Error)
         }
     }
+    @Middleware(authAdmin())
+    @HTTPMethod({ path: '/queue', method: HTTPMethodEnum.POST })
+    async queue(@Context() ctx: EggContext, @HTTPBody() params: { model: AIModelEnum }) {
+        try {
+            const model = params.model || 'MJ'
+            const res = await ctx.service.uniAI.queue(model)
+            if (model === 'MJ') ctx.service.res.success('Image task queue', res)
+        } catch (e) {
+            console.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
 }

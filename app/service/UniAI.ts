@@ -328,4 +328,8 @@ export default class UniAI extends Service {
         if (model === 'MJ') return mj.change(id, action as MJTaskEnum, index)
         else throw new Error('Image change model not found')
     }
+    queue(model: AIModelEnum = 'MJ') {
+        if (model === 'MJ') return mj.queue()
+        else throw new Error('Image queue model not found')
+    }
 }

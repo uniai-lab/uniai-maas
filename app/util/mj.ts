@@ -28,6 +28,9 @@ export default {
             { taskId, action, index },
             { headers }
         )
+    },
+    queue() {
+        return $.get<null, MJTaskResponse[]>(`${API}/mj/task/queue`, null, { headers: { 'mj-api-secret': TOKEN } })
     }
 }
 
