@@ -87,11 +87,12 @@ export default class UniAI {
             if (!prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
             const chunk = params.chunk || false
+            const format = params.format || true
             const { top, temperature, maxLength, subModel } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
-            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk, format)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
@@ -207,10 +208,11 @@ export default class UniAI {
             const res = await ctx.service.uniAI.task(params.taskId, model)
             if (model === 'MJ') {
                 const data = res as MJTaskResponse
+                if (data.failReason) throw new Error(data.failReason)
                 ctx.service.res.success('MidJourney task progress', {
                     progress: data.progress,
                     image: data.imageUrl,
-                    info: data.failReason || data.description
+                    info: data.description
                 } as UniAITaskResponseData)
             } else if (model === 'SD') {
                 const data = res as SDTaskResponse
