@@ -86,9 +86,7 @@ export default class UniAI {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!prompts.length) throw new Error('Empty prompts')
             const model = params.model || 'GLM'
-            const chunk = params.chunk || false
-            const format = params.format || true
-            const { top, temperature, maxLength, subModel } = params
+            const { top, temperature, maxLength, subModel, chunk, format } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
