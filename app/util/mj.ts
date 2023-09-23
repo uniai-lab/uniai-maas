@@ -19,8 +19,9 @@ export default {
             { headers }
         )
     },
-    task(id: string) {
-        return $.get<null, MJTaskResponse>(`${API}/mj/task/${id}/fetch`, null, { headers: { 'mj-api-secret': TOKEN } })
+    async task(id: string) {
+        if (id) return [await $.get<null, MJTaskResponse>(`${API}/mj/task/${id}/fetch`, null, { headers })]
+        else return await $.get<null, MJTaskResponse[]>(`${API}/mj/task/list`, null, { headers })
     },
     change(taskId: string, action: MJTaskEnum, index?: number) {
         return $.post<MJChangeRequest, MJImagineResponse>(
@@ -59,9 +60,9 @@ export interface MJImagineResponse {
 
 export interface MJTaskResponse {
     id: string
-    properties: {
-        notifyHook: string | null
-        discordInstanceId: string
+    properties?: {
+        notifyHook: string
+        discordInstanceId?: string
         flags: number
         messageId: string
         messageHash: string
@@ -80,5 +81,5 @@ export interface MJTaskResponse {
     finishTime: number
     imageUrl: string
     progress: string
-    failReason: string | null
+    failReason?: string
 }

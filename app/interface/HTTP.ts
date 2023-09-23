@@ -254,7 +254,9 @@ interface UniAIImagineResponseData {
     taskId?: string
 }
 interface UniAITaskResponseData {
+    id?: string
     progress: string
     image?: string
     info?: string
+    failReason?: string
 }

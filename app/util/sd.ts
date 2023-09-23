@@ -58,7 +58,7 @@ export default {
         )
     },
     async task() {
-        return await $.get<null, SDTaskResponse>(`${process.env.STABLE_DIFFUSION_API}/sdapi/v1/progress`)
+        return [await $.get<null, SDTaskResponse>(`${process.env.STABLE_DIFFUSION_API}/sdapi/v1/progress`)]
     }
 }
 
@@ -124,6 +124,6 @@ export interface SDTaskResponse {
         sampling_step: number
         sampling_steps: number
     }
-    current_image: string | null
-    textinfo: string | null
+    current_image?: string
+    textinfo?: string
 }

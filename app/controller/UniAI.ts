@@ -201,24 +201,32 @@ export default class UniAI {
     @HTTPMethod({ path: '/task', method: HTTPMethodEnum.POST })
     async task(@Context() ctx: EggContext, @HTTPBody() params: UniAITaskPost) {
         try {
-            if (!params.taskId) throw new Error('Param taskId is null')
-            const model = params.model || 'MJ'
-            const res = await ctx.service.uniAI.task(params.taskId, model)
+            const { taskId, model } = params
+            const res = await ctx.service.uniAI.task(taskId, model)
+            if (!res.length) throw new Error('No Tasks found')
             if (model === 'MJ') {
-                const data = res as MJTaskResponse
-                if (data.failReason) throw new Error(data.failReason)
-                ctx.service.res.success('MidJourney task progress', {
-                    progress: data.progress,
-                    image: data.imageUrl,
-                    info: data.description
-                } as UniAITaskResponseData)
+                const tasks = res as MJTaskResponse[]
+                if (taskId && tasks[0].failReason) throw new Error(tasks[0].failReason)
+                const data: UniAITaskResponseData[] = tasks.map(v => {
+                    return {
+                        id: v.id,
+                        progress: v.progress,
+                        image: v.imageUrl,
+                        info: v.description,
+                        failReason: v.failReason
+                    }
+                })
+                ctx.service.res.success('MidJourney task progress', data)
             } else if (model === 'SD') {
-                const data = res as SDTaskResponse
-                ctx.service.res.success('Stable Diffusion task progress', {
-                    progress: data.progress.toString(),
-                    image: data.current_image,
-                    info: data.textinfo
-                } as UniAITaskResponseData)
+                const tasks = res as SDTaskResponse[]
+                const data: UniAITaskResponseData[] = tasks.map(v => {
+                    return {
+                        progress: v.progress.toString(),
+                        image: v.current_image,
+                        info: v.textinfo
+                    }
+                })
+                ctx.service.res.success('Stable Diffusion task progress', data)
             }
         } catch (e) {
             console.error(e)
