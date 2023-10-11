@@ -141,7 +141,7 @@ export default class WeChat {
             if (!userId) throw new Error('No user id')
             const { input, dialogId } = params
             if (!input) throw new Error('Input nothing')
-            const model = params.model || AIModelEnum.SPARK
+            const model = params.model || 'SPARK'
 
             const res = await ctx.service.weChat.chat(input, userId, dialogId, model)
             const data: ChatResponseData = {
