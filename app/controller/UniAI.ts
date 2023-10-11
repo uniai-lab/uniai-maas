@@ -30,12 +30,12 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
-            const model = params.model || 'GLM'
+            const model = params.model || AIModelEnum.GLM
             const { top, temperature, maxLength, subModel } = params
             const res = await ctx.service.uniAI.chat(prompts, false, model, top, temperature, maxLength, subModel)
 
             // chat to GPT
-            if (model === 'GPT') {
+            if (model === AIModelEnum.GPT) {
                 const { choices, model, object, usage } = res as GPTChatResponse
                 if (choices[0].message?.content)
                     ctx.service.res.success('Success to chat to OpenAI GPT', {
@@ -49,7 +49,7 @@ export default class UniAI {
                 else throw new Error('Error to chat to GPT')
             }
             // chat to GLM
-            if (model === 'GLM') {
+            if (model === AIModelEnum.GLM) {
                 const data = res as GLMChatResponse
                 if (data.content)
                     ctx.service.res.success('Success to chat to GLM', {
@@ -62,7 +62,7 @@ export default class UniAI {
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to GLM')
             }
-            if (model === 'SPARK') {
+            if (model === AIModelEnum.SPARK) {
                 const { payload } = res as SPKChatResponse
                 if (payload.choices.text[0].content)
                     ctx.service.res.success('Success to chat to IFLYTEK SPARK', {
@@ -85,7 +85,7 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!prompts.length) throw new Error('Empty prompts')
-            const model = params.model || 'GLM'
+            const model = params.model || AIModelEnum.GLM
             const { top, temperature, maxLength, subModel, chunk } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
@@ -166,17 +166,17 @@ export default class UniAI {
     @HTTPMethod({ path: '/imagine', method: HTTPMethodEnum.POST })
     async imagine(@Context() ctx: EggContext, @HTTPBody() params: UniAIImaginePost) {
         try {
-            const model = params.model || 'DALLE'
+            const model = params.model || AIModelEnum.DALLE
             const { prompt, negativePrompt, num, width, height } = params
             if (!prompt) throw new Error('Prompt is empty')
 
             const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)
-            if (model === 'DALLE') {
+            if (model === AIModelEnum.DALLE) {
                 const { data } = res as ImagesResponse
                 const images: string[] = []
                 for (const item of data) if (item.url) images.push(item.url)
                 ctx.service.res.success('Success text to image by DALL-E', { images } as UniAIImagineResponseData)
-            } else if (model === 'SD') {
+            } else if (model === AIModelEnum.SD) {
                 const { images, info } = res as SDImagineResponse
                 ctx.service.res.success('Success text to image by stable diffusion', {
                     images,
@@ -204,7 +204,7 @@ export default class UniAI {
             const { taskId, model } = params
             const res = await ctx.service.uniAI.task(taskId, model)
             if (!res.length) throw new Error('No Tasks found')
-            if (model === 'MJ') {
+            if (model === AIModelEnum.MJ) {
                 const tasks = res as MJTaskResponse[]
                 if (taskId && tasks[0].failReason) throw new Error(tasks[0].failReason)
                 const data: UniAITaskResponseData[] = tasks.map(v => {
@@ -217,7 +217,7 @@ export default class UniAI {
                     }
                 })
                 ctx.service.res.success('MidJourney task progress', data)
-            } else if (model === 'SD') {
+            } else if (model === AIModelEnum.SD) {
                 const tasks = res as SDTaskResponse[]
                 const data: UniAITaskResponseData[] = tasks.map(v => {
                     return {
@@ -240,9 +240,9 @@ export default class UniAI {
             const { action, index, taskId } = params
             if (!taskId) throw new Error('Param taskId is null')
             if (!action) throw new Error('Param action is null')
-            const model = params.model || 'MJ'
+            const model = params.model || AIModelEnum.MJ
             const res = await ctx.service.uniAI.change(taskId, action, index, model)
-            if (model === 'MJ') {
+            if (model === AIModelEnum.MJ) {
                 ctx.service.res.success('Success text to image by MidJourney', {
                     images: [],
                     taskId: res.result,
@@ -258,9 +258,9 @@ export default class UniAI {
     @HTTPMethod({ path: '/queue', method: HTTPMethodEnum.POST })
     async queue(@Context() ctx: EggContext, @HTTPBody() params: { model: AIModelEnum }) {
         try {
-            const model = params.model || 'MJ'
+            const model = params.model || AIModelEnum.MJ
             const res = await ctx.service.uniAI.queue(model)
-            if (model === 'MJ') ctx.service.res.success('Image task queue', res)
+            if (model === AIModelEnum.MJ) ctx.service.res.success('Image task queue', res)
         } catch (e) {
             console.error(e)
             ctx.service.res.error(e as Error)
