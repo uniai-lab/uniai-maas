@@ -18,6 +18,7 @@ import md5 from 'md5'
 import $ from '@util/util'
 import { Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
+import { SPKChatResponse } from '@util/fly'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2500
@@ -355,6 +356,10 @@ export default class WeChat extends Service {
                 if (model === 'GLM') {
                     const obj = $.json<GLMChatResponse>(event.data)
                     if (obj && obj.content) cache.content += obj.content
+                }
+                if (model === 'SPARK') {
+                    const obj = $.json<SPKChatResponse>(event.data)
+                    if (obj && obj.payload.choices.text[0].content) cache.content += obj.payload.choices.text[0].content
                 }
                 $.setCache(`chat_${userId}`, cache)
             }
