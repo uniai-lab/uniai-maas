@@ -30,6 +30,7 @@ export default class LongText {
             params.language = params.language || ctx.__('chinese')
 
             const res = await ctx.service.prompt.outline({ ...params })
+            ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
             ctx.body = ctx.service.uniAI.parseSSE(res as Stream, params.model)
         } catch (e) {
             console.error(e)

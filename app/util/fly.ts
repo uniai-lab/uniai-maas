@@ -30,8 +30,7 @@ export default {
     ) {
         const url = getURL(version)
         const ws = new WebSocket(url)
-        let domain = 'general'
-        if (version === 'v2.1') domain = 'generalv2'
+        const domain = version === 'v2.1' ? 'generalv2' : 'general'
 
         const input: SPKChatRequest = {
             header: { app_id: APP_ID },
@@ -53,7 +52,7 @@ export default {
                     res.payload.object = `chat.completion.chunk`
                     stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 })
-                ws.on('error', e => reject(e))
+                ws.on('error', e => stream.destroy(e))
                 ws.on('close', () => stream.end())
                 resolve(stream as Stream)
             } else {

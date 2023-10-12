@@ -367,19 +367,25 @@ export default class WeChat extends Service {
 
         // add listen stream
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
+        stream.on('error', (e: Error) => {
+            cache.content = e.message
+            cache.chatId = Infinity
+            $.setCache(`chat_${userId}`, cache)
+        })
         stream.on('end', async () => {
+            if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
+            else await user.decrement({ chatChance: 1 })
+
+            // save assistant response
             if (cache.content) {
-                if (user.chatChanceFree > 0) user.decrement({ chatChanceFree: 1 })
-                else user.decrement({ chatChance: 1 })
-                // save assistant response
                 const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
                     role: ChatCompletionResponseMessageRoleEnum.Assistant,
                     content: cache.content
                 })
                 cache.chatId = chat.id
-                $.setCache(`chat_${userId}`, cache)
-            } else $.removeCache(`chat_${userId}`)
+            } else cache.chatId = Infinity
+            $.setCache(`chat_${userId}`, cache)
         })
 
         // save user prompt

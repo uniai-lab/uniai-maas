@@ -80,27 +80,14 @@ export default class UniAI extends Service {
         maxLength?: number,
         subModel?: string
     ) {
-        if (stream) {
-            if (model === 'GPT') return await gpt.chat(prompts, true, top, temperature, maxLength, subModel)
-            else if (model === 'GLM') return await glm.chat(prompts, true, top, temperature, maxLength)
-            else if (model === 'SPARK') return await fly.chat(prompts, true, top, temperature, maxLength, subModel)
-            else throw new Error('Model for chat not found')
-        } else {
-            if (model === 'GPT') return await gpt.chat(prompts, false, top, temperature, maxLength, subModel)
-            else if (model === 'GLM') return await glm.chat(prompts, false, top, temperature, maxLength)
-            else if (model === 'SPARK') return await fly.chat(prompts, false, top, temperature, maxLength, subModel)
-            else throw new Error('Chat model not found')
-        }
+        if (model === 'GPT') return await gpt.chat(prompts, stream, top, temperature, maxLength, subModel)
+        else if (model === 'GLM') return await glm.chat(prompts, stream, top, temperature, maxLength)
+        else if (model === 'SPARK') return await fly.chat(prompts, stream, top, temperature, maxLength, subModel)
+        else throw new Error('Chat model not found')
     }
 
     // handle chat stream
     parseSSE(message: Stream, model: AIModelEnum = 'GLM', chunk: boolean = false) {
-        this.ctx.set({
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Access-Control-Allow-Origin': '*',
-            Connection: 'keep-alive'
-        })
         // define return data
         const res: StandardResponse<UniAIChatResponseData> = {
             status: 1,
@@ -155,7 +142,11 @@ export default class UniAI extends Service {
         })
 
         message.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-        message.on('error', e => stream.destroy(e))
+        message.on('error', e => {
+            res.data.content = e.message
+            stream.write(`data: ${JSON.stringify(res)}\n\n`)
+            stream.end()
+        })
         message.on('end', () => stream.end())
         return stream
     }
