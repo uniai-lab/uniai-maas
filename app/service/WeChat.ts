@@ -369,7 +369,7 @@ export default class WeChat extends Service {
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
         stream.on('error', (e: Error) => {
             cache.content = e.message
-            cache.chatId = Infinity
+            cache.chatId = 0.1
             $.setCache(`chat_${userId}`, cache)
         })
         stream.on('end', async () => {
@@ -384,7 +384,7 @@ export default class WeChat extends Service {
                     content: cache.content
                 })
                 cache.chatId = chat.id
-            } else cache.chatId = Infinity
+            } else cache.chatId = 0.1
             $.setCache(`chat_${userId}`, cache)
         })
 
