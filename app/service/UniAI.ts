@@ -74,7 +74,7 @@ export default class UniAI extends Service {
     async chat(
         prompts: ChatCompletionRequestMessage[],
         stream: boolean = false,
-        model: AIModelEnum,
+        model: AIModelEnum = 'GLM',
         top?: number,
         temperature?: number,
         maxLength?: number,
@@ -94,7 +94,7 @@ export default class UniAI extends Service {
     }
 
     // handle chat stream
-    parseSSE(message: Stream, model: AIModelEnum, chunk: boolean = false) {
+    parseSSE(message: Stream, model: AIModelEnum = 'GLM', chunk: boolean = false) {
         this.ctx.set({
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
@@ -154,10 +154,9 @@ export default class UniAI extends Service {
             }
         })
 
-        message.on('data', (buff: Buffer) => parser.feed(buff.toString()))
+        message.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
         message.on('error', e => stream.destroy(e))
         message.on('end', () => stream.end())
-        message.on('close', () => stream.destroy())
         return stream
     }
 

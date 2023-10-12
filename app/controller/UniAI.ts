@@ -30,8 +30,7 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!params.prompts.length) throw new Error('Empty prompts')
-            const model = params.model || 'GLM'
-            const { top, temperature, maxLength, subModel } = params
+            const { top, temperature, maxLength, model, subModel } = params
             const res = await ctx.service.uniAI.chat(prompts, false, model, top, temperature, maxLength, subModel)
 
             // chat to GPT
@@ -85,8 +84,7 @@ export default class UniAI {
         try {
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!prompts.length) throw new Error('Empty prompts')
-            const model = params.model || 'GLM'
-            const { top, temperature, maxLength, subModel, chunk } = params
+            const { top, temperature, maxLength, model, subModel, chunk } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 

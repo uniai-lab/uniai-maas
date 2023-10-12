@@ -20,7 +20,7 @@ const APP_ID = process.env.SPARK_APP_ID
 const VERSION = process.env.SPARK_API_VERSION
 
 export default {
-    async chat(
+    chat(
         messages: ChatCompletionRequestMessage[],
         stream: boolean = false,
         top?: number,
@@ -41,27 +41,22 @@ export default {
 
         ws.on('open', () => ws.send(JSON.stringify(input)))
 
-        if (stream) {
-            const stream = new PassThrough()
-            ws.on('error', e => stream.destroy(e))
-            ws.on('message', (e: Buffer) => {
-                try {
-                    const res = $.json<SPKChatResponse>(e.toString())
-                    if (!res) throw new Error('Response data is not JSON')
-                    if (res.header.code !== 0) throw new Error(res.header.message)
+        return new Promise<SPKChatResponse>((resolve, reject) => {
+            if (stream) {
+                const stream = new PassThrough()
+                ws.on('message', (e: Buffer) => {
+                    const res = $.json<SPKChatResponse>(e.toString('utf8'))
+                    if (!res) return stream.destroy(new Error('Response data is not JSON'))
+                    if (res.header.code !== 0) return stream.destroy(new Error(res.header.message))
+                    // simulate SSE data stream
                     res.payload.model = `spark-${version}`
                     res.payload.object = `chat.completion.chunk`
-                    // simulate SSE data stream
                     stream.write(`data: ${JSON.stringify(res)}\n\n`)
-                } catch (e) {
-                    stream.destroy(e as Error)
-                    ws.close()
-                }
-            })
-            ws.on('close', () => stream.end().destroy())
-            return stream
-        } else {
-            return new Promise<SPKChatResponse>((resolve, reject) => {
+                })
+                ws.on('error', e => reject(e))
+                ws.on('close', () => stream.end())
+                return stream
+            } else {
                 let res: SPKChatResponse | null = null
                 ws.on('error', e => reject(e))
                 ws.on('message', (e: Buffer) => {
@@ -79,14 +74,13 @@ export default {
                     res.payload.object = `chat.completion`
                     resolve(res)
                 })
-            })
-        }
+            }
+        })
     }
 }
 
 function getURL(version: string) {
     const host = os.hostname()
-    console.log(host)
     const date = new Date().toUTCString()
     const algorithm = 'hmac-sha256'
     const headers = 'host date request-line'
