@@ -9,7 +9,7 @@ import os from 'os'
 import crypto from 'crypto'
 import WebSocket from 'ws'
 import { ChatCompletionRequestMessage } from 'openai'
-import { PassThrough } from 'stream'
+import { PassThrough, Stream } from 'stream'
 import $ from '@util/util'
 
 // IFLYTEK spark model default API info
@@ -41,7 +41,7 @@ export default {
 
         ws.on('open', () => ws.send(JSON.stringify(input)))
 
-        return new Promise<SPKChatResponse>((resolve, reject) => {
+        return new Promise<SPKChatResponse | Stream>((resolve, reject) => {
             if (stream) {
                 const stream = new PassThrough()
                 ws.on('message', (e: Buffer) => {
@@ -55,7 +55,7 @@ export default {
                 })
                 ws.on('error', e => reject(e))
                 ws.on('close', () => stream.end())
-                return stream
+                resolve(stream as Stream)
             } else {
                 let res: SPKChatResponse | null = null
                 ws.on('error', e => reject(e))

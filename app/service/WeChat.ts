@@ -366,7 +366,7 @@ export default class WeChat extends Service {
         })
 
         // add listen stream
-        stream.on('data', (buff: Buffer) => parser.feed(buff.toString()))
+        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
         stream.on('end', async () => {
             if (cache.content) {
                 if (user.chatChanceFree > 0) user.decrement({ chatChanceFree: 1 })
