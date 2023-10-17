@@ -7,12 +7,12 @@
 
 import crypto from 'crypto'
 import pdf from 'pdf-parse'
+import { extname } from 'path'
 import mammoth from 'mammoth'
 import { readFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
-import { fromBuffer } from 'file-type'
 import { google } from 'googleapis'
 import { convert } from 'html-to-text'
 import { similarity } from 'ml-distance'
@@ -20,6 +20,7 @@ import { path as ROOT_PATH } from 'app-root-path'
 import Filter from 'mint-filter'
 import COS from 'cos-nodejs-sdk-v5'
 import Redis from 'ioredis'
+import { EggFile } from 'egg-multipart'
 
 const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
@@ -135,13 +136,14 @@ export default {
         return decode(nTokens)
     },
     // extract text from file buffer
-    async extractText(buffer: Buffer) {
-        const type = await fromBuffer(buffer)
+    async extractText(path: string) {
         const data: { text?: string; ext?: string } = {}
-        if (type) {
-            data.ext = type.ext
-            if (data.ext === 'pdf') data.text = (await pdf(buffer)).text
-            else if (data.ext === 'docx') data.text = (await mammoth.extractRawText({ buffer })).value
+        data.ext = extname(path).replace('.', '').toLowerCase()
+        console.log(data.ext)
+        if (data.ext === 'pdf') {
+            data.text = (await pdf(readFileSync(path))).text
+        } else if (data.ext === 'doc' || data.ext === 'docx') {
+            data.text = (await mammoth.extractRawText({ path })).value
         }
         return data
     },

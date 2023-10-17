@@ -2,13 +2,13 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { readFileSync } from 'fs'
 import {
     ChatCompletionRequestMessage,
     ChatCompletionRequestMessageRoleEnum,
     ChatCompletionResponseMessageRoleEnum
 } from 'openai'
 import { EggFile } from 'egg-multipart'
+import { statSync } from 'fs'
 import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
 import { Resource } from '@model/Resource'
@@ -177,8 +177,7 @@ export default class WeChat extends Service {
     // user upload file
     async upload(file: EggFile, userId: number, typeId: number): Promise<Resource> {
         // detect file type from buffer
-        const buff = readFileSync(file.filepath)
-        const { text, ext } = await $.extractText(buff)
+        const { text, ext } = await $.extractText(file.filepath)
         if (!ext) throw new Error('Fail to detect file type')
         if (!text) throw new Error('Fail to extract content text')
 
@@ -187,7 +186,7 @@ export default class WeChat extends Service {
             name: file.filename,
             path: file.filepath,
             ext,
-            size: buff.byteLength
+            size: statSync(file.filepath).size
         }
         return await this.saveDocument(resource, userId, typeId)
     }

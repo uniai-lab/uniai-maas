@@ -43,7 +43,6 @@
         "egg-tracer": "^2.1.0",
         "egg-view-nunjucks": "^2.3.0",
         "eventsource-parser": "^1.0.0",
-        "file-type": "16",
         "googleapis": "^118.0.0",
         "gpt-3-encoder": "^1.1.4",
         "html-to-text": "^9.0.5",
