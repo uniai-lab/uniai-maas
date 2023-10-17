@@ -3,6 +3,7 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
+import { PassThrough } from 'stream'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Res extends Service {
@@ -16,13 +17,17 @@ export default class Res extends Service {
         this.ctx.body = response
     }
     // error response format
-    error(e: Error) {
-        const response: StandardResponse<null> = {
-            status: 0,
-            msg: this.ctx.__(e.message),
-            data: null
+    error(e: Error, stream: boolean = false) {
+        if (stream) {
+            const stream = new PassThrough()
+            this.ctx.body = stream
+            const data: StandardResponse<null> = { status: 0, msg: this.ctx.__(e.message), data: null }
+            stream.write(`data: ${JSON.stringify(data)}\n\n`)
+            stream.end()
+        } else {
+            const response: StandardResponse<null> = { status: 0, msg: this.ctx.__(e.message), data: null }
+            this.ctx.body = response
         }
-        this.ctx.body = response
     }
     // error with no auth
     noAuth() {

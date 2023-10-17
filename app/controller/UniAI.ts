@@ -82,17 +82,18 @@ export default class UniAI {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
         try {
+            ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
+
             const prompts = params.prompts as ChatCompletionRequestMessage[]
             if (!prompts.length) throw new Error('Empty prompts')
             const { top, temperature, maxLength, model, subModel, chunk } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
-            ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
             ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
             console.error(e)
-            ctx.service.res.error(e as Error)
+            ctx.service.res.error(e as Error, true)
         }
     }
 
