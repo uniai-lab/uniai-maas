@@ -141,7 +141,7 @@ export default class WeChat {
             if (!userId) throw new Error('No user id')
             const { input, dialogId } = params
             if (!input) throw new Error('Input nothing')
-            const model = params.model || 'SPARK'
+            const model = params.model || process.env.WX_DEFAULT_MODEL
 
             const res = await ctx.service.weChat.chat(input, userId, dialogId, model)
             const data: ChatResponseData = {
@@ -150,7 +150,7 @@ export default class WeChat {
                 userId,
                 dialogId: res.dialogId,
                 chatId: res.id,
-                avatar: process.env.DEFAULT_AVATAR_AI
+                avatar: process.env.DEFAULT_AVATAR_USER
             }
 
             ctx.service.res.success('Success start chat stream', data)

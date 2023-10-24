@@ -44,6 +44,7 @@ declare global {
             WX_APP_ACCESS_TOKEN_URL: string
             WX_APP_PHONE_URL: string
             WX_APP_MSG_CHECK: string
+            WX_DEFAULT_MODEL: AIModelEnum
 
             COS_SECRET_ID: string
             COS_SECRET_KEY: string

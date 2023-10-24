@@ -26,7 +26,7 @@ const PAGE_LIMIT = 5
 const TOKEN_FIRST_PAGE = 800
 const TOKEN_SPLIT_PAGE = 400
 const SAME_SIMILARITY = 0.01
-const CHAT_BACKTRACK = 8
+const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
