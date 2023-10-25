@@ -35,6 +35,8 @@ export default {
         else if (version === 'v3.1') domain = 'generalv3'
         else domain = 'general'
 
+        for (const i in messages) if (messages[i].role === 'system') messages[i].role = 'user'
+
         const input: SPKChatRequest = {
             header: { app_id: APP_ID },
             parameter: { chat: { domain, temperature, max_tokens: maxLength, top_k: top } },

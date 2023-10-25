@@ -96,7 +96,8 @@ export default class WeChat {
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
+            if (!userId) throw new Error('No user id')
             const { user, config } = await ctx.service.weChat.getUserResetChance(userId)
 
             const task: Array<UserTask> = []
@@ -165,11 +166,12 @@ export default class WeChat {
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
     async getChat(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
+            if (!userId) throw new Error('No user id')
             const res = await ctx.service.weChat.getChat(userId)
             if (!res) return ctx.service.res.success('No chat stream', null)
             // filter sensitive
-            const content = $.filterSensitive(res.content, ctx.__('non compliant information'))
+            const content = res.content // $.filterSensitive(res.content, ctx.__('non compliant information'))
             const data: ChatResponseData = {
                 type: false,
                 content,
@@ -189,7 +191,8 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListPost) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
+            if (!userId) throw new Error('No user id')
             const dialogId = params.dialogId
 
             const res = await ctx.service.weChat.listChat(userId, dialogId)
@@ -199,7 +202,7 @@ export default class WeChat {
                 data.push({
                     chatId: item.id,
                     type: item.role === 'user',
-                    content: $.filterSensitive(item.content, ctx.__('non compliant information')),
+                    content: item.content, // $.filterSensitive(item.content, ctx.__('non compliant information')),
                     avatar: item.role === 'user' ? process.env.DEFAULT_AVATAR_USER : process.env.DEFAULT_AVATAR_AI,
                     dialogId: res.id,
                     userId: res.userId
@@ -215,7 +218,8 @@ export default class WeChat {
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
     async upload(@Context() ctx: UserContext, @HTTPBody() params: ResourceUploadPost) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
+            if (!userId) throw new Error('No user id')
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
             const typeId = params.typeId
@@ -250,7 +254,8 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
     async listDialogResource(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
+            const userId = ctx.userId
+            if (!userId) throw new Error('No user id')
             const res = await ctx.service.weChat.listDialog(userId)
             const data: DialogResponseData[] = []
             for (const item of res)

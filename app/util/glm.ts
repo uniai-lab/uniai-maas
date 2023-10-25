@@ -25,8 +25,8 @@ export default {
         let prompt = ''
         const history: string[][] = []
         for (const { role, content } of messages)
-            if (role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.System) history.push([content || '', 'yes'])
-            else if (role.toLowerCase() === ChatCompletionRequestMessageRoleEnum.User) prompt += `${content}\n`
+            if (role === 'system') history.push([content || '', 'Yes'])
+            else if (role === 'user') prompt += `${content}\n`
             else {
                 history.push([prompt.trim(), content || ''])
                 prompt = ''

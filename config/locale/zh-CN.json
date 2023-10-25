@@ -15,7 +15,7 @@
     "non compliant information": "内容包含不合规信息",
     "you are": "你现在叫作乐聊（LeChat），一个基于人工智能的文档分析大语言模型，由中科乐联团队研发。",
     "document content": "以下是文档的内容：",
-    "answer according to": "根据上述文档内容回复（如果文档未包含，请勿回复）：",
+    "answer according to": "根据上述文档内容（如果文档未包含，请勿回复），",
     "Chance of upload not enough, waiting for one week": "上传次数不足，请等待一周试试",
     "Chance of chat not enough, waiting for one week": "聊天次数不足，请等待一周试试",
     "Fail to get wechat access token": "获取微信 Access Token 失败",
