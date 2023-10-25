@@ -20,15 +20,14 @@ import { path as ROOT_PATH } from 'app-root-path'
 import Filter from 'mint-filter'
 import COS from 'cos-nodejs-sdk-v5'
 import Redis from 'ioredis'
-import { EggFile } from 'egg-multipart'
 
 const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
 const ERR_CODE = 87014
-const { REDIS_PORT, COS_SECRET_ID, COS_SECRET_KEY } = process.env
+const { REDIS_PORT, REDIS_HOST, COS_SECRET_ID, COS_SECRET_KEY } = process.env
 
 // redis cache
-const redis = new Redis(REDIS_PORT)
+const redis = new Redis(REDIS_PORT, REDIS_HOST)
 // tencent cos service
 const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
 // sensitive words filter

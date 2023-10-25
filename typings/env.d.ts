@@ -37,6 +37,7 @@ declare global {
             POSTGRES_DB: string
 
             REDIS_PORT: number
+            REDIS_HOST: string
 
             WX_APP_ID: string
             WX_APP_SECRET: string

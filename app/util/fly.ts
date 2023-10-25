@@ -30,7 +30,10 @@ export default {
     ) {
         const url = getURL(version)
         const ws = new WebSocket(url)
-        const domain = version === 'v2.1' ? 'generalv2' : 'general'
+        let domain = 'general'
+        if (version === 'v2.1') domain = 'generalv2'
+        else if (version === 'v3.1') domain = 'generalv3'
+        else domain = 'general'
 
         const input: SPKChatRequest = {
             header: { app_id: APP_ID },

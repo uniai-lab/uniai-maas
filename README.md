@@ -83,6 +83,7 @@ POSTGRES_DB=uniai
 
 # Redis cache
 REDIS_PORT=6379
+REDIS_HOST=localhost
 
 # WeChat
 WX_APP_ID=[Wechat miniapp app id]
@@ -91,6 +92,7 @@ WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
 WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
 WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
+WX_DEFAULT_MODEL=SPARK
 
 # COS, OSS storage
 COS_SECRET_ID=[Tencent COS secret id]
