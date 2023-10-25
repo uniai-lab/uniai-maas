@@ -135,6 +135,7 @@ interface UserInfoPost {
 
 interface WXSignInPost {
     code: string
+    fid?: number
 }
 
 interface WXSignUpPost {

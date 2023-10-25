@@ -32,7 +32,7 @@ const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
     // use wechat to login, get code, return new user
-    async signIn(code: string) {
+    async signIn(code: string, fid?: number) {
         const { ctx } = this
 
         const authURL = process.env.WX_APP_AUTH_URL // wx api, get login auth
@@ -74,6 +74,7 @@ export default class WeChat extends Service {
             // add default dialog resource
             if (config.INIT_RESOURCE_ID) await this.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
             await this.dialog(user.id) // add free chat dialog
+            if (fid) await this.shareReward(fid)
         }
 
         // user is existed, update session key

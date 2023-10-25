@@ -26,10 +26,10 @@ export default class WeChat {
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async login(@Context() ctx: UserContext, @HTTPBody() params: WXSignInPost) {
         try {
-            const { code } = params
+            const { code, fid } = params
             if (!code) throw new Error('Code is null')
 
-            const user = await ctx.service.weChat.signIn(code)
+            const user = await ctx.service.weChat.signIn(code, fid)
             const data: UserinfoResponseData = {
                 id: user.id,
                 username: user.username,

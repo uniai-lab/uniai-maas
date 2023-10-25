@@ -20,7 +20,7 @@ const menu = [
 const task = [
     {
         title: '分享给好友',
-        tip: '对话次数+100',
+        tip: '对话+100 上传+10',
         button: '立即分享',
         type: 1 // 分享
     },
