@@ -19,9 +19,9 @@ import { Stream } from 'stream'
 
 const API = process.env.OPENAI_API
 const KEY = process.env.OPENAI_API_KEY
-const API_VERSION = 'v1'
-const EMBEDDING_MODEL = 'text-embedding-ada-002'
-const DEFAULT_CHAT_MODEL = 'gpt-3.5-turbo'
+const API_VERSION = process.env.OPENAI_API_VERSION
+const EMBEDDING_MODEL = process.env.OPENAI_DEFAULT_EMBED_MODEL
+const DEFAULT_CHAT_MODEL = process.env.OPENAI_DEFAULT_CHAT_MODEL
 
 export default {
     key: KEY,

@@ -68,7 +68,9 @@ export default class UniAI {
                         content: payload.choices.text[0].content,
                         promptTokens: payload.usage?.text.prompt_tokens,
                         completionTokens: payload.usage?.text.completion_tokens,
-                        totalTokens: payload.usage?.text.total_tokens
+                        totalTokens: payload.usage?.text.total_tokens,
+                        model: payload.model,
+                        object: payload.object
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to SPARK')
             }

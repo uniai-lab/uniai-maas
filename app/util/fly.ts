@@ -17,7 +17,7 @@ const API = process.env.SPARK_API
 const API_KEY = process.env.SPARK_API_KEY
 const API_SECRET = process.env.SPARK_API_SECRET
 const APP_ID = process.env.SPARK_APP_ID
-const VERSION = process.env.SPARK_API_VERSION
+const VERSION = process.env.SPARK_DEFAULT_MODEL_VERSION
 
 export default {
     chat(
