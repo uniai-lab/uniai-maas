@@ -3,24 +3,24 @@ const menu = [
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
         title: '5MB',
-        tip: '单个文档'
+        tip: '单个文档限制'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
         title: '10个文档',
-        tip: '每周上传'
+        tip: '每周上传次数'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
-        title: '999次对话',
-        tip: '对话次数'
+        title: '299次对话',
+        tip: '每周对话次数'
     }
 ]
 
 const task = [
     {
         title: '分享给好友',
-        tip: '对话+100 上传+10',
+        tip: '加对话上传次数',
         button: '立即分享',
         type: 1 // 分享
     },
@@ -40,7 +40,7 @@ export default [
     },
     {
         key: 'appVersion',
-        value: 'v1.0.0',
+        value: 'v2.2.0',
         description: '小程序版本号'
     },
     {
@@ -60,11 +60,11 @@ export default [
     },
     {
         key: 'shareTitle',
-        value: '自主可控的大模型文档分析与对话小程序！'
+        value: '大模型文档分析与对话小程序！'
     },
     {
         key: 'shareDesc',
-        value: '自主可控的大模型文档分析与对话小程序！'
+        value: '大模型文档分析与对话小程序！'
     },
     {
         key: 'shareImg',
@@ -84,7 +84,7 @@ export default [
     },
     {
         key: 'DEFAULT_FREE_CHAT_CHANCE',
-        value: 999
+        value: 299
     },
     {
         key: 'DEFAULT_FREE_UPLOAD_CHANCE',
@@ -104,7 +104,7 @@ export default [
     },
     {
         key: 'INIT_RESOURCE_ID',
-        value: 0
+        value: 449
     },
     {
         key: 'menu',
