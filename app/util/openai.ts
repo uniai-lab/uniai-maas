@@ -12,7 +12,8 @@ import {
     CreateImageRequest,
     CreateImageRequestSizeEnum,
     ImagesResponse,
-    CreateChatCompletionResponse
+    CreateChatCompletionResponse,
+    ChatCompletionResponseMessage
 } from 'openai'
 import $ from '@util/util'
 import { Stream } from 'stream'
@@ -85,13 +86,13 @@ export interface CreateChatCompletionStreamResponse {
     object: string
     created: number
     model: string
-    choices: CreateChatCompletionStreamResponseChoicesInner[]
+    choices: Array<CreateChatCompletionStreamResponseChoicesInner>
 }
 
 export interface CreateChatCompletionStreamResponseChoicesInner {
-    delta: { role?: string; content?: string }
-    index: number
-    finish_reason: string
+    delta?: ChatCompletionResponseMessage
+    index?: number
+    finish_reason?: string
 }
 
 export type GPTChatResponse = CreateChatCompletionResponse

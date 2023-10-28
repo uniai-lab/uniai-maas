@@ -351,15 +351,15 @@ export default class WeChat extends Service {
             if (event.type === 'event') {
                 if (model === 'GPT') {
                     const obj = $.json<GPTChatStreamResponse>(event.data)
-                    if (obj && obj.choices[0].delta.content) cache.content += obj.choices[0].delta.content
+                    if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
                 }
                 if (model === 'GLM') {
                     const obj = $.json<GLMChatResponse>(event.data)
-                    if (obj && obj.content) cache.content += obj.content
+                    if (obj?.content) cache.content += obj.content
                 }
                 if (model === 'SPARK') {
                     const obj = $.json<SPKChatResponse>(event.data)
-                    if (obj && obj.payload.choices.text[0].content) cache.content += obj.payload.choices.text[0].content
+                    if (obj?.payload.choices.text[0].content) cache.content += obj.payload.choices.text[0].content
                 }
                 $.setCache(`chat_${userId}`, cache)
             }

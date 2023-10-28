@@ -102,7 +102,7 @@ export default class UniAI extends Service {
                 count++
                 if (model === 'GPT') {
                     const obj = $.json<GPTChatStreamResponse>(event.data)
-                    if (obj && obj.choices[0].delta.content) {
+                    if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
                         res.data.completionTokens = count
@@ -113,7 +113,7 @@ export default class UniAI extends Service {
                 }
                 if (model === 'GLM') {
                     const obj = $.json<GLMChatResponse>(event.data)
-                    if (obj && obj.content) {
+                    if (obj?.content) {
                         if (chunk) res.data.content = obj.content
                         else res.data.content += obj.content
                         res.data.completionTokens = obj.completion_tokens
@@ -126,7 +126,7 @@ export default class UniAI extends Service {
                 }
                 if (model === 'SPARK') {
                     const obj = $.json<SPKChatResponse>(event.data)
-                    if (obj && obj.payload.choices.text[0].content) {
+                    if (obj?.payload.choices.text[0].content) {
                         const { payload } = obj
                         if (chunk) res.data.content = payload.choices.text[0].content
                         else res.data.content += payload.choices.text[0].content
