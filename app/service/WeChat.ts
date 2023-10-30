@@ -206,7 +206,7 @@ export default class WeChat extends Service {
         if (check.length) return check[0]
 
         // embedding all pages, sentence-level, 500 token per page
-        splitPage[0] = ctx.__('title, copyright, abstract, authors') + splitPage[0]
+        // splitPage[0] = ctx.__('title, copyright, abstract, authors') + splitPage[0]
         const res = await glm.embedding(splitPage)
 
         // save resource to cos
@@ -300,11 +300,7 @@ export default class WeChat extends Service {
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
             where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
-            include: {
-                model: ctx.model.Chat,
-                limit: CHAT_BACKTRACK,
-                order: [['id', 'desc']]
-            }
+            include: { model: ctx.model.Chat, limit: CHAT_BACKTRACK, order: [['id', 'desc']] }
         })
         if (!dialog) throw new Error('Dialog is invalid')
         dialog.chats.reverse()
@@ -312,7 +308,7 @@ export default class WeChat extends Service {
         const prompts: ChatCompletionRequestMessage[] = []
         // define character
 
-        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
+        // prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
 
         // add user chat history
         for (const { role, content } of dialog.chats)
