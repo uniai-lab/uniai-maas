@@ -11,23 +11,21 @@ import { EggFile } from 'egg-multipart'
 import { statSync } from 'fs'
 import { IncludeOptions, Op } from 'sequelize'
 import { random } from 'lodash'
-import { Resource } from '@model/Resource'
-import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
-import glm, { GLMChatResponse } from '@util/glm' // GLM models
 import md5 from 'md5'
-import $ from '@util/util'
 import { Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
+import { Resource } from '@model/Resource'
+import $ from '@util/util'
 import { SPKChatResponse } from '@util/fly'
+import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
+import { GLMChatResponse } from '@util/glm' // GLM models
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const MAX_TOKEN = 2500
 const PAGE_LIMIT = 5
-const TOKEN_FIRST_PAGE = 800
-const TOKEN_SPLIT_PAGE = 400
-const SAME_SIMILARITY = 0.01
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
+const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -71,9 +69,11 @@ export default class WeChat extends Service {
         if (created) {
             user.avatar = config.DEFAULT_AVATAR_USER || ''
             user.name = `${ctx.__(config.DEFAULT_USERNAME || 'Reader')} NO.${user.id}`
+            // add free chat dialog
+            await this.dialog(user.id)
             // add default dialog resource
             if (config.INIT_RESOURCE_ID) await this.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
-            await this.dialog(user.id) // add free chat dialog
+            // give share reward
             if (fid) await this.shareReward(fid)
         }
 
@@ -166,7 +166,7 @@ export default class WeChat extends Service {
                 isDel: false
             },
             attributes: ['id'],
-            order: [['id', 'DESC']],
+            order: [['updatedAt', 'DESC']],
             include: {
                 model: ctx.model.Resource,
                 attributes: ['id', 'page', 'tokens', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'typeId'],
@@ -177,76 +177,35 @@ export default class WeChat extends Service {
 
     // user upload file
     async upload(file: EggFile, userId: number, typeId: number): Promise<Resource> {
+        const { ctx } = this
         // detect file type from buffer
         const { text, ext } = await $.extractText(file.filepath)
         if (!ext) throw new Error('Fail to detect file type')
         if (!text) throw new Error('Fail to extract content text')
 
-        const resource: ResourceFile = {
+        // uploading
+        const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${ext}`, file.filepath)
+        // embedding
+        return await ctx.service.uniAI.embedding(
+            process.env.WX_DEFAULT_EMBED_MODEL,
+            0,
             text,
-            name: file.filename,
-            path: file.filepath,
-            ext,
-            size: statSync(file.filepath).size
-        }
-        return await this.saveDocument(resource, userId, typeId)
-    }
-
-    async saveDocument(file: ResourceFile, userId: number, typeId: number) {
-        const { ctx } = this
-
-        // check same similarity for first one page, 1000 tokens
-        const firstPage: string[] = $.splitPage(file.text, TOKEN_FIRST_PAGE)
-        const splitPage: string[] = $.splitPage(file.text, TOKEN_SPLIT_PAGE)
-        if (!firstPage.length || !splitPage.length) throw new Error('File content cannot be split')
-
-        const embed = await glm.embedding([firstPage[0]])
-        const embedding2 = embed.data[0]
-        const check = await ctx.model.Resource.similarFindAll2(embedding2, 1, SAME_SIMILARITY)
-        if (check.length) return check[0]
-
-        // embedding all pages, sentence-level, 500 token per page
-        // splitPage[0] = ctx.__('title, copyright, abstract, authors') + splitPage[0]
-        const res = await glm.embedding(splitPage)
-
-        // save resource to cos
-        const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${file.ext}`, file.path)
-        // save resource + pages
-        return await ctx.model.Resource.create(
-            {
-                page: splitPage.length, // sentence num
-                typeId,
-                userId,
-                embedding2,
-                filePath: `https://${upload.Location}`,
-                fileName: file.name,
-                fileSize: file.size,
-                content: file.text,
-                tokens: $.countTokens(file.text),
-                pages: res.data.map((v, i) => {
-                    return {
-                        page: i + 1,
-                        embedding2: v,
-                        content: splitPage[i],
-                        tokens: $.countTokens(splitPage[i])
-                    }
-                })
-            },
-            { include: ctx.model.Page }
+            file.filename,
+            upload.Location,
+            statSync(file.filepath).size,
+            userId,
+            typeId
         )
     }
 
     // async saveImage(userId: number, typeId: number, path: string, file: EggFile, buff: Buffer) {}
 
     // find or create a dialog
-    async dialog(userId: number, resourceId?: number, include?: IncludeOptions) {
+    async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
         const { ctx } = this
 
         // create or find the dialog
-        const [res, created] = await ctx.model.Dialog.findOrCreate({
-            where: { userId, resourceId: resourceId || null },
-            include
-        })
+        const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
 
         // first create
         if (created) {
@@ -257,9 +216,9 @@ export default class WeChat extends Service {
                 const resource = await ctx.model.Resource.findOne({
                     where: { id: resourceId, isEffect: true, isDel: false }
                 })
-                content = `${ctx.__('Hello, I am AI Reading Guy')}
-                       ${ctx.__('I have finished reading the file')} ${resource?.fileName}
-                       ${ctx.__('You can ask me questions about this book')}`
+                if (!resource) throw new Error('Can not find the resource')
+                content = `${ctx.__('I have finished reading the file')} ${resource?.fileName}`
+                content += ctx.__('You can ask me questions about this book')
             }
             res.chats = await ctx.model.Chat.bulkCreate([
                 {
@@ -275,7 +234,15 @@ export default class WeChat extends Service {
     // list all the chats from a user and dialog
     async listChat(userId: number, dialogId: number = 0, limit: number = CHAT_BACKTRACK) {
         const { ctx } = this
-        const include: IncludeOptions = { model: ctx.model.Chat, limit, order: [['createdAt', 'DESC']] }
+        const include: IncludeOptions = {
+            model: ctx.model.Chat,
+            limit,
+            order: [['createdAt', 'DESC']],
+            where: {
+                isDel: false,
+                isEffect: true
+            }
+        }
         const dialog = dialogId
             ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
             : await this.dialog(userId, undefined, include)
@@ -284,7 +251,7 @@ export default class WeChat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId: number = 0, model: AIModelEnum = 'GLM') {
+    async chat(input: string, userId: number, dialogId: number = 0, model: AIModelEnum = WX_DEFAULT_CHAT_MODEL) {
         const { ctx } = this
 
         // check processing chat stream
@@ -294,8 +261,7 @@ export default class WeChat extends Service {
         // check user chat chance
         const user = await ctx.model.UserChance.findOne({ where: { userId } })
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree <= 0 && user.chatChance <= 0)
-            throw new Error('Chance of chat not enough, waiting for one week')
+        if (user.chatChanceFree <= 0 && user.chatChance <= 0) throw new Error('Chance of chat not enough')
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
@@ -306,31 +272,32 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
 
         const prompts: ChatCompletionRequestMessage[] = []
-        // define character
 
-        // prompts.push({ role: ChatCompletionRequestMessageRoleEnum.System, content: ctx.__('you are') })
-
-        // add user chat history
+        // user chat history
         for (const { role, content } of dialog.chats)
             prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
 
         const resourceId = dialog.resourceId
-        let prompt = input
-        // find similar pages of the resource id
+        // find related resource pages
+        let content = input
         if (resourceId) {
-            const embed = await glm.embedding([input])
-            const embedding = embed.data[0]
-            const role = ChatCompletionRequestMessageRoleEnum.System
-            prompts.push({ role, content: ctx.__('document content') })
-            // find related pages
-            const pages = await ctx.model.Page.similarFindAll2(embedding, PAGE_LIMIT, { resourceId })
-            while (pages.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) pages.pop()
-            pages.sort((a, b) => a.id - b.id)
-            for (const { content } of pages) prompts.push({ role, content })
-            prompt = `${ctx.__('answer according to')}${input}`
+            prompts.push({ role: 'system', content: ctx.__('document content') })
+            // query resource
+            const query: ChatCompletionRequestMessage[] = [{ role: 'user', content: input }]
+            const pages = await ctx.service.uniAI.queryResource(
+                query,
+                resourceId,
+                WX_DEFAULT_EMBED_MODEL,
+                PAGE_LIMIT,
+                MAX_TOKEN
+            )
+            for (const { content } of pages) prompts.push({ role: 'system', content })
+            content = `${ctx.__('answer according to')}${input}`
         }
 
-        prompts.push({ role: ChatCompletionRequestMessageRoleEnum.User, content: prompt })
+        prompts.push({ role: 'user', content })
+
+        console.log(prompts)
 
         // set chat stream cache
         const cache: ChatStreamCache = {

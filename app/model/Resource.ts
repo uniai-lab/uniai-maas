@@ -17,7 +17,9 @@ import { Dialog } from './Dialog'
 import { Page } from './Page'
 import { ResourceType } from './ResourceType'
 import { Chat } from './Chat'
-const { GLM_EMBED_DIM, OPENAI_EMBED_DIM } = process.env
+import { Embedding1 } from './Embedding1'
+import { Embedding2 } from './Embedding2'
+import { Includeable } from 'sequelize'
 
 @Table({ modelName: 'resource' })
 export class Resource extends Model {
@@ -37,7 +39,7 @@ export class Resource extends Model {
     page: number
 
     @Column({
-        type: `VECTOR(${OPENAI_EMBED_DIM})`,
+        type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
         get() {
             const raw = this.getDataValue('embedding')
             return raw ? JSON.parse(raw) : null
@@ -49,17 +51,23 @@ export class Resource extends Model {
     })
     embedding: number[] | null
 
-    static async similarFindAll(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
+    static async similarFindAll(
+        vector: number[],
+        limit: number = 1,
+        distance?: number,
+        include?: Includeable | Includeable[]
+    ) {
         const db = this.sequelize
         return await this.findAll({
             order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
             where: distance ? db?.literal(`embedding <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
-            limit
+            limit,
+            include
         })
     }
 
     @Column({
-        type: `VECTOR(${GLM_EMBED_DIM})`,
+        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
         get() {
             const raw = this.getDataValue('embedding2')
             return raw ? JSON.parse(raw) : null
@@ -71,12 +79,18 @@ export class Resource extends Model {
     })
     embedding2: number[] | null
 
-    static async similarFindAll2(vector: number[], limit: number, distance?: number): Promise<Resource[]> {
+    static async similarFindAll2(
+        vector: number[],
+        limit: number = 1,
+        distance?: number,
+        include?: Includeable | Includeable[]
+    ) {
         const db = this.sequelize
         return await this.findAll({
             order: db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' ASC`),
             where: distance ? db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
-            limit
+            limit,
+            include
         })
     }
 
@@ -127,6 +141,12 @@ export class Resource extends Model {
 
     @HasMany(() => Chat)
     chats: Chat[]
+
+    @HasMany(() => Embedding1)
+    embeddings1: Embedding1[]
+
+    @HasMany(() => Embedding2)
+    embeddings2: Embedding2[]
 }
 
 export default () => Resource

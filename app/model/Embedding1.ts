@@ -1,5 +1,3 @@
-/** @format */
-
 import { WhereOptions } from 'sequelize'
 import {
     Table,
@@ -15,8 +13,8 @@ import {
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
 
-@Table({ modelName: 'page' })
-export class Page extends Model {
+@Table({ modelName: 'openai_embedding' })
+export class Embedding1 extends Model {
     @PrimaryKey
     @AutoIncrement
     @Column(DataType.INTEGER)
@@ -35,12 +33,12 @@ export class Page extends Model {
     @Column({
         type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
         get() {
-            const raw = this.getDataValue('embedding')
+            const raw: string = this.getDataValue('embedding')
             return raw ? JSON.parse(raw) : null
         },
         set(v: number[] | null) {
-            if (Array.isArray(v)) this.setDataValue('embedding', JSON.stringify([...v]))
-            else this.setDataValue('embedding', null)
+            const embedding = v ? JSON.stringify(v) : null
+            this.setDataValue('embedding', embedding)
         }
     })
     embedding: number[] | null
@@ -49,29 +47,7 @@ export class Page extends Model {
         const db = this.sequelize
         return await this.findAll({
             order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
-            where: where,
-            limit
-        })
-    }
-
-    @Column({
-        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
-        get() {
-            const raw = this.getDataValue('embedding2')
-            return raw ? JSON.parse(raw) : null
-        },
-        set(v: number[] | null) {
-            if (Array.isArray(v)) this.setDataValue('embedding2', JSON.stringify([...v]))
-            else this.setDataValue('embedding2', null)
-        }
-    })
-    embedding2: number[] | null
-
-    static async similarFindAll2(vector: number[], limit?: number, where?: WhereOptions) {
-        const db = this.sequelize
-        return await this.findAll({
-            order: db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' ASC`),
-            where: where,
+            where,
             limit
         })
     }
@@ -86,18 +62,8 @@ export class Page extends Model {
     @Column(DataType.INTEGER)
     tokens: number
 
-    @AllowNull(false)
-    @Default(false)
-    @Column(DataType.BOOLEAN)
-    isDel: boolean
-
-    @AllowNull(false)
-    @Default(true)
-    @Column(DataType.BOOLEAN)
-    isEffect: boolean
-
     @BelongsTo(() => Resource)
     resource: Resource
 }
 
-export default () => Page
+export default () => Embedding1

@@ -3,71 +3,84 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { ChatCompletionRequestMessage } from 'openai'
-import { WhereOptions, Op } from 'sequelize'
 import { PassThrough, Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
-import { Page } from '@model/Page'
 import glm, { GLMChatResponse } from '@util/glm'
 import gpt, { GPTChatStreamResponse } from '@util/openai'
 import fly, { SPKChatResponse } from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
 import $ from '@util/util'
+import { Resource } from '@model/Resource'
 
-const MAX_PAGE = 5
+const MAX_PAGE = 6
+const MAX_TOKEN = 4096
 const SAME_SIMILARITY = 0.01
-const TOKEN_FIRST_PAGE = 800
-const TOKEN_SPLIT_PAGE = 400
+const TOKEN_PAGE_FIRST = 768
+const TOKEN_PAGE_SPLIT_L1 = 2048
+const TOKEN_PAGE_SPLIT_L2 = 1024
+const TOKEN_PAGE_SPLIT_L3 = 512
+const TOKEN_PAGE_TOTAL_L1 = TOKEN_PAGE_SPLIT_L1 * 1
+const TOKEN_PAGE_TOTAL_L2 = TOKEN_PAGE_SPLIT_L2 * 8
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
     // query resource
     async queryResource(
         prompts: ChatCompletionRequestMessage[],
-        resourceId: number = 0,
+        resourceId?: number,
+        model: AIModelEnum = 'GLM',
         maxPage: number = MAX_PAGE,
-        model: AIModelEnum = 'GLM'
+        maxToken: number = MAX_TOKEN
     ) {
         const { ctx } = this
-        let query: string = ''
-        for (const item of prompts) query += `${item.content}\n`
 
-        let pages: Page[]
-        let embedding: number[]
-        const where: WhereOptions = {}
-        if (model === 'GPT') {
-            if (resourceId) {
-                const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['embedding'] })
-                if (!resource) throw new Error('Resource not found')
-                if (!resource.embedding) throw new Error('GPT embedding not found')
-                where.resourceId = resourceId
-            }
-            where.embedding = { [Op.ne]: null }
-            const embed = await gpt.embedding([query.trim()])
-            embedding = embed.data[0].embedding
-            pages = await ctx.model.Page.similarFindAll(embedding, maxPage, where)
-        } else if (model === 'GLM') {
-            if (resourceId) {
-                const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['embedding2'] })
-                if (!resource) throw new Error('Resource not found')
-                if (!resource.embedding2) throw new Error('GLM embedding not found')
-                where.resourceId = resourceId
-            }
-            where.embedding2 = { [Op.ne]: null }
-            const embed = await glm.embedding([query.trim()])
-            embedding = embed.data[0]
-            pages = await ctx.model.Page.similarFindAll2(embedding, maxPage, where)
-        } else throw new Error('Model not found')
+        const where: { resourceId?: number } = {}
+        // check resource
+        if (resourceId) {
+            const resource = await ctx.model.Resource.count({ where: { id: resourceId } })
+            if (!resource) throw new Error('Resource not found')
+            where.resourceId = resourceId
+            // check embeddings exist
+            let count = 0
+            if (model === 'GPT') count = await ctx.model.Embedding1.count({ where })
+            else if (model === 'GLM') count = await ctx.model.Embedding2.count({ where })
+            // create embeddings
+            if (!count) await this.embedding(model, resourceId)
+        }
+
+        const pages: { content: string; similar: number; page: number; resourceId: number }[] = []
+
+        for (const item of prompts) {
+            const query = (item.content || '').trim()
+            if (model === 'GPT') {
+                const embed = await gpt.embedding([query])
+                const embedding = embed.data[0].embedding
+                const res = await ctx.model.Embedding1.similarFindAll(embedding, maxPage, where)
+                while (res.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) res.pop()
+                for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
+                    pages.push({
+                        resourceId: item.resourceId,
+                        page: item.page,
+                        content: item.content,
+                        similar: $.cosine(embedding, item.embedding as number[])
+                    })
+            } else if (model === 'GLM') {
+                const embed = await glm.embedding([query])
+                const embedding = embed.data[0]
+                const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
+                while (res.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) res.pop()
+                for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
+                    pages.push({
+                        resourceId: item.resourceId,
+                        page: item.page,
+                        content: item.content,
+                        similar: $.cosine(embedding, item.embedding as number[])
+                    })
+            } else throw new Error('Embedding model not found')
+        }
 
         return pages
-            .sort((a, b) => a.id - b.id)
-            .map(v => {
-                const vEmbedding = (model === 'GPT' ? v.embedding : v.embedding2) || []
-                return {
-                    content: v.content,
-                    similar: vEmbedding.length === embedding.length ? $.cosine(embedding, vEmbedding) : 0
-                }
-            })
     }
 
     // chat to model
@@ -152,70 +165,62 @@ export default class UniAI extends Service {
     }
 
     // create embedding
-    async createEmbedding(
-        content: string,
-        fileName: string,
-        filePath: string,
-        fileSize: number,
+    async embedding(
         model: AIModelEnum = 'GLM',
+        resourceId?: number,
+        content?: string,
+        fileName?: string,
+        filePath?: string,
+        fileSize?: number,
         userId: number = 0,
         typeId: number = 1
     ) {
         const { ctx } = this
+        let resource: Resource | null = null
+
+        // find by resource id
+        if (resourceId) {
+            resource = await ctx.model.Resource.findByPk(resourceId)
+            if (!resource) throw new Error('Can not find existed resource by id')
+            content = resource.content
+            fileName = resource.fileName
+            filePath = resource.filePath
+            fileSize = resource.fileSize
+        }
+        if (!content) throw new Error('File content is empty')
+        if (!fileName) throw new Error('File name is empty')
+        if (!filePath) throw new Error('File path is empty')
+        if (!fileSize) throw new Error('File size is empty')
+
+        // split first page
+        const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
+        if (!firstPage[0]) throw new Error('First page can not be split')
+
+        // embedding first page
+        const res = await glm.embedding([firstPage[0]])
+        const embedding = res.data[0]
+
+        // find by embedding similarity
+        if (!resourceId) {
+            const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
+            resource = resources[0]
+        }
 
         // split pages
-        const firstPage: string[] = $.splitPage(content, TOKEN_FIRST_PAGE)
-        const splitPage: string[] = $.splitPage(content, TOKEN_SPLIT_PAGE)
-        if (!firstPage.length || !splitPage.length) throw new Error('Content cannot be split')
+        const tokens = $.countTokens(content)
+        let split = TOKEN_PAGE_SPLIT_L1
+        if (tokens <= TOKEN_PAGE_TOTAL_L1) split = TOKEN_PAGE_SPLIT_L1
+        else if (tokens <= TOKEN_PAGE_TOTAL_L2) split = TOKEN_PAGE_SPLIT_L2
+        else split = TOKEN_PAGE_SPLIT_L3
+        const splitPage: string[] = $.splitPage(content, split)
+        if (!splitPage.length) throw new Error('Content can not be split')
 
-        let embedding: null | number[] = null
-        let embedding2: null | number[] = null
-        const pages: {
-            page: number
-            embedding?: number[]
-            embedding2?: number[]
-            content: string
-            tokens: number
-        }[] = []
-
-        if (model === 'GPT') {
-            const first = await gpt.embedding([firstPage[0]])
-            embedding = first.data[0].embedding
-
-            // check similarity
-            const check = await ctx.model.Resource.similarFindAll(embedding, 1, SAME_SIMILARITY)
-            if (check.length) return check[0]
-
-            const res = await gpt.embedding(splitPage)
-            res.data.map((v, i) => {
-                pages.push({
-                    page: i + 1,
-                    embedding: v.embedding,
-                    content: splitPage[i],
-                    tokens: $.countTokens(splitPage[i])
-                })
-            })
-        } else if (model === 'GLM') {
-            const first = await glm.embedding([firstPage[0]])
-            embedding2 = first.data[0]
-
-            // check similarity
-            const check = await ctx.model.Resource.similarFindAll2(embedding2, 1, SAME_SIMILARITY)
-            if (check.length) return check[0]
-
-            const res = await glm.embedding(splitPage)
-            res.data.map((v, i) => {
-                pages.push({
-                    page: i + 1,
-                    embedding2: v,
-                    content: splitPage[i],
-                    tokens: $.countTokens(splitPage[i])
-                })
-            })
-        } else throw new Error('Embedding model not found')
-
-        return await ctx.model.Resource.create(
-            {
+        if (resource) {
+            resource.embedding2 = embedding
+            resource.page = splitPage.length
+            await resource.save()
+        } else {
+            resource = await ctx.model.Resource.create({
                 page: splitPage.length,
                 content,
                 typeId,
@@ -223,80 +228,45 @@ export default class UniAI extends Service {
                 fileName,
                 filePath,
                 fileSize,
-                embedding,
-                embedding2,
-                tokens: $.countTokens(content),
-                pages
-            },
-            { include: ctx.model.Page }
-        )
-    }
-
-    // update embedding
-    async updateEmbedding(id: number, model: AIModelEnum = 'GLM', userId: number = 0) {
-        const { ctx } = this
-
-        // check resource is all right
-        const attributes = ['id', 'embedding', 'embedding2', 'content', 'tokens', 'page']
-        const resource = await ctx.model.Resource.findOne({
-            where: { id, userId },
-            attributes,
-            include: { model: ctx.model.Page, attributes }
-        })
-        if (!resource) throw new Error('Updating resource not found')
-
-        // split content
-        const content = resource.content
-        const firstPage: string[] = $.splitPage(content, TOKEN_FIRST_PAGE)
-        const splitPage: string[] = $.splitPage(content, TOKEN_SPLIT_PAGE)
-        if (!firstPage.length || !splitPage.length) throw new Error('Content cannot be split')
-
-        // number of pages changed
-        if (resource.pages.length !== splitPage.length) {
-            // remove old pages
-            await ctx.model.Page.destroy({ where: { resourceId: resource.id } })
-            const resourceId = resource.id
-            // create new pages
-            resource.pages = await ctx.model.Page.bulkCreate(
-                splitPage.map((v, i) => {
-                    return { resourceId, page: i + 1, content: v, tokens: $.countTokens(v) }
-                })
-            )
-            resource.page = splitPage.length
-            resource.embedding = null
-            resource.embedding2 = null
+                embedding2: embedding,
+                tokens: $.countTokens(content)
+            })
         }
+        if (!resource) throw new Error('Fail to create embed resource')
+        resourceId = resource.id
 
-        // update embedding
+        const where = { resourceId }
         if (model === 'GPT') {
-            // embedding first page
-            const first = await gpt.embedding([firstPage[0]])
-            resource.embedding = first.data[0].embedding
-
-            // check similarity
-            const check = await ctx.model.Resource.similarFindAll(resource.embedding, 1, SAME_SIMILARITY)
-            if (check.length) return check[0]
-
-            // embedding all pages
+            await ctx.model.Embedding1.destroy({ where })
             const res = await gpt.embedding(splitPage)
-            res.data.map((v, i) => (resource.pages[i].embedding = v.embedding))
+            const embeddings = res.data.map((v, i) => {
+                return {
+                    resourceId,
+                    page: i + 1,
+                    embedding: v.embedding,
+                    content: splitPage[i],
+                    tokens: $.countTokens(splitPage[i])
+                }
+            })
+            resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(embeddings)
         } else if (model === 'GLM') {
-            // embedding first page
-            const first = await glm.embedding([firstPage[0]])
-            resource.embedding2 = first.data[0]
-
-            // check similarity
-            const check = await ctx.model.Resource.similarFindAll2(resource.embedding2, 1, SAME_SIMILARITY)
-            if (check.length) return check[0]
-
-            // embedding all pages
+            await ctx.model.Embedding2.destroy({ where })
             const res = await glm.embedding(splitPage)
-            res.data.map((v, i) => (resource.pages[i].embedding2 = v))
+            const embeddings = res.data.map((v, i) => {
+                return {
+                    resourceId,
+                    page: i + 1,
+                    embedding: v,
+                    content: splitPage[i],
+                    tokens: $.countTokens(splitPage[i])
+                }
+            })
+            resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(embeddings)
         } else throw new Error('Embedding model not found')
 
-        for (const item of resource.pages) await item.save()
-        return await resource.save()
+        return resource
     }
+
     imagine(
         prompt: string,
         nPrompt: string = '',
@@ -310,15 +280,18 @@ export default class UniAI extends Service {
         else if (model === 'MJ') return mj.imagine(prompt, nPrompt, width, height)
         else throw new Error('Image imagine model not found')
     }
+
     task(id: string, model: AIModelEnum = 'MJ') {
         if (model === 'MJ') return mj.task(id)
         else if (model === 'SD') return sd.task()
         else throw new Error('Image task model not found')
     }
+
     change(id: string, action: string, index?: number, model: AIModelEnum = 'MJ') {
         if (model === 'MJ') return mj.change(id, action as MJTaskEnum, index)
         else throw new Error('Image change model not found')
     }
+
     queue(model: AIModelEnum = 'MJ') {
         if (model === 'MJ') return mj.queue()
         else throw new Error('Image queue model not found')

@@ -3,7 +3,6 @@
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, Inject } from '@eggjs/tegg'
 import { UserContext } from '@interface/Context'
 import auth from 'app/middleware/auth'
-import $ from '@util/util'
 import { EggLoader } from 'egg'
 
 @HTTPController({ path: '/wechat' })
@@ -140,9 +139,8 @@ export default class WeChat {
         try {
             const userId = ctx.userId
             if (!userId) throw new Error('No user id')
-            const { input, dialogId } = params
+            const { input, dialogId, model } = params
             if (!input) throw new Error('Input nothing')
-            const model = params.model || process.env.WX_DEFAULT_MODEL
 
             const res = await ctx.service.weChat.chat(input, userId, dialogId, model)
             const data: ChatResponseData = {

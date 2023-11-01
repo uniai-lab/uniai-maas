@@ -21,13 +21,15 @@ import { OpenAILog } from '../app/model/OpenAILog'
 import { Dialog } from '../app/model/Dialog'
 import { UserChance } from '../app/model/UserChance'
 import { Prompt } from '../app/model/Prompt'
+import { Embedding1 } from '../app/model/Embedding1'
+import { Embedding2 } from '../app/model/Embedding2'
 
 // initial data source
 import configs from './data/config'
 import resourceTypes from './data/resourceType'
 
 // select models
-const models = [Resource, Page, User, PhoneCode, Config, ResourceType, Chat, OpenAILog, Dialog, UserChance, Prompt]
+const models = [Resource, Page, User, PhoneCode, Config, ResourceType, Chat, OpenAILog, Dialog, UserChance, Prompt, Embedding1, Embedding2]
 
 // define db
 const db = new Sequelize({
@@ -38,9 +40,7 @@ const db = new Sequelize({
     username: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
     models,
-    define: {
-        underscored: true // 转换所有驼峰命名的字段为下划线
-    }
+    define: { underscored: true }
 })
 
 // test connection

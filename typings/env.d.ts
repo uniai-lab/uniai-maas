@@ -1,6 +1,6 @@
 /** @format */
 // for env file
-export {}
+export { }
 
 declare global {
     namespace NodeJS {
@@ -18,13 +18,13 @@ declare global {
             OPENAI_API_VERSION: string
             OPENAI_API_KEY: string
             OPENAI_EMBED_DIM: number
-            OPENAI_DEFAULT_CHAT_MODEL:string
-            OPENAI_DEFAULT_EMBED_MODEL:string
+            OPENAI_DEFAULT_CHAT_MODEL: AIModelEnum
+            OPENAI_DEFAULT_EMBED_MODEL: AIModelEnum
 
 
             // GLM
             GLM_API: string
-            GLM_EMBED_DIM: number
+            TEXT2VEC_EMBED_DIM: number
 
             // Spark
             SPARK_API: string
@@ -58,7 +58,8 @@ declare global {
             WX_APP_ACCESS_TOKEN_URL: string
             WX_APP_PHONE_URL: string
             WX_APP_MSG_CHECK: string
-            WX_DEFAULT_MODEL: AIModelEnum
+            WX_DEFAULT_CHAT_MODEL: AIModelEnum
+            WX_DEFAULT_EMBED_MODEL: AIModelEnum
 
             // tencent oss
             COS_SECRET_ID: string
