@@ -21,12 +21,12 @@ import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
 import { GLMChatResponse } from '@util/glm' // GLM models
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
-const MAX_TOKEN = 2500
 const PAGE_LIMIT = 5
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
+const ERROR_CHAT_ID = 0.1
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -286,7 +286,7 @@ export default class WeChat extends Service {
 
         // add related resource
         if (resourceId) {
-            let content = ctx.__('document content')
+            let content = ctx.__('document content start')
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
                 [{ role: 'user', content: input }],
@@ -295,7 +295,7 @@ export default class WeChat extends Service {
                 PAGE_LIMIT
             )
             for (const item of pages) content += `\n${item.content}`
-            content += `\n${ctx.__('answer according to')}`
+            content += `\n${ctx.__('document content end')}`
             prompts.push({ role: 'system', content })
             prompts.push({ role: 'assistant', content: 'Ok' })
         }
@@ -304,7 +304,8 @@ export default class WeChat extends Service {
         for (const { role, content } of dialog.chats)
             prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
 
-        prompts.push({ role: 'user', content: input })
+        const content = resourceId ? `${ctx.__('answer according to')}\n${input}` : input
+        prompts.push({ role: 'user', content })
 
         console.log(prompts)
 
@@ -317,22 +318,28 @@ export default class WeChat extends Service {
         }
         await $.setCache(`chat_${userId}`, cache)
 
+        model = 'GLM'
         // start chat stream
         const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as Stream
         const parser = createParser(event => {
-            if (event.type === 'event') {
-                if (model === 'GPT') {
-                    const obj = $.json<GPTChatStreamResponse>(event.data)
-                    if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
+            try {
+                if (event.type === 'event') {
+                    if (model === 'GPT') {
+                        const obj = $.json<GPTChatStreamResponse>(event.data)
+                        if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
+                    }
+                    if (model === 'GLM') {
+                        const obj = $.json<GLMChatResponse>(event.data)
+                        if (obj?.content) cache.content += obj.content
+                    }
+                    if (model === 'SPARK') {
+                        const obj = $.json<SPKChatResponse>(event.data)
+                        if (obj?.payload.choices.text[0].content) cache.content += obj.payload.choices.text[0].content
+                    }
+                    $.setCache(`chat_${userId}`, cache)
                 }
-                if (model === 'GLM') {
-                    const obj = $.json<GLMChatResponse>(event.data)
-                    if (obj?.content) cache.content += obj.content
-                }
-                if (model === 'SPARK') {
-                    const obj = $.json<SPKChatResponse>(event.data)
-                    if (obj?.payload.choices.text[0].content) cache.content += obj.payload.choices.text[0].content
-                }
+            } catch (e) {
+                cache.chatId = ERROR_CHAT_ID
                 $.setCache(`chat_${userId}`, cache)
             }
         })
@@ -341,7 +348,7 @@ export default class WeChat extends Service {
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
         stream.on('error', (e: Error) => {
             cache.content = e.message
-            cache.chatId = 0.1
+            cache.chatId = ERROR_CHAT_ID
             $.setCache(`chat_${userId}`, cache)
         })
         stream.on('end', async () => {
@@ -356,7 +363,7 @@ export default class WeChat extends Service {
                     content: cache.content
                 })
                 cache.chatId = chat.id
-            } else cache.chatId = 0.1
+            } else cache.chatId = ERROR_CHAT_ID
             $.setCache(`chat_${userId}`, cache)
         })
 
