@@ -26,6 +26,7 @@ const PAGE_LIMIT = 5
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
+const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -178,6 +179,11 @@ export default class WeChat extends Service {
     // user upload file
     async upload(file: EggFile, userId: number, typeId: number): Promise<Resource> {
         const { ctx } = this
+
+        // limit upload file size
+        const fileSize = statSync(file.filepath).size
+        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File exceeds 5MB')
+
         // detect file type from buffer
         const { text, ext } = await $.extractText(file.filepath)
         if (!ext) throw new Error('Fail to detect file type')
@@ -185,14 +191,15 @@ export default class WeChat extends Service {
 
         // uploading
         const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${ext}`, file.filepath)
+
         // embedding
         return await ctx.service.uniAI.embedding(
-            process.env.WX_DEFAULT_EMBED_MODEL,
+            WX_DEFAULT_EMBED_MODEL,
             0,
             text,
             file.filename,
-            upload.Location,
-            statSync(file.filepath).size,
+            'https://' + upload.Location,
+            fileSize,
             userId,
             typeId
         )
