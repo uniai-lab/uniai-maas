@@ -37,7 +37,7 @@ export default class UniAI {
             if (model === 'GPT') {
                 const { choices, model, object, usage } = res as GPTChatResponse
                 if (choices[0].message?.content)
-                    ctx.service.res.success('Success to chat to OpenAI GPT', {
+                    ctx.service.res.success('Success to chat to THUDM GLM', {
                         content: choices[0].message.content,
                         promptTokens: usage?.prompt_tokens,
                         completionTokens: usage?.completion_tokens,
@@ -49,15 +49,15 @@ export default class UniAI {
             }
             // chat to GLM
             if (model === 'GLM') {
-                const data = res as GLMChatResponse
-                if (data.content)
-                    ctx.service.res.success('Success to chat to GLM', {
-                        content: data.content,
-                        promptTokens: data.prompt_tokens,
-                        completionTokens: data.completion_tokens,
-                        totalTokens: data.total_tokens,
-                        model: data.model,
-                        object: data.object
+                const { choices, model, object, usage } = res as GLMChatResponse
+                if (choices[0].message?.content)
+                    ctx.service.res.success('Success to chat to OpenAI GPT', {
+                        content: choices[0].message.content,
+                        promptTokens: usage?.prompt_tokens,
+                        completionTokens: usage?.completion_tokens,
+                        totalTokens: usage?.total_tokens,
+                        model,
+                        object
                     } as UniAIChatResponseData)
                 else throw new Error('Error to chat to GLM')
             }

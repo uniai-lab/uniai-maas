@@ -18,7 +18,7 @@ import { Resource } from '@model/Resource'
 import $ from '@util/util'
 import { SPKChatResponse } from '@util/fly'
 import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
-import { GLMChatResponse } from '@util/glm' // GLM models
+import { GLMChatStreamResponse } from '@util/glm' // GLM models
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 5
@@ -286,6 +286,7 @@ export default class WeChat extends Service {
 
         // add related resource
         if (resourceId) {
+            model = 'GLM'
             let content = ctx.__('document content start')
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
@@ -318,7 +319,6 @@ export default class WeChat extends Service {
         }
         await $.setCache(`chat_${userId}`, cache)
 
-        model = 'GLM'
         // start chat stream
         const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as Stream
         const parser = createParser(event => {
@@ -329,8 +329,8 @@ export default class WeChat extends Service {
                         if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
                     }
                     if (model === 'GLM') {
-                        const obj = $.json<GLMChatResponse>(event.data)
-                        if (obj?.content) cache.content += obj.content
+                        const obj = $.json<GLMChatStreamResponse>(event.data)
+                        if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
                     }
                     if (model === 'SPARK') {
                         const obj = $.json<SPKChatResponse>(event.data)

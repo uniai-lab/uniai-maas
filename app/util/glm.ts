@@ -5,7 +5,12 @@
  * @devilyouwei
  */
 
-import { ChatCompletionRequestMessage, ChatCompletionRequestMessageRoleEnum, CreateEmbeddingRequestInput } from 'openai'
+import {
+    ChatCompletionRequestMessage,
+    ChatCompletionResponseMessage,
+    CreateChatCompletionResponse,
+    CreateEmbeddingRequestInput
+} from 'openai'
 import { Stream } from 'stream'
 import $ from '@util/util'
 
@@ -22,52 +27,40 @@ export default {
         temperature?: number,
         maxLength?: number
     ) {
-        let prompt = ''
-        const history: string[][] = []
-        for (const { role, content } of messages)
-            if (role === 'system') history.push([content || '', 'Yes'])
-            else if (role === 'user') prompt += `${content}\n`
-            else {
-                history.push([prompt.trim(), content || ''])
-                prompt = ''
-            }
-
-        const params: GLMChatRequest = {
-            prompt: prompt.trim(),
-            history,
-            temperature,
-            top_p: top,
-            max_length: maxLength
-        }
-
-        return stream
-            ? await $.post<GLMChatRequest, Stream>(`${API}/chat-stream`, params, { responseType: 'stream' })
-            : await $.post<GLMChatRequest, GLMChatResponse>(`${API}/chat`, params, { responseType: 'json' })
+        return await $.post<GLMChatRequest, Stream | GLMChatResponse>(
+            `${API}/chat`,
+            { messages, stream, temperature, top_p: top, max_tokens: maxLength },
+            { responseType: stream ? 'stream' : 'json' }
+        )
     }
 }
 
-interface GLMChatRequest {
-    prompt: string
-    history?: string[][]
-    max_length?: number
-    top_p?: number
+type GLMEmbeddingRequest = { prompt: CreateEmbeddingRequestInput }
+export type GLMEmbeddingResponse = { model: string; object: string; data: number[][] }
+
+type GLMChatRequest = {
+    messages: ChatCompletionRequestMessage[]
     temperature?: number
+    top_p?: number
+    max_tokens?: number
+    stream?: boolean
+    chunk?: boolean
+    stop_token_ids?: number[]
+    repetition_penalty?: number
+    return_function_call?: boolean
 }
-interface GLMEmbeddingRequest {
-    prompt: CreateEmbeddingRequestInput
+
+type GLMChatStreamResponseChoicesInner = {
+    index?: number
+    delta?: ChatCompletionResponseMessage
+    finish_reason?: string
 }
-export interface GLMChatResponse {
-    content: string
-    prompt_tokens: number
-    completion_tokens: number
-    total_tokens: number
-    model: string
+
+export type GLMChatResponse = CreateChatCompletionResponse
+export type GLMChatStreamResponse = {
+    id: string
     object: string
-}
-export interface GLMEmbeddingResponse {
+    created: number
     model: string
-    object: string
-    data: number[][]
-    prompt_tokens: number
-    total_tokens: number
+    choices: Array<GLMChatStreamResponseChoicesInner>
 }

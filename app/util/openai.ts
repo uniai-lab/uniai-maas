@@ -28,7 +28,7 @@ export default {
     key: KEY,
     api: API,
     async embedding(input: CreateEmbeddingRequestInput) {
-        return await $.post<EmbeddingRequest, CreateEmbeddingResponse>(
+        return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
             `${this.api}/${API_VERSION}/embeddings`,
             { model: EMBEDDING_MODEL, input },
             {
@@ -45,7 +45,7 @@ export default {
         maxLength?: number,
         model: string = DEFAULT_CHAT_MODEL
     ) {
-        return await $.post<ChatRequest, Stream | GPTChatResponse>(
+        return await $.post<GPTChatRequest, Stream | GPTChatResponse>(
             `${this.api}/${API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
             {
@@ -67,12 +67,12 @@ export default {
     }
 }
 
-interface EmbeddingRequest {
+type GPTEmbeddingRequest = {
     model: string
     input: CreateEmbeddingRequestInput
 }
 
-interface ChatRequest {
+type GPTChatRequest = {
     model: string
     messages: ChatCompletionRequestMessage[]
     stream: boolean
@@ -81,19 +81,18 @@ interface ChatRequest {
     max_tokens?: number
 }
 
-export interface CreateChatCompletionStreamResponse {
-    id: string
-    object: string
-    created: number
-    model: string
-    choices: Array<CreateChatCompletionStreamResponseChoicesInner>
-}
-
-export interface CreateChatCompletionStreamResponseChoicesInner {
-    delta?: ChatCompletionResponseMessage
+type GPTChatStreamResponseChoicesInner = {
     index?: number
+    delta?: ChatCompletionResponseMessage
     finish_reason?: string
 }
 
 export type GPTChatResponse = CreateChatCompletionResponse
-export type GPTChatStreamResponse = CreateChatCompletionStreamResponse
+export type GPTChatStreamResponse = {
+    id: string
+    object: string
+    created: number
+    model: string
+    choices: Array<GPTChatStreamResponseChoicesInner>
+}
+export type GPTEmbeddingResponse = CreateEmbeddingResponse

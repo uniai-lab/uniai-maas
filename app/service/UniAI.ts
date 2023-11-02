@@ -5,7 +5,7 @@ import { Service } from 'egg'
 import { ChatCompletionRequestMessage } from 'openai'
 import { PassThrough, Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
-import glm, { GLMChatResponse } from '@util/glm'
+import glm, { GLMChatStreamResponse } from '@util/glm'
 import gpt, { GPTChatStreamResponse } from '@util/openai'
 import fly, { SPKChatResponse } from '@util/fly'
 import sd from '@util/sd'
@@ -125,13 +125,11 @@ export default class UniAI extends Service {
                     }
                 }
                 if (model === 'GLM') {
-                    const obj = $.json<GLMChatResponse>(event.data)
-                    if (obj?.content) {
-                        if (chunk) res.data.content = obj.content
-                        else res.data.content += obj.content
-                        res.data.completionTokens = obj.completion_tokens
-                        res.data.promptTokens = obj.prompt_tokens
-                        res.data.totalTokens = obj.total_tokens
+                    const obj = $.json<GLMChatStreamResponse>(event.data)
+                    if (obj?.choices[0].delta?.content) {
+                        if (chunk) res.data.content = obj.choices[0].delta.content
+                        else res.data.content += obj.choices[0].delta.content
+                        res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
