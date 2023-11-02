@@ -147,9 +147,7 @@ export default {
         return data
     },
     tinyText(text: string): string {
-        text = text.replace(/\s+/gm, ' ')
-        text = text.replace(/-\s+/g, '-')
-        return text.trim()
+        return text.replace(/[\n\r]{2,}/g, '\n').trim()
     },
     // split a long document text into pages by sentences
     splitPage(text: string, min: number = MIN_SPLIT_SIZE) {

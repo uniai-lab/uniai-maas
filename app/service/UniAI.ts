@@ -192,6 +192,8 @@ export default class UniAI extends Service {
         if (!filePath) throw new Error('File path is empty')
         if (!fileSize) throw new Error('File size is empty')
 
+        content = $.tinyText(content)
+
         // split first page
         const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
         if (!firstPage[0]) throw new Error('First page can not be split')

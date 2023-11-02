@@ -277,32 +277,34 @@ export default class WeChat extends Service {
         })
         if (!dialog) throw new Error('Dialog is invalid')
         dialog.chats.reverse()
+        const resourceId = dialog.resourceId
 
         const prompts: ChatCompletionRequestMessage[] = []
+        // add character definition
+        // prompts.push({ role: 'system', content: ctx.__('you are') })
+        // prompts.push({ role: 'assistant', content: 'Ok' })
 
-        // user chat history
+        // add related resource
+        if (resourceId) {
+            let content = ctx.__('document content')
+            // query resource
+            const pages = await ctx.service.uniAI.queryResource(
+                [{ role: 'user', content: input }],
+                resourceId,
+                WX_DEFAULT_EMBED_MODEL,
+                PAGE_LIMIT
+            )
+            for (const item of pages) content += `\n${item.content}`
+            content += `\n${ctx.__('answer according to')}`
+            prompts.push({ role: 'system', content })
+            prompts.push({ role: 'assistant', content: 'Ok' })
+        }
+
+        // add user chat history
         for (const { role, content } of dialog.chats)
             prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
 
-        const resourceId = dialog.resourceId
-        // find related resource pages
-        let content = input
-        if (resourceId) {
-            prompts.push({ role: 'system', content: ctx.__('document content') })
-            // query resource
-            const query: ChatCompletionRequestMessage[] = [{ role: 'user', content: input }]
-            const pages = await ctx.service.uniAI.queryResource(
-                query,
-                resourceId,
-                WX_DEFAULT_EMBED_MODEL,
-                PAGE_LIMIT,
-                MAX_TOKEN
-            )
-            for (const { content } of pages) prompts.push({ role: 'system', content })
-            content = `${ctx.__('answer according to')}${input}`
-        }
-
-        prompts.push({ role: 'user', content })
+        prompts.push({ role: 'user', content: input })
 
         console.log(prompts)
 
