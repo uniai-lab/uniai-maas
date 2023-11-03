@@ -1,9 +1,10 @@
 {
     "name": "uni-ai",
-    "version": "1.2.0",
-    "description": "UniAI is a platform that integrates a multitude of AI models",
+    "version": "1.3.0",
+    "description": "UniAI is a platform that integrates multiple AI models",
     "egg": {
-        "typescript": true
+        "typescript": true,
+        "declarations": true
     },
     "scripts": {
         "start": "egg-scripts start --daemon --title=uniai-app --port 3300",

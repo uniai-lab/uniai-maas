@@ -24,50 +24,50 @@ export class User extends Model {
     id: number
 
     @Column(DataType.STRING)
-    name: string
+    name: string | null
 
     @Unique
     @Column(DataType.STRING)
-    phone: string
+    phone: string | null
 
     @Unique
     @Column(DataType.STRING)
-    email: string
+    email: string | null
 
     @Column(DataType.INTEGER)
-    countryCode: number
+    countryCode: number | null
 
     @Unique
     @Column(DataType.STRING)
-    username: string
+    username: string | null
 
     @Column(DataType.STRING)
-    password: string
+    password: string | null
 
     @Column(DataType.STRING)
-    avatar: string
+    avatar: string | null
 
     @Unique
     @Column(DataType.STRING)
-    token: string
+    token: string | null
 
     @Column(DataType.DATE)
-    tokenTime: Date
+    tokenTime: Date | null
 
     @Unique
     @Column(DataType.STRING)
-    wxOpenId: string
+    wxOpenId: string | null
 
     @Unique
     @Column(DataType.STRING)
-    wxPublicOpenId: string
+    wxPublicOpenId: string | null
 
     @Unique
     @Column(DataType.STRING)
-    wxUnionId: string
+    wxUnionId: string | null
 
     @Column(DataType.STRING)
-    wxSessionKey: string
+    wxSessionKey: string | null
 
     @AllowNull(false)
     @Default(false)

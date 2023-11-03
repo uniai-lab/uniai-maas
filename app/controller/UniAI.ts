@@ -1,15 +1,6 @@
 /** @format */
 
-import {
-    HTTPController,
-    HTTPMethod,
-    HTTPMethodEnum,
-    Context,
-    EggContext,
-    HTTPBody,
-    Inject,
-    Middleware
-} from '@eggjs/tegg'
+import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, ImagesResponse } from 'openai'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
@@ -18,19 +9,30 @@ import { GPTChatResponse } from '@util/openai'
 import { SPKChatResponse } from '@util/fly'
 import { Stream } from 'stream'
 import { MJImagineResponse, MJTaskResponse } from '@util/mj'
+import { AIModelEnum } from '@interface/Enum'
+import {
+    QueryResourceRequest,
+    QueryResourceResponse,
+    EmbeddingRequest,
+    EmbeddingResponse,
+    ImagineRequest,
+    ImagineResponse,
+    TaskRequest,
+    TaskResponse,
+    ImgChangeRequest,
+    ChatRequest,
+    ChatResponse
+} from '@interface/http/UniAI'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
-    @Inject()
-    logger: EggContext
-
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
+    async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         try {
-            const prompts = params.prompts as ChatCompletionRequestMessage[]
+            const { top, temperature, maxLength, model, subModel, prompts } = params
             if (!params.prompts.length) throw new Error('Empty prompts')
-            const { top, temperature, maxLength, model, subModel } = params
+
             const res = await ctx.service.uniAI.chat(prompts, false, model, top, temperature, maxLength, subModel)
 
             // chat to GPT
@@ -44,7 +46,7 @@ export default class UniAI {
                         totalTokens: usage?.total_tokens,
                         model,
                         object
-                    } as UniAIChatResponseData)
+                    } as ChatResponse)
                 else throw new Error('Error to chat to GPT')
             }
             // chat to GLM
@@ -58,7 +60,7 @@ export default class UniAI {
                         totalTokens: usage?.total_tokens,
                         model,
                         object
-                    } as UniAIChatResponseData)
+                    } as ChatResponse)
                 else throw new Error('Error to chat to GLM')
             }
             if (model === 'SPARK') {
@@ -71,18 +73,18 @@ export default class UniAI {
                         totalTokens: payload.usage?.text.total_tokens,
                         model: payload.model,
                         object: payload.object
-                    } as UniAIChatResponseData)
+                    } as ChatResponse)
                 else throw new Error('Error to chat to SPARK')
             }
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
-    async chatStream(@Context() ctx: EggContext, @HTTPBody() params: UniAIChatPost) {
+    async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         try {
             ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
 
@@ -94,35 +96,29 @@ export default class UniAI {
 
             ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error, true)
         }
     }
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
-    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: UniAIQueryResourcePost) {
+    async queryResource(@Context() ctx: EggContext, @HTTPBody() params: QueryResourceRequest) {
         try {
             const { prompts, resourceId, maxPage, maxToken, model } = params
             if (!prompts.length) throw new Error('Empty prompts')
 
-            const data = await ctx.service.uniAI.queryResource(
-                prompts as ChatCompletionRequestMessage[],
-                resourceId,
-                model,
-                maxPage,
-                maxToken
-            )
-            ctx.service.res.success('Success to find resources', data)
+            const data = await ctx.service.uniAI.queryResource(prompts, resourceId, model, maxPage, maxToken)
+            ctx.service.res.success('Success to find resources', data as QueryResourceResponse[])
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
-    async embedding(@Context() ctx: EggContext, @HTTPBody() params: UniAIEmbeddingPost) {
+    async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         try {
             const { content, fileName, filePath, fileSize, model, id } = params
             const userId = 0
@@ -142,16 +138,16 @@ export default class UniAI {
                 id: res.id,
                 tokens: res.tokens,
                 page: res.page
-            } as UniAIEmbeddingResponseData)
+            } as EmbeddingResponse)
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/imagine', method: HTTPMethodEnum.POST })
-    async imagine(@Context() ctx: EggContext, @HTTPBody() params: UniAIImaginePost) {
+    async imagine(@Context() ctx: EggContext, @HTTPBody() params: ImagineRequest) {
         try {
             const model = params.model || 'DALLE'
             const { prompt, negativePrompt, num, width, height } = params
@@ -162,13 +158,13 @@ export default class UniAI {
                 const { data } = res as ImagesResponse
                 const images: string[] = []
                 for (const item of data) if (item.url) images.push(item.url)
-                ctx.service.res.success('Success text to image by DALL-E', { images } as UniAIImagineResponseData)
+                ctx.service.res.success('Success to imagine by DALL-E', { images } as ImagineResponse)
             } else if (model === 'SD') {
                 const { images, info } = res as SDImagineResponse
-                ctx.service.res.success('Success text to image by stable diffusion', {
+                ctx.service.res.success('Success imagine by Stable Diffusion', {
                     images,
                     info
-                } as UniAIImagineResponseData)
+                } as ImagineResponse)
             } else {
                 const { result, description, code } = res as MJImagineResponse
                 if (code !== 1) throw new Error(description)
@@ -176,17 +172,17 @@ export default class UniAI {
                     images: [],
                     taskId: result,
                     info: description
-                } as UniAIImagineResponseData)
+                } as ImagineResponse)
             }
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/task', method: HTTPMethodEnum.POST })
-    async task(@Context() ctx: EggContext, @HTTPBody() params: UniAITaskPost) {
+    async task(@Context() ctx: EggContext, @HTTPBody() params: TaskRequest) {
         try {
             const { taskId, model } = params
             const res = await ctx.service.uniAI.task(taskId, model)
@@ -194,7 +190,7 @@ export default class UniAI {
             if (model === 'MJ') {
                 const tasks = res as MJTaskResponse[]
                 if (taskId && tasks[0].failReason) throw new Error(tasks[0].failReason)
-                const data: UniAITaskResponseData[] = tasks.map(v => {
+                const data: TaskResponse[] = tasks.map(v => {
                     return {
                         id: v.id,
                         progress: v.progress,
@@ -206,7 +202,7 @@ export default class UniAI {
                 ctx.service.res.success('MidJourney task progress', data)
             } else if (model === 'SD') {
                 const tasks = res as SDTaskResponse[]
-                const data: UniAITaskResponseData[] = tasks.map(v => {
+                const data: TaskResponse[] = tasks.map(v => {
                     return {
                         progress: v.progress.toString(),
                         image: v.current_image,
@@ -216,13 +212,13 @@ export default class UniAI {
                 ctx.service.res.success('Stable Diffusion task progress', data)
             }
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/change', method: HTTPMethodEnum.POST })
-    async change(@Context() ctx: EggContext, @HTTPBody() params: UniAIChangePost) {
+    async change(@Context() ctx: EggContext, @HTTPBody() params: ImgChangeRequest) {
         try {
             const { action, index, taskId } = params
             if (!taskId) throw new Error('Param taskId is null')
@@ -234,10 +230,10 @@ export default class UniAI {
                     images: [],
                     taskId: res.result,
                     info: res.description
-                } as UniAIImagineResponseData)
+                } as ImagineResponse)
             }
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -249,7 +245,7 @@ export default class UniAI {
             const res = await ctx.service.uniAI.queue(model)
             if (model === 'MJ') ctx.service.res.success('Image task queue', res)
         } catch (e) {
-            console.error(e)
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }

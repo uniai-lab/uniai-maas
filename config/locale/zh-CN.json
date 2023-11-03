@@ -12,7 +12,7 @@
     "I have finished reading the file": "我已阅读完毕",
     "You can ask me questions about this book": "你可以向我提出关于文档的问题。",
     "Unknown": "未知",
-    "non compliant information": "内容包含不合规信息",
+    "not compliant": "内容包含不合规信息",
     "you are": "你现在是乐聊（LeChat）机器人角色，与用户对话。",
     "document content start": "以下是供参考的文档内容：",
     "document content end": "文档内容结束，以下是历史对话。",

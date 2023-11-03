@@ -26,6 +26,8 @@ export class ResourceType extends Model {
     @Column(DataType.STRING)
     type: string
 
+    @AllowNull(false)
+    @Default('')
     @Column(DataType.STRING)
     description: string
 

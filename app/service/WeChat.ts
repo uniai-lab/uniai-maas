@@ -15,21 +15,35 @@ import md5 from 'md5'
 import { Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { Resource } from '@model/Resource'
-import $ from '@util/util'
 import { SPKChatResponse } from '@util/fly'
 import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
 import { GLMChatStreamResponse } from '@util/glm' // GLM models
+import { AIModelEnum } from '@interface/Enum'
+import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
+import $ from '@util/util'
+import { ConfigResponse } from '@interface/http/WeChat'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 5
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
-const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
+const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_RESOURCE_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const ERROR_CHAT_ID = 0.1
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
+    // get app configs to user
+    async getConfig() {
+        const res = await this.ctx.model.Config.findAll({
+            where: { isDel: false, isEffect: true },
+            attributes: ['key', 'value', 'isJson']
+        })
+        const data: ConfigResponse = {}
+        for (const item of res) data[item.key] = item.isJson ? $.json(item.value) : item.value
+        return data
+    }
+
     // use wechat to login, get code, return new user
     async signIn(code: string, fid?: number) {
         const { ctx } = this
@@ -43,7 +57,7 @@ export default class WeChat extends Service {
         const res = await $.get<undefined, WXAuthCodeAPI>(url)
         if (!res.openid || !res.session_key) throw new Error('Fail to get openid or session key')
 
-        const config = await ctx.service.user.getConfig()
+        const config = await this.getConfig()
         // try to create user
         const [user, created] = await ctx.model.User.findOrCreate({
             where: {
@@ -130,7 +144,7 @@ export default class WeChat extends Service {
         const uc = await ctx.model.UserChance.findOne({ where: { userId } })
         if (!uc) throw Error('Fail to reward')
 
-        const config = await ctx.service.user.getConfig()
+        const config = await this.getConfig()
         uc.uploadChance += parseInt(config.SHARE_REWARD_UPLOAD_CHANCE || '0')
         uc.chatChance += parseInt(config.SHARE_REWARD_CHAT_CHANCE || '0')
         uc.uploadChanceUpdateAt = new Date()
@@ -147,7 +161,7 @@ export default class WeChat extends Service {
         })
         if (!user || !user.chance) throw Error('Fail to reward')
 
-        const config = await ctx.service.user.getConfig()
+        const config = await this.getConfig()
         user.chance.chatChance += parseInt(config.FOLLOW_REWARD_CHAT_CHANCE || '0')
         user.chance.chatChanceUpdateAt = new Date()
         user.wxPublicOpenId = openId // public open id
@@ -162,7 +176,7 @@ export default class WeChat extends Service {
         return await ctx.model.Dialog.findAll({
             where: {
                 userId,
-                resourceId: { [Op.ne]: 0 },
+                resourceId: { [Op.ne]: null },
                 isEffect: true,
                 isDel: false
             },
@@ -258,9 +272,9 @@ export default class WeChat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId: number = 0, model: AIModelEnum = WX_DEFAULT_CHAT_MODEL) {
+    async chat(input: string, userId: number, dialogId: number = 0) {
         const { ctx } = this
-
+        let model: AIModelEnum = WX_DEFAULT_CHAT_MODEL
         // check processing chat stream
         const check = await this.getChat(userId)
         if (check && !check.chatId) throw new Error('You have another processing chat')
@@ -280,13 +294,14 @@ export default class WeChat extends Service {
         const resourceId = dialog.resourceId
 
         const prompts: ChatCompletionRequestMessage[] = []
+
         // add character definition
-        // prompts.push({ role: 'system', content: ctx.__('you are') })
-        // prompts.push({ role: 'assistant', content: 'Ok' })
+        prompts.push({ role: 'system', content: ctx.__('you are') })
+        prompts.push({ role: 'assistant', content: 'Ok' })
 
         // add related resource
         if (resourceId) {
-            model = 'GLM'
+            model = WX_DEFAULT_RESOURCE_MODEL
             let content = ctx.__('document content start')
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
@@ -302,8 +317,7 @@ export default class WeChat extends Service {
         }
 
         // add user chat history
-        for (const { role, content } of dialog.chats)
-            prompts.push({ role: role as ChatCompletionRequestMessageRoleEnum, content })
+        for (const { role, content } of dialog.chats) prompts.push({ role: role, content })
 
         const content = resourceId ? `${ctx.__('answer according to')}\n${input}` : input
         prompts.push({ role: 'user', content })
@@ -315,6 +329,8 @@ export default class WeChat extends Service {
             chatId: 0,
             dialogId: dialog.id,
             content: '',
+            resourceId,
+            model,
             time: new Date().getTime()
         }
         await $.setCache(`chat_${userId}`, cache)
@@ -359,8 +375,10 @@ export default class WeChat extends Service {
             if (cache.content) {
                 const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
+                    resourceId,
                     role: ChatCompletionResponseMessageRoleEnum.Assistant,
-                    content: cache.content
+                    content: cache.content,
+                    model
                 })
                 cache.chatId = chat.id
             } else cache.chatId = ERROR_CHAT_ID
@@ -395,12 +413,15 @@ export default class WeChat extends Service {
     }
 
     // get user and reset free chat/upload chance
-    async getUserResetChance(userId: number) {
+    async getUserResetChance(id: number) {
         const { ctx } = this
-        const user = await ctx.service.user.getUser(userId)
+        const user = await ctx.model.User.findOne({
+            where: { id, isDel: false, isEffect: true },
+            include: [{ model: ctx.model.UserChance }]
+        })
         if (!user || !user.chance) throw new Error('Fail to find user')
 
-        const config = await ctx.service.user.getConfig()
+        const config = await this.getConfig()
         const now = new Date()
         if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() >= WEEK) {
             user.chance.uploadChanceFree = parseInt(config.DEFAULT_FREE_UPLOAD_CHANCE || '0')

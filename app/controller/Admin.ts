@@ -1,13 +1,14 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, HTTPBody, Context, EggContext, Middleware } from '@eggjs/tegg'
+import { UpdateResourceRequest, AddFollowRewardRequest, UpdateUserRequest, UploadResponse } from '@interface/http/Admin'
 import { authAdmin } from '@middleware/auth'
 
 @HTTPController({ path: '/admin' })
 export default class Admin {
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/add-resource', method: HTTPMethodEnum.POST })
-    async updateResource(@Context() ctx: EggContext, @HTTPBody() params: AdminUpdateResourcePost) {
+    async updateResource(@Context() ctx: EggContext, @HTTPBody() params: UpdateResourceRequest) {
         try {
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
@@ -16,7 +17,7 @@ export default class Admin {
             if (params.fileName) file.filename = params.fileName // use customize filename
 
             const res = await ctx.service.weChat.upload(file, 0, resourceTypeId)
-            const resource: UploadResponseData = {
+            const resource: UploadResponse = {
                 id: res.id,
                 typeId: res.typeId,
                 page: res.page,
@@ -43,7 +44,7 @@ export default class Admin {
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/add-follow-reward', method: HTTPMethodEnum.POST })
-    async addFollowReward(@Context() ctx: EggContext, @HTTPBody() params: AdminAddFollowRewardPost) {
+    async addFollowReward(@Context() ctx: EggContext, @HTTPBody() params: AddFollowRewardRequest) {
         try {
             if (!params.unionId) throw new Error('No user union ID')
             if (!params.openId) throw new Error('No public account user open ID')
@@ -58,7 +59,7 @@ export default class Admin {
 
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/save-user', method: HTTPMethodEnum.POST })
-    async saveUser(@Context() ctx: EggContext, @HTTPBody() params: AdminUpdateUserPost) {
+    async saveUser(@Context() ctx: EggContext, @HTTPBody() params: UpdateUserRequest) {
         try {
             if (!params.username) throw new Error('No username')
             if (!params.password) throw new Error('No password')

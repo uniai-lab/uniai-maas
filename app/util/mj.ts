@@ -5,7 +5,10 @@
  * 2023-9-12
  * devilyouwei
  */
+
 import $ from './util'
+import { MJTaskEnum } from '@interface/Enum'
+
 const API = process.env.MID_JOURNEY_API
 const TOKEN = process.env.MID_JOURNEY_TOKEN
 const headers = { 'mj-api-secret': TOKEN }

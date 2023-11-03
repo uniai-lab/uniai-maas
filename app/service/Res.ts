@@ -1,5 +1,5 @@
 /** @format */
-// HTTP response/result format service
+// HTTP response standard format service
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
@@ -33,7 +33,7 @@ export default class Res extends Service {
     noAuth() {
         const response: StandardResponse<null> = {
             status: -1,
-            msg: this.ctx.__('Not login or login is expired'),
+            msg: this.ctx.__('No auth to access'),
             data: null
         }
         this.ctx.body = response

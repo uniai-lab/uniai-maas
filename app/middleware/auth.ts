@@ -2,6 +2,7 @@
 // This is a middleware to check user login auth, add to controller -> action
 
 // app/middleware/auth.ts
+import { UserTokenCache } from '@interface/Cache'
 import { UserContext } from '@interface/Context'
 import $ from '@util/util'
 const EXPIRE = 1000 * 60 * 60 * 24 * 7
@@ -23,7 +24,7 @@ export default function auth() {
                 where: { id, token, isDel: false, isEffect: true },
                 attributes: ['id', 'tokenTime']
             })
-            const time = user?.tokenTime.getTime() || 0
+            const time = user?.tokenTime?.getTime() || 0
             if (user && now - time < EXPIRE) {
                 await $.setCache<UserTokenCache>(`token_${id}`, { id, token, time })
                 ctx.userId = user.id

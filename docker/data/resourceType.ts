@@ -4,7 +4,7 @@ export default [
     {
         id: 1,
         type: 'document',
-        description: '书籍'
+        description: '文档'
     },
     {
         id: 2,

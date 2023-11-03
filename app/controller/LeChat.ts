@@ -1,10 +1,10 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
+import { Stream } from 'stream'
 import { UserContext } from '@interface/Context'
-import { ChatCompletionRequestMessage } from 'openai'
-import { PassThrough, Stream } from 'stream'
-import auth from 'app/middleware/auth'
+import auth from '@middleware/auth'
+import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/http/LeChat'
 
 @HTTPController({ path: '/lechat' })
 export default class LeChat {
@@ -12,81 +12,69 @@ export default class LeChat {
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.POST })
     async userinfo(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
-            const res = await ctx.service.user.getUser(userId)
+            const userId = ctx.userId
+            if (!userId) throw new Error('No user id')
+
+            const res = await ctx.service.leChat.getUser(userId)
             if (!res) throw new Error('User not found')
-            const data: UserinfoResponseData = {
+
+            const data: UserInfoResponse = {
                 id: res.id,
-                username: res.username,
-                name: res.name,
-                phone: res.phone,
-                countryCode: res.countryCode,
+                username: res.username || '',
+                name: res.name || '',
+                phone: res.phone || '',
+                countryCode: res.countryCode || 0,
                 avatar: res.avatar || process.env.DEFAULT_AVATAR_USER,
-                token: res.token,
-                tokenTime: res.tokenTime
+                token: res.token || '',
+                tokenTime: res.tokenTime || new Date()
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
-    }
-
-    @Middleware(auth())
-    @HTTPMethod({ path: '/query-online', method: HTTPMethodEnum.POST })
-    async queryOnline(@Context() ctx: UserContext, @HTTPBody() params: UniAIQueryOnlinePost) {
-        const prompts = params.prompts as ChatCompletionRequestMessage[]
-        if (!prompts.length) throw new Error('Empty prompts')
-        const query = prompts.pop() as ChatCompletionRequestMessage
-        const stream = new PassThrough()
-        ctx.service.leChat.searchStream(query.content, stream)
-        ctx.body = stream
     }
 
     @Middleware(auth())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: UserContext, @HTTPBody() params: UniAIChatPost) {
+    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         try {
-            const prompts = params.prompts as ChatCompletionRequestMessage[]
-            if (!params.prompts.length) throw new Error('Empty prompts')
-            const model = params.model || 'GLM'
-            const chunk = params.chunk || false
-
-            const res = await ctx.service.uniAI.chat(
-                prompts,
-                true,
-                model,
-                params.top,
-                params.temperature,
-                params.maxLength
-            )
             ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
+
+            const { prompts, model, chunk, top, temperature, maxLength } = params
+            if (!prompts.length) throw new Error('Empty prompts')
+
+            const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength)
+
             ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
-            console.error(e)
-            ctx.service.res.error(e as Error)
+            ctx.logger.error(e)
+            ctx.service.res.error(e as Error, true)
         }
     }
 
     @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })
-    async signIn(@Context() ctx: EggContext, @HTTPBody() params: SignInPost) {
+    async signIn(@Context() ctx: EggContext, @HTTPBody() params: SignInRequest) {
         try {
             const { username, password } = params
             if (!username.trim()) throw new Error('No username')
             if (!password.trim()) throw new Error('No password')
 
-            const res = await ctx.service.user.signIn(username, password)
-            const data: UserinfoResponseData = {
+            const res = await ctx.service.leChat.signIn(username, password)
+
+            const data: UserInfoResponse = {
                 id: res.id,
-                username: res.username,
-                name: res.name,
-                phone: res.phone,
-                countryCode: res.countryCode,
+                username: res.username || '',
+                name: res.name || '',
+                phone: res.phone || '',
+                countryCode: res.countryCode || 0,
                 avatar: res.avatar || process.env.DEFAULT_AVATAR_USER,
-                token: res.token,
-                tokenTime: res.tokenTime
+                token: res.token || '',
+                tokenTime: res.tokenTime || new Date()
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
+            ctx.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }

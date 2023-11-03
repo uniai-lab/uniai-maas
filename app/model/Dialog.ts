@@ -31,7 +31,7 @@ export class Dialog extends Model {
 
     @ForeignKey(() => Resource)
     @Column(DataType.INTEGER)
-    resourceId: number
+    resourceId: number | null
 
     @AllowNull(false)
     @Default(false)

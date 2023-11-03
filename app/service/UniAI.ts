@@ -8,10 +8,12 @@ import { createParser } from 'eventsource-parser'
 import glm, { GLMChatStreamResponse } from '@util/glm'
 import gpt, { GPTChatStreamResponse } from '@util/openai'
 import fly, { SPKChatResponse } from '@util/fly'
+import { Resource } from '@model/Resource'
+import { AIModelEnum, MJTaskEnum } from '@interface/Enum'
+import { ChatResponse } from '@interface/http/UniAI'
 import sd from '@util/sd'
 import mj from '@util/mj'
 import $ from '@util/util'
-import { Resource } from '@model/Resource'
 
 const MAX_PAGE = 6
 const MAX_TOKEN = 4096
@@ -102,7 +104,7 @@ export default class UniAI extends Service {
     // handle chat stream
     parseSSE(message: Stream, model: AIModelEnum = 'GLM', chunk: boolean = false) {
         // define return data
-        const res: StandardResponse<UniAIChatResponseData> = {
+        const res: StandardResponse<ChatResponse> = {
             status: 1,
             data: { content: '', promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             msg: 'success to get chat stream message'

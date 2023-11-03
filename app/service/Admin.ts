@@ -3,6 +3,7 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import md5 from 'md5'
+import { UpdateUserRequest } from '@interface/http/Admin'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Admin extends Service {
@@ -17,7 +18,7 @@ export default class Admin extends Service {
     }
     */
     // add a new user
-    async updateUser(data: AdminUpdateUserPost) {
+    async updateUser(data: UpdateUserRequest) {
         const { ctx } = this
 
         const defaults = {

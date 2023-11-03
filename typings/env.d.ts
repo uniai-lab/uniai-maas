@@ -1,6 +1,6 @@
 /** @format */
 // for env file
-export { }
+export {}
 
 declare global {
     namespace NodeJS {
@@ -20,7 +20,6 @@ declare global {
             OPENAI_EMBED_DIM: number
             OPENAI_DEFAULT_CHAT_MODEL: AIModelEnum
             OPENAI_DEFAULT_EMBED_MODEL: AIModelEnum
-
 
             // GLM
             GLM_API: string
@@ -42,7 +41,7 @@ declare global {
 
             // DB postgresSQL
             POSTGRES_HOST: string
-            POSTGRES_PORT: number
+            POSTGRES_PORT: string
             POSTGRES_USER: string
             POSTGRES_PASSWORD: string
             POSTGRES_DB: string
@@ -59,6 +58,7 @@ declare global {
             WX_APP_PHONE_URL: string
             WX_APP_MSG_CHECK: string
             WX_DEFAULT_CHAT_MODEL: AIModelEnum
+            WX_DEFAULT_RESOURCE_MODEL: AIModelEnum
             WX_DEFAULT_EMBED_MODEL: AIModelEnum
 
             // tencent oss
