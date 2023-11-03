@@ -24,12 +24,12 @@ import $ from '@util/util'
 import { ConfigResponse } from '@interface/http/WeChat'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
-const PAGE_LIMIT = 5
+const PAGE_LIMIT = 6
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
-const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_RESOURCE_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const ERROR_CHAT_ID = 0.1
+const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_RESOURCE_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -295,14 +295,10 @@ export default class WeChat extends Service {
 
         const prompts: ChatCompletionRequestMessage[] = []
 
-        // add character definition
-        prompts.push({ role: 'system', content: ctx.__('you are') })
-        prompts.push({ role: 'assistant', content: 'Ok' })
-
         // add related resource
         if (resourceId) {
             model = WX_DEFAULT_RESOURCE_MODEL
-            let content = ctx.__('document content start')
+            let content = `${ctx.__('you are')}${ctx.__('document content start')}`
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
                 [{ role: 'user', content: input }],
@@ -311,16 +307,14 @@ export default class WeChat extends Service {
                 PAGE_LIMIT
             )
             for (const item of pages) content += `\n${item.content}`
-            content += `\n${ctx.__('document content end')}`
+            content += `\n${ctx.__('document content end')}${ctx.__('answer according to')}`
             prompts.push({ role: 'system', content })
-            prompts.push({ role: 'assistant', content: 'Ok' })
         }
 
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role: role, content })
 
-        const content = resourceId ? `${ctx.__('answer according to')}\n${input}` : input
-        prompts.push({ role: 'user', content })
+        prompts.push({ role: 'user', content: input })
 
         console.log(prompts)
 

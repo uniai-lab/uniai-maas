@@ -11,6 +11,7 @@ export interface ChatRequest {
     model?: AIModelEnum
     subModel?: string
     chunk?: boolean
+    stream?: boolean
 }
 
 export interface QueryResourceRequest {

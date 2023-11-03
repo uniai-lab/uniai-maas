@@ -16,7 +16,7 @@ import mj from '@util/mj'
 import $ from '@util/util'
 
 const MAX_PAGE = 6
-const MAX_TOKEN = 4096
+const MAX_TOKEN = 8192
 const SAME_SIMILARITY = 0.01
 const TOKEN_PAGE_FIRST = 768
 const TOKEN_PAGE_SPLIT_L1 = 2048
@@ -71,7 +71,7 @@ export default class UniAI extends Service {
                 const embed = await glm.embedding([query])
                 const embedding = embed.data[0]
                 const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
-                while (res.reduce((n, p) => n + $.countTokens(p.content), 0) > MAX_TOKEN) res.pop()
+                while (res.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) res.pop()
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
                         resourceId: item.resourceId,
@@ -103,6 +103,7 @@ export default class UniAI extends Service {
 
     // handle chat stream
     parseSSE(message: Stream, model: AIModelEnum = 'GLM', chunk: boolean = false) {
+        this.ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
         // define return data
         const res: StandardResponse<ChatResponse> = {
             status: 1,

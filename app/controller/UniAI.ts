@@ -1,6 +1,15 @@
 /** @format */
 
-import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
+import {
+    HTTPController,
+    HTTPMethod,
+    HTTPMethodEnum,
+    Context,
+    EggContext,
+    HTTPBody,
+    Middleware,
+    Inject
+} from '@eggjs/tegg'
 import { ChatCompletionRequestMessage, ImagesResponse } from 'openai'
 import { authAdmin } from '@middleware/auth'
 import { GLMChatResponse } from '@util/glm'
@@ -23,23 +32,27 @@ import {
     ChatRequest,
     ChatResponse
 } from '@interface/http/UniAI'
+import { EggLogger } from 'egg'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
+    @Inject()
+    logger: EggLogger
+
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         try {
-            const { top, temperature, maxLength, model, subModel, prompts } = params
-            if (!params.prompts.length) throw new Error('Empty prompts')
+            const { top, temperature, maxLength, model, subModel, prompts, chunk, stream } = params
+            if (!prompts.length) throw new Error('Empty prompts')
 
-            const res = await ctx.service.uniAI.chat(prompts, false, model, top, temperature, maxLength, subModel)
-
-            // chat to GPT
-            if (model === 'GPT') {
+            const res = await ctx.service.uniAI.chat(prompts, stream, model, top, temperature, maxLength, subModel)
+            if (stream) ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
+            else if (model === 'GPT') {
+                // chat to GPT
                 const { choices, model, object, usage } = res as GPTChatResponse
                 if (choices[0].message?.content)
-                    ctx.service.res.success('Success to chat to THUDM GLM', {
+                    ctx.service.res.success('Success to chat to OpenAI/GPT', {
                         content: choices[0].message.content,
                         promptTokens: usage?.prompt_tokens,
                         completionTokens: usage?.completion_tokens,
@@ -48,12 +61,11 @@ export default class UniAI {
                         object
                     } as ChatResponse)
                 else throw new Error('Error to chat to GPT')
-            }
-            // chat to GLM
-            if (model === 'GLM') {
+            } else if (model === 'GLM') {
+                // chat to GLM
                 const { choices, model, object, usage } = res as GLMChatResponse
                 if (choices[0].message?.content)
-                    ctx.service.res.success('Success to chat to OpenAI GPT', {
+                    ctx.service.res.success('Success to chat to THUDM/GLM', {
                         content: choices[0].message.content,
                         promptTokens: usage?.prompt_tokens,
                         completionTokens: usage?.completion_tokens,
@@ -62,11 +74,11 @@ export default class UniAI {
                         object
                     } as ChatResponse)
                 else throw new Error('Error to chat to GLM')
-            }
-            if (model === 'SPARK') {
+            } else if (model === 'SPARK') {
+                // chat to SPARK
                 const { payload } = res as SPKChatResponse
                 if (payload.choices.text[0].content)
-                    ctx.service.res.success('Success to chat to IFLYTEK SPARK', {
+                    ctx.service.res.success('Success to chat to iFlyTek/SPARK', {
                         content: payload.choices.text[0].content,
                         promptTokens: payload.usage?.text.prompt_tokens,
                         completionTokens: payload.usage?.text.completion_tokens,
@@ -77,8 +89,8 @@ export default class UniAI {
                 else throw new Error('Error to chat to SPARK')
             }
         } catch (e) {
-            ctx.logger.error(e)
-            ctx.service.res.error(e as Error)
+            this.logger.error(e)
+            ctx.service.res.error(e as Error, params.stream)
         }
     }
 
@@ -86,17 +98,14 @@ export default class UniAI {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         try {
-            ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
-
-            const prompts = params.prompts as ChatCompletionRequestMessage[]
+            const { prompts, top, temperature, maxLength, model, subModel, chunk } = params
             if (!prompts.length) throw new Error('Empty prompts')
-            const { top, temperature, maxLength, model, subModel, chunk } = params
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
             ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error, true)
         }
     }
@@ -111,7 +120,7 @@ export default class UniAI {
             const data = await ctx.service.uniAI.queryResource(prompts, resourceId, model, maxPage, maxToken)
             ctx.service.res.success('Success to find resources', data as QueryResourceResponse[])
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -140,7 +149,7 @@ export default class UniAI {
                 page: res.page
             } as EmbeddingResponse)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -175,7 +184,7 @@ export default class UniAI {
                 } as ImagineResponse)
             }
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -212,7 +221,7 @@ export default class UniAI {
                 ctx.service.res.success('Stable Diffusion task progress', data)
             }
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -233,7 +242,7 @@ export default class UniAI {
                 } as ImagineResponse)
             }
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -245,7 +254,7 @@ export default class UniAI {
             const res = await ctx.service.uniAI.queue(model)
             if (model === 'MJ') ctx.service.res.success('Image task queue', res)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }

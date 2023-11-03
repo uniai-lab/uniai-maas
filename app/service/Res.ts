@@ -19,6 +19,7 @@ export default class Res extends Service {
     // error response format
     error(e: Error, stream: boolean = false) {
         if (stream) {
+            this.ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
             const stream = new PassThrough()
             this.ctx.body = stream
             const data: StandardResponse<null> = { status: 0, msg: this.ctx.__(e.message), data: null }

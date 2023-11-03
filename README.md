@@ -8,11 +8,12 @@
 
 ## Integrated Models
 
--   [OpenAI GPT](https://platform.openai.com/)
--   [OpenAI DALL-E](https://platform.openai.com/)
--   [THUDM GLM](https://github.com/THUDM/ChatGLM-6B)
+-   [OpenAI GPT](https://platform.openai.com)
+-   [OpenAI DALL-E](https://platform.openai.com)
+-   [Midjourney](https://github.com/novicezk/midjourney-proxy)
+-   [THUDM ChatGLM3](https://github.com/THUDM/ChatGLM3)
 -   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
--   [IFLYTEK Spark](https://xinghuo.xfyun.cn/)
+-   [IFLYTEK Spark](https://xinghuo.xfyun.cn)
 
 ## Samples
 
@@ -50,66 +51,74 @@ touch ./.env
 2. Fill in the environment parameters in the `.env` file as follows:
 
 ```bash
+
 # APP
 APP_NAME=UniAI
 APP_URL=https://www.uniai.us
 DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png
 DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
 DEFAULT_USERNAME=AI
-ADMIN_TOKEN=[Your Admin Token]
+ADMIN_TOKEN=    # admin token
 
-# GPT
-OPENAI_API=[Your OpenAI proxy URL]
-OPENAI_API_KEY=[Your OpenAI key]
+# OPENAI GPT
+OPENAI_API=http://8.214.93.3
+OPENAI_API_VERSION=v1
+OPENAI_API_KEY=     # OpenAI API key    
 OPENAI_EMBED_DIM=1536
+OPENAI_DEFAULT_CHAT_MODEL=gpt-4     # gpt-4 | gpt-3.5-turbo
+OPENAI_DEFAULT_EMBED_MODEL=text-embedding-ada-002 # 001 | 002
 
 # GLM
-GLM_API=[Your ChatGLM model API URL]
-GLM_EMBED_DIM=1024
+GLM_API=http://10.144.1.7:8100 # visit https://github.com/uni-openai/GLM-API
+TEXT2VEC_EMBED_DIM=1024 # use https://huggingface.co/GanymedeNil/text2vec-large-chinese
 
-# IFLYTEK
+
+# SPARK
 SPARK_API=ws://spark-api.xf-yun.com
-SPARK_API_KEY=[IFLYTEK API key]
-SPARK_API_SECRET=[IFLYTEK API secret]
-SPARK_APP_ID=[IFLYTEK API ID]
-SPARK_API_VERSION=v2.1
+SPARK_API_KEY=      # IFLYTEK Spark API KEY
+SPARK_API_SECRET=   # IFLYTEK Spark API Secret
+SPARK_APP_ID=       # IFLYTEK Spark APP ID
+SPARK_DEFAULT_MODEL_VERSION=v3.1 # IFLYTEK Spark model version
 
 # PostgreSQL database
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=uniai
+POSTGRES_HOST=10.144.1.7    # postgresql host url
+POSTGRES_PORT=5432          # postgresql port
+POSTGRES_USER=postgres      # postgresql user
+POSTGRES_PASSWORD=postgres  # postgresql password
+POSTGRES_DB=uniai           # postgresql db
 
 # Redis cache
-REDIS_PORT=6379
-REDIS_HOST=localhost
+REDIS_HOST=10.144.1.7       # Redis cache host url
+REDIS_PORT=6379             # Redis cache host port
 
 # WeChat
-WX_APP_ID=[Wechat miniapp app id]
-WX_APP_SECRET=[Wechat miniapp app secret]
+WX_APP_ID=    # wechat app id
+WX_APP_SECRET=     # wechat app secret
 WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
 WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
 WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
-WX_DEFAULT_MODEL=SPARK
+WX_DEFAULT_CHAT_MODEL=SPARK     # wechat default chat model
+WX_DEFAULT_RESOURCE_MODEL=GLM   # wechat default resource chat model
+WX_DEFAULT_EMBED_MODEL=GPT      # wechat default embed model
+
 
 # COS, OSS storage
-COS_SECRET_ID=[Tencent COS secret id]
-COS_SECRET_KEY=[Tencent COS secret key]
-COS_BUCKET=[Tencent COS bucket]
-COS_REGION=[Tencent COS region]
+COS_SECRET_ID=      # tencent cos/oss secret id
+COS_SECRET_KEY=     # tencent cos/oss secret key
+COS_BUCKET=         # tencent cos/oss bucket
+COS_REGION=         # tencent cos/oss region
 
 # Google Search
-GOOGLE_SEARCH_API_TOKEN=[Google search API token]
-GOOGLE_SEARCH_ENGINE_ID=[Google search engine ID]
+GOOGLE_SEARCH_API_TOKEN=
+GOOGLE_SEARCH_ENGINE_ID=
 
 # Stable Diffusion
 STABLE_DIFFUSION_API=http://10.144.1.7:3400
 
-# MidJourney proxy https://github.com/novicezk/midjourney-proxy
-MID_JOURNEY_API=[Your midjourney-proxy address]
-MID_JOURNEY_TOKEN=[Your midjourney-proxy app-secret-key]
+MID_JOURNEY_API=        # visit https://github.com/novicezk/midjourney-proxy
+MID_JOURNEY_TOKEN=      # mj-proxy token
+
 ```
 
 ### Installation

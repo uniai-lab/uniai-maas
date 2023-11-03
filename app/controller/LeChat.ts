@@ -39,8 +39,6 @@ export default class LeChat {
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         try {
-            ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
-
             const { prompts, model, chunk, top, temperature, maxLength } = params
             if (!prompts.length) throw new Error('Empty prompts')
 

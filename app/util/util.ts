@@ -103,7 +103,7 @@ export default {
     },
     // use local json to filter sensitive content
     jsonFilterSensitive(content: string, replace: string = ''): string {
-        return filter.verify(content) ? content : replace
+        return replace ? (filter.verify(content) ? content : replace) : filter.filter(content).text
     },
     // decrypt data from wechat phone API
     decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string): WXDecodedData {

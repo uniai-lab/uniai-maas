@@ -186,7 +186,7 @@ export default class WeChat {
             // filter sensitive
             const data: ChatResponse = {
                 type: false,
-                content: res.model === 'SPARK' ? res.content : $.filterSensitive(res.content, ctx.__('not compliant')),
+                content: res.model === 'SPARK' ? res.content : $.filterSensitive(res.content),
                 userId,
                 dialogId: res.dialogId,
                 resourceId: res.resourceId,
@@ -216,10 +216,7 @@ export default class WeChat {
                 data.push({
                     chatId: item.id,
                     type: item.role === 'user',
-                    content:
-                        item.model === 'SPARK'
-                            ? item.content
-                            : $.filterSensitive(item.content, ctx.__('not compliant')),
+                    content: item.model === 'SPARK' ? item.content : $.filterSensitive(item.content),
                     resourceId: item.resourceId,
                     model: item.model,
                     avatar: item.role === 'user' ? DEFAULT_AVATAR_USER : DEFAULT_AVATAR_AI,
