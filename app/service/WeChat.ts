@@ -305,7 +305,7 @@ export default class WeChat extends Service {
         }
 
         // add user chat history
-        for (const { role, content } of dialog.chats) prompts.push({ role: role, content })
+        for (const { role, content } of dialog.chats) prompts.push({ role, content })
 
         prompts.push({ role: 'user', content: input })
 

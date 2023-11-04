@@ -1,10 +1,10 @@
 /** @format */
 
 import { AIModelEnum } from '@interface/Enum'
-import { ChatCompletionRequestMessage } from 'openai'
+import { ChatCompletionMessage } from 'openai/resources'
 
 export interface ChatRequest {
-    prompts: ChatCompletionRequestMessage[]
+    prompts: ChatCompletionMessage[]
     maxLength?: number
     top?: number
     temperature?: number
@@ -15,7 +15,7 @@ export interface ChatRequest {
 }
 
 export interface QueryResourceRequest {
-    prompts: ChatCompletionRequestMessage[]
+    prompts: ChatCompletionMessage[]
     model?: AIModelEnum
     resourceId?: number
     maxPage?: number

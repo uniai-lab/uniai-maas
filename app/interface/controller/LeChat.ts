@@ -1,7 +1,7 @@
 /** @format */
 
 import { AIModelEnum } from '@interface/Enum'
-import { ChatCompletionRequestMessage } from 'openai'
+import { ChatCompletionMessage } from 'openai/resources'
 
 export interface SignInRequest {
     username: string
@@ -20,7 +20,7 @@ export interface UserInfoResponse {
 }
 
 export interface ChatRequest {
-    prompts: ChatCompletionRequestMessage[]
+    prompts: ChatCompletionMessage[]
     maxLength?: number
     top?: number
     temperature?: number

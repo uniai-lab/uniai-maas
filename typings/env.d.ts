@@ -1,4 +1,7 @@
 /** @format */
+
+import { AIModelEnum } from '@interface/Enum'
+
 // for env file
 export {}
 
