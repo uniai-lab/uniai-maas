@@ -2,7 +2,7 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware } from '@eggjs/tegg'
 import { UserContext } from '@interface/Context'
-import auth from 'app/middleware/auth'
+import auth from '@middleware/auth'
 import $ from '@util/util'
 import {
     SignInRequest,
@@ -15,7 +15,7 @@ import {
     DialogResponse,
     ChatRequest,
     ChatResponse
-} from '@interface/http/WeChat'
+} from '@interface/controller/WeChat'
 
 const { DEFAULT_AVATAR_AI, DEFAULT_AVATAR_USER } = process.env
 

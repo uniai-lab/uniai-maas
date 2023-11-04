@@ -8,8 +8,9 @@
 import os from 'os'
 import crypto from 'crypto'
 import WebSocket from 'ws'
-import { ChatCompletionRequestMessage } from 'openai'
+import { ChatCompletionMessage } from 'openai/resources'
 import { PassThrough, Stream } from 'stream'
+import { SPKChatRequest, SPKChatResponse } from '@interface/Spark'
 import $ from '@util/util'
 
 // IFLYTEK spark model default API info
@@ -21,7 +22,7 @@ const VERSION = process.env.SPARK_DEFAULT_MODEL_VERSION
 
 export default {
     chat(
-        messages: ChatCompletionRequestMessage[],
+        messages: ChatCompletionMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
@@ -94,58 +95,4 @@ function getURL(version: string) {
     const authorizationOrigin = `api_key="${API_KEY}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`
     const authorization = Buffer.from(authorizationOrigin).toString('base64')
     return `${API}/${version}/chat?authorization=${authorization}&date=${date}&host=${host}`
-}
-
-// spark chat model request interface
-interface SPKChatRequest {
-    header: {
-        app_id: string
-        uid?: string
-    }
-    parameter: {
-        chat: {
-            domain: string
-            temperature?: number
-            max_tokens?: number
-            top_k?: number
-            chat_id?: number
-        }
-    }
-    payload: {
-        message: {
-            text: ChatCompletionRequestMessage[]
-        }
-    }
-}
-
-export interface SPKChatResponse {
-    header: {
-        code: number
-        message: string
-        sid: string
-        status: number
-    }
-    payload: {
-        choices: {
-            status: number
-            seq: number
-            text: [
-                {
-                    content: string
-                    role: string
-                    index: number
-                }
-            ]
-        }
-        usage?: {
-            text: {
-                question_tokens: number
-                prompt_tokens: number
-                completion_tokens: number
-                total_tokens: number
-            }
-        }
-        model?: string
-        object?: string
-    }
 }

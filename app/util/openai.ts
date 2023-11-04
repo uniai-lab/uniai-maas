@@ -5,18 +5,18 @@
  * @devilyouwei
  */
 
-import {
-    ChatCompletionRequestMessage,
-    CreateEmbeddingRequestInput,
-    CreateEmbeddingResponse,
-    CreateImageRequest,
-    CreateImageRequestSizeEnum,
-    ImagesResponse,
-    CreateChatCompletionResponse,
-    ChatCompletionResponseMessage
-} from 'openai'
 import $ from '@util/util'
 import { Stream } from 'stream'
+import {
+    GPTChatRequest,
+    GPTChatResponse,
+    GPTChatStreamRequest,
+    GPTEmbeddingRequest,
+    GPTEmbeddingResponse,
+    GPTImagineRequest,
+    GPTImagineResponse
+} from '@interface/OpenAI'
+import { ChatCompletionMessage } from 'openai/resources'
 
 const API = process.env.OPENAI_API
 const KEY = process.env.OPENAI_API_KEY
@@ -27,72 +27,36 @@ const DEFAULT_CHAT_MODEL = process.env.OPENAI_DEFAULT_CHAT_MODEL
 export default {
     key: KEY,
     api: API,
-    async embedding(input: CreateEmbeddingRequestInput) {
+    async embedding(input: string[]) {
         return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
             `${this.api}/${API_VERSION}/embeddings`,
             { model: EMBEDDING_MODEL, input },
-            {
-                headers: { Authorization: `Bearer ${this.key}` },
-                responseType: 'json'
-            }
+            { headers: { Authorization: `Bearer ${this.key}` }, responseType: 'json' }
         )
     },
     async chat(
-        messages: ChatCompletionRequestMessage[],
+        messages: ChatCompletionMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number,
         model: string = DEFAULT_CHAT_MODEL
     ) {
-        return await $.post<GPTChatRequest, Stream | GPTChatResponse>(
+        return await $.post<GPTChatRequest | GPTChatStreamRequest, Stream | GPTChatResponse>(
             `${this.api}/${API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
-            {
-                headers: { Authorization: `Bearer ${this.key}` },
-                responseType: stream ? 'stream' : 'json'
-            }
+            { headers: { Authorization: `Bearer ${this.key}` }, responseType: stream ? 'stream' : 'json' }
         )
     },
     async imagine(prompt: string, nPrompt: string = '', width: number = 1024, height: number = 1024, n: number = 1) {
-        return await $.post<CreateImageRequest, ImagesResponse>(
+        return await $.post<GPTImagineRequest, GPTImagineResponse>(
             `${this.api}/${API_VERSION}/images/generations`,
             {
                 prompt: `Positive prompt: ${prompt}\nNegative prompt: ${nPrompt}`,
                 n,
-                size: `${width}x${height}` as CreateImageRequestSizeEnum
+                size: `${width}x${height}` as '256x256' | '512x512' | '1024x1024' | null | undefined
             },
-            { headers: { Authorization: `Bearer ${this.key}` } }
+            { headers: { Authorization: `Bearer ${this.key}` }, responseType: 'json' }
         )
     }
 }
-
-type GPTEmbeddingRequest = {
-    model: string
-    input: CreateEmbeddingRequestInput
-}
-
-type GPTChatRequest = {
-    model: string
-    messages: ChatCompletionRequestMessage[]
-    stream: boolean
-    temperature?: number
-    top_p?: number
-    max_tokens?: number
-}
-
-type GPTChatStreamResponseChoicesInner = {
-    index?: number
-    delta?: ChatCompletionResponseMessage
-    finish_reason?: string
-}
-
-export type GPTChatResponse = CreateChatCompletionResponse
-export type GPTChatStreamResponse = {
-    id: string
-    object: string
-    created: number
-    model: string
-    choices: Array<GPTChatStreamResponseChoicesInner>
-}
-export type GPTEmbeddingResponse = CreateEmbeddingResponse

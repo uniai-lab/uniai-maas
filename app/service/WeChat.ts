@@ -2,11 +2,6 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import {
-    ChatCompletionRequestMessage,
-    ChatCompletionRequestMessageRoleEnum,
-    ChatCompletionResponseMessageRoleEnum
-} from 'openai'
 import { EggFile } from 'egg-multipart'
 import { statSync } from 'fs'
 import { IncludeOptions, Op } from 'sequelize'
@@ -14,14 +9,15 @@ import { random } from 'lodash'
 import md5 from 'md5'
 import { Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
+import { ChatCompletionMessage } from 'openai/resources'
 import { Resource } from '@model/Resource'
-import { SPKChatResponse } from '@util/fly'
-import { GPTChatStreamResponse } from '@util/openai' // OpenAI models
-import { GLMChatStreamResponse } from '@util/glm' // GLM models
-import { AIModelEnum } from '@interface/Enum'
+import { AIModelEnum, ChatRoleEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
+import { ConfigResponse } from '@interface/controller/WeChat'
+import { GPTChatStreamResponse } from '@interface/OpenAI'
+import { GLMChatStreamResponse } from '@interface/GLM'
+import { SPKChatResponse } from '@interface/Spark'
 import $ from '@util/util'
-import { ConfigResponse } from '@interface/http/WeChat'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -29,7 +25,14 @@ const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const ERROR_CHAT_ID = 0.1
-const { WX_DEFAULT_CHAT_MODEL, WX_DEFAULT_RESOURCE_MODEL, WX_DEFAULT_EMBED_MODEL } = process.env
+const {
+    WX_DEFAULT_CHAT_MODEL,
+    WX_DEFAULT_RESOURCE_MODEL,
+    WX_DEFAULT_EMBED_MODEL,
+    WX_APP_ID,
+    WX_APP_AUTH_URL,
+    WX_APP_SECRET
+} = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -48,21 +51,15 @@ export default class WeChat extends Service {
     async signIn(code: string, fid?: number) {
         const { ctx } = this
 
-        const authURL = process.env.WX_APP_AUTH_URL // wx api, get login auth
-        const appId = process.env.WX_APP_ID // wx AppID
-        const appSecret = process.env.WX_APP_SECRET // wx AppSecret
-
         // get access_token, openid, unionid
-        const url = `${authURL}?grant_type=authorization_code&appid=${appId}&secret=${appSecret}&js_code=${code}`
+        const url = `${WX_APP_AUTH_URL}?grant_type=authorization_code&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}&js_code=${code}`
         const res = await $.get<undefined, WXAuthCodeAPI>(url)
         if (!res.openid || !res.session_key) throw new Error('Fail to get openid or session key')
 
         const config = await this.getConfig()
         // try to create user
         const [user, created] = await ctx.model.User.findOrCreate({
-            where: {
-                wxOpenId: res.openid
-            },
+            where: { wxOpenId: res.openid },
             defaults: {
                 chance: {
                     level: 0,
@@ -116,10 +113,8 @@ export default class WeChat extends Service {
             user.token = md5(`${user.wxOpenId}${new Date().getTime()}${code}`)
             user.tokenTime = new Date()
         } else {
-            // sign up
-            const appId = process.env.WX_APP_ID
             // decode user info
-            const res = $.decryptData(encryptedData, iv, user.wxSessionKey, appId)
+            const res = $.decryptData(encryptedData, iv, user.wxSessionKey, WX_APP_ID)
             if (res && res.phoneNumber && res.countryCode) {
                 user.phone = res.phoneNumber
                 user.countryCode = res.countryCode
@@ -238,16 +233,16 @@ export default class WeChat extends Service {
                     where: { id: resourceId, isEffect: true, isDel: false }
                 })
                 if (!resource) throw new Error('Can not find the resource')
-                content = `${ctx.__('I have finished reading the file')} ${resource?.fileName}`
+                content = `${ctx.__('I have finished reading the file')} ${resource?.fileName}\n`
                 content += ctx.__('You can ask me questions about this book')
             }
-            res.chats = await ctx.model.Chat.bulkCreate([
-                {
+            res.chats = [
+                await ctx.model.Chat.create({
                     dialogId: res.id,
-                    role: ChatCompletionRequestMessageRoleEnum.Assistant,
+                    role: ChatRoleEnum.ASSISTANT,
                     content
-                }
-            ])
+                })
+            ]
         }
         return res
     }
@@ -274,7 +269,6 @@ export default class WeChat extends Service {
     // chat
     async chat(input: string, userId: number, dialogId: number = 0) {
         const { ctx } = this
-        let model: AIModelEnum = WX_DEFAULT_CHAT_MODEL
         // check processing chat stream
         const check = await this.getChat(userId)
         if (check && !check.chatId) throw new Error('You have another processing chat')
@@ -293,11 +287,10 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
         const resourceId = dialog.resourceId
 
-        const prompts: ChatCompletionRequestMessage[] = []
+        const prompts: ChatCompletionMessage[] = []
 
         // add related resource
         if (resourceId) {
-            model = WX_DEFAULT_RESOURCE_MODEL
             let content = `${ctx.__('you are')}${ctx.__('document content start')}`
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
@@ -317,6 +310,8 @@ export default class WeChat extends Service {
         prompts.push({ role: 'user', content: input })
 
         console.log(prompts)
+
+        const model: AIModelEnum = resourceId ? WX_DEFAULT_RESOURCE_MODEL : WX_DEFAULT_CHAT_MODEL
 
         // set chat stream cache
         const cache: ChatStreamCache = {
@@ -370,7 +365,7 @@ export default class WeChat extends Service {
                 const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
                     resourceId,
-                    role: ChatCompletionResponseMessageRoleEnum.Assistant,
+                    role: ChatRoleEnum.ASSISTANT,
                     content: cache.content,
                     model
                 })
@@ -380,11 +375,7 @@ export default class WeChat extends Service {
         })
 
         // save user prompt
-        return await this.ctx.model.Chat.create({
-            dialogId: dialog.id,
-            role: ChatCompletionRequestMessageRoleEnum.User,
-            content: input
-        })
+        return await ctx.model.Chat.create({ dialogId: dialog.id, role: ChatRoleEnum.USER, content: input })
     }
 
     // get current chat stream by userId

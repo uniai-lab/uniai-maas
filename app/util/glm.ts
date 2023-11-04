@@ -5,62 +5,34 @@
  * @devilyouwei
  */
 
-import {
-    ChatCompletionRequestMessage,
-    ChatCompletionResponseMessage,
-    CreateChatCompletionResponse,
-    CreateEmbeddingRequestInput
-} from 'openai'
 import { Stream } from 'stream'
+import { ChatCompletionMessage } from 'openai/resources'
+import {
+    GLMChatRequest,
+    GLMChatResponse,
+    GLMChatStreamRequest,
+    GLMEmbeddingRequest,
+    GLMEmbeddingResponse
+} from '@interface/GLM'
 import $ from '@util/util'
 
 const API = process.env.GLM_API
 
 export default {
-    async embedding(prompt: CreateEmbeddingRequestInput) {
+    async embedding(prompt: string[]) {
         return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${API}/embedding`, { prompt })
     },
     async chat(
-        messages: ChatCompletionRequestMessage[],
+        messages: ChatCompletionMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        return await $.post<GLMChatRequest, Stream | GLMChatResponse>(
+        return await $.post<GLMChatRequest | GLMChatStreamRequest, Stream | GLMChatResponse>(
             `${API}/chat`,
-            { messages, stream, temperature, top_p: top, max_tokens: maxLength },
+            { messages, stream, temperature, top_p: top, max_tokens: maxLength, model: 'chatglm3-6b-32k' },
             { responseType: stream ? 'stream' : 'json' }
         )
     }
-}
-
-type GLMEmbeddingRequest = { prompt: CreateEmbeddingRequestInput }
-export type GLMEmbeddingResponse = { model: string; object: string; data: number[][] }
-
-type GLMChatRequest = {
-    messages: ChatCompletionRequestMessage[]
-    temperature?: number
-    top_p?: number
-    max_tokens?: number
-    stream?: boolean
-    chunk?: boolean
-    stop_token_ids?: number[]
-    repetition_penalty?: number
-    return_function_call?: boolean
-}
-
-type GLMChatStreamResponseChoicesInner = {
-    index?: number
-    delta?: ChatCompletionResponseMessage
-    finish_reason?: string
-}
-
-export type GLMChatResponse = CreateChatCompletionResponse
-export type GLMChatStreamResponse = {
-    id: string
-    object: string
-    created: number
-    model: string
-    choices: Array<GLMChatStreamResponseChoicesInner>
 }

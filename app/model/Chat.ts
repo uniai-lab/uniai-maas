@@ -14,7 +14,7 @@ import {
 } from 'sequelize-typescript'
 import { Dialog } from './Dialog'
 import { Resource } from './Resource'
-import { ChatCompletionRequestMessageRoleEnum } from 'openai'
+import { ChatCompletionRole } from 'openai/resources'
 import { AIModelEnum } from '@interface/Enum'
 
 @Table({ modelName: 'chat' })
@@ -31,7 +31,7 @@ export class Chat extends Model {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    role: ChatCompletionRequestMessageRoleEnum
+    role: ChatCompletionRole
 
     @AllowNull(false)
     @Column(DataType.TEXT)

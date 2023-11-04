@@ -5,7 +5,7 @@ import { Service } from 'egg'
 import { PassThrough } from 'stream'
 import md5 from 'md5'
 import { random } from 'lodash'
-import { ChatResponse } from '@interface/http/LeChat'
+import { ChatResponse } from '@interface/controller/LeChat'
 import $ from '@util/util'
 
 const MAX_PAGE_TOKEN = 1600

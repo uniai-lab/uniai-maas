@@ -4,7 +4,7 @@ import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBo
 import { Stream } from 'stream'
 import { UserContext } from '@interface/Context'
 import auth from '@middleware/auth'
-import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/http/LeChat'
+import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/controller/LeChat'
 
 @HTTPController({ path: '/lechat' })
 export default class LeChat {

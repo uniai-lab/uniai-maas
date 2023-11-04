@@ -18,8 +18,8 @@ declare global {
             OPENAI_API_VERSION: string
             OPENAI_API_KEY: string
             OPENAI_EMBED_DIM: number
-            OPENAI_DEFAULT_CHAT_MODEL: AIModelEnum
-            OPENAI_DEFAULT_EMBED_MODEL: AIModelEnum
+            OPENAI_DEFAULT_CHAT_MODEL: string
+            OPENAI_DEFAULT_EMBED_MODEL: string
 
             // GLM
             GLM_API: string

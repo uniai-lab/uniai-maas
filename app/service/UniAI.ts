@@ -2,15 +2,18 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { ChatCompletionRequestMessage } from 'openai'
+import { ChatCompletionMessage } from 'openai/resources'
 import { PassThrough, Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
-import glm, { GLMChatStreamResponse } from '@util/glm'
-import gpt, { GPTChatStreamResponse } from '@util/openai'
-import fly, { SPKChatResponse } from '@util/fly'
 import { Resource } from '@model/Resource'
 import { AIModelEnum, MJTaskEnum } from '@interface/Enum'
-import { ChatResponse } from '@interface/http/UniAI'
+import { ChatResponse } from '@interface/controller/UniAI'
+import { GPTChatStreamResponse } from '@interface/OpenAI'
+import { GLMChatStreamResponse } from '@interface/GLM'
+import { SPKChatResponse } from '@interface/Spark'
+import glm from '@util/glm'
+import gpt from '@util/openai'
+import fly from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
 import $ from '@util/util'
@@ -29,9 +32,9 @@ const TOKEN_PAGE_TOTAL_L2 = TOKEN_PAGE_SPLIT_L2 * 8
 export default class UniAI extends Service {
     // query resource
     async queryResource(
-        prompts: ChatCompletionRequestMessage[],
+        prompts: ChatCompletionMessage[],
         resourceId?: number,
-        model: AIModelEnum = 'GLM',
+        model: AIModelEnum = AIModelEnum.GLM,
         maxPage: number = MAX_PAGE,
         maxToken: number = MAX_TOKEN
     ) {
@@ -53,8 +56,9 @@ export default class UniAI extends Service {
 
         const pages: { content: string; similar: number; page: number; resourceId: number }[] = []
 
-        for (const item of prompts) {
-            const query = (item.content || '').trim()
+        for (const { content } of prompts) {
+            if (!content) continue
+            const query = content.trim()
             if (model === 'GPT') {
                 const embed = await gpt.embedding([query])
                 const embedding = embed.data[0].embedding
@@ -87,9 +91,9 @@ export default class UniAI extends Service {
 
     // chat to model
     async chat(
-        prompts: ChatCompletionRequestMessage[],
+        prompts: ChatCompletionMessage[],
         stream: boolean = false,
-        model: AIModelEnum = 'GLM',
+        model: AIModelEnum = AIModelEnum.GLM,
         top?: number,
         temperature?: number,
         maxLength?: number,
@@ -102,7 +106,7 @@ export default class UniAI extends Service {
     }
 
     // handle chat stream
-    parseSSE(message: Stream, model: AIModelEnum = 'GLM', chunk: boolean = false) {
+    parseSSE(message: Stream, model: AIModelEnum = AIModelEnum.GLM, chunk: boolean = false) {
         this.ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
         // define return data
         const res: StandardResponse<ChatResponse> = {
@@ -111,17 +115,14 @@ export default class UniAI extends Service {
             msg: 'success to get chat stream message'
         }
         // count tokens
-        let count = 0
         const stream = new PassThrough()
         const parser = createParser(event => {
             if (event.type === 'event') {
-                count++
                 if (model === 'GPT') {
                     const obj = $.json<GPTChatStreamResponse>(event.data)
                     if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
-                        res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
@@ -132,7 +133,6 @@ export default class UniAI extends Service {
                     if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
-                        res.data.completionTokens = count
                         res.data.model = obj.model
                         res.data.object = obj.object
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
@@ -167,7 +167,7 @@ export default class UniAI extends Service {
 
     // create embedding
     async embedding(
-        model: AIModelEnum = 'GLM',
+        model: AIModelEnum = AIModelEnum.GLM,
         resourceId?: number,
         content?: string,
         fileName?: string,
@@ -276,7 +276,7 @@ export default class UniAI extends Service {
         num: number = 1,
         width: number = 1024,
         height: number = 1024,
-        model: AIModelEnum = 'MJ'
+        model: AIModelEnum = AIModelEnum.MJ
     ) {
         if (model === 'SD') return sd.imagine(prompt, nPrompt, width, height, num)
         else if (model === 'DALLE') return gpt.imagine(prompt, nPrompt, width, height, num)
@@ -284,18 +284,18 @@ export default class UniAI extends Service {
         else throw new Error('Image imagine model not found')
     }
 
-    task(id: string, model: AIModelEnum = 'MJ') {
+    task(id: string, model: AIModelEnum = AIModelEnum.MJ) {
         if (model === 'MJ') return mj.task(id)
         else if (model === 'SD') return sd.task()
         else throw new Error('Image task model not found')
     }
 
-    change(id: string, action: string, index?: number, model: AIModelEnum = 'MJ') {
+    change(id: string, action: string, index?: number, model: AIModelEnum = AIModelEnum.MJ) {
         if (model === 'MJ') return mj.change(id, action as MJTaskEnum, index)
         else throw new Error('Image change model not found')
     }
 
-    queue(model: AIModelEnum = 'MJ') {
+    queue(model: AIModelEnum = AIModelEnum.MJ) {
         if (model === 'MJ') return mj.queue()
         else throw new Error('Image queue model not found')
     }

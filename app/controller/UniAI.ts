@@ -1,5 +1,6 @@
 /** @format */
 
+import { EggLogger } from 'egg'
 import {
     HTTPController,
     HTTPMethod,
@@ -10,14 +11,8 @@ import {
     Middleware,
     Inject
 } from '@eggjs/tegg'
-import { ChatCompletionRequestMessage, ImagesResponse } from 'openai'
 import { authAdmin } from '@middleware/auth'
-import { GLMChatResponse } from '@util/glm'
-import { SDImagineResponse, SDTaskResponse } from '@util/sd'
-import { GPTChatResponse } from '@util/openai'
-import { SPKChatResponse } from '@util/fly'
 import { Stream } from 'stream'
-import { MJImagineResponse, MJTaskResponse } from '@util/mj'
 import { AIModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
@@ -31,8 +26,12 @@ import {
     ImgChangeRequest,
     ChatRequest,
     ChatResponse
-} from '@interface/http/UniAI'
-import { EggLogger } from 'egg'
+} from '@interface/controller/UniAI'
+import { GPTChatResponse, GPTImagineResponse } from '@interface/OpenAI'
+import { GLMChatResponse } from '@interface/GLM'
+import { SPKChatResponse } from '@interface/Spark'
+import { MJImagineResponse, MJTaskResponse } from '@interface/MJ'
+import { SDImagineResponse, SDTaskResponse } from '@interface/SD'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -158,26 +157,27 @@ export default class UniAI {
     @HTTPMethod({ path: '/imagine', method: HTTPMethodEnum.POST })
     async imagine(@Context() ctx: EggContext, @HTTPBody() params: ImagineRequest) {
         try {
-            const model = params.model || 'DALLE'
-            const { prompt, negativePrompt, num, width, height } = params
+            const { prompt, negativePrompt, num, width, height, model } = params
             if (!prompt) throw new Error('Prompt is empty')
 
             const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)
             if (model === 'DALLE') {
-                const { data } = res as ImagesResponse
+                const { data } = res as GPTImagineResponse
                 const images: string[] = []
                 for (const item of data) if (item.url) images.push(item.url)
                 ctx.service.res.success('Success to imagine by DALL-E', { images } as ImagineResponse)
-            } else if (model === 'SD') {
+            }
+            if (model === 'SD') {
                 const { images, info } = res as SDImagineResponse
-                ctx.service.res.success('Success imagine by Stable Diffusion', {
+                ctx.service.res.success('Success to imagine by Stable Diffusion', {
                     images,
                     info
                 } as ImagineResponse)
-            } else {
+            }
+            if (model === 'SD') {
                 const { result, description, code } = res as MJImagineResponse
                 if (code !== 1) throw new Error(description)
-                ctx.service.res.success('Success text to image by MidJourney', {
+                ctx.service.res.success('Success to imagine by MidJourney', {
                     images: [],
                     taskId: result,
                     info: description

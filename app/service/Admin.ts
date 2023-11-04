@@ -3,7 +3,7 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import md5 from 'md5'
-import { UpdateUserRequest } from '@interface/http/Admin'
+import { UpdateUserRequest } from '@interface/controller/Admin'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Admin extends Service {

@@ -1,7 +1,7 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, HTTPBody, Context, EggContext, Middleware } from '@eggjs/tegg'
-import { UpdateResourceRequest, AddFollowRewardRequest, UpdateUserRequest, UploadResponse } from '@interface/http/Admin'
+import { UpdateResourceRequest, AddFollowRewardRequest, UpdateUserRequest, UploadResponse } from '@interface/controller/Admin'
 import { authAdmin } from '@middleware/auth'
 
 @HTTPController({ path: '/admin' })
