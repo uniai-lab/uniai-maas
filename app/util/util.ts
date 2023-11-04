@@ -24,7 +24,20 @@ import Redis from 'ioredis'
 const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
 const ERR_CODE = 87014
-const { REDIS_PORT, REDIS_HOST, COS_SECRET_ID, COS_SECRET_KEY } = process.env
+const {
+    REDIS_PORT,
+    REDIS_HOST,
+    COS_SECRET_ID,
+    COS_SECRET_KEY,
+    GOOGLE_SEARCH_API_TOKEN,
+    GOOGLE_SEARCH_ENGINE_ID,
+    WX_APP_ACCESS_TOKEN_URL,
+    WX_APP_ID,
+    WX_APP_SECRET,
+    WX_APP_MSG_CHECK,
+    COS_BUCKET,
+    COS_REGION
+} = process.env
 
 // redis cache
 const redis = new Redis(REDIS_PORT, REDIS_HOST)
@@ -53,8 +66,8 @@ export default {
     async search(prompt: string, num: number) {
         return (
             await customsearch.cse.list({
-                auth: process.env.GOOGLE_SEARCH_API_TOKEN,
-                cx: process.env.GOOGLE_SEARCH_ENGINE_ID,
+                auth: GOOGLE_SEARCH_API_TOKEN,
+                cx: GOOGLE_SEARCH_ENGINE_ID,
                 q: prompt,
                 num // 返回搜索结果数量
             })
@@ -85,7 +98,7 @@ export default {
         if (s && new Date().getTime() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) {
             return s.token
         } else {
-            const url = `${process.env.WX_APP_ACCESS_TOKEN_URL}?grant_type=client_credential&appid=${process.env.WX_APP_ID}&secret=${process.env.WX_APP_SECRET}`
+            const url = `${WX_APP_ACCESS_TOKEN_URL}?grant_type=client_credential&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}`
             const res: WXAccessTokenAPI = await this.get(url)
             if (res && res.access_token) {
                 await this.setCache<WXAccessToken>('wx_access_token', { time: new Date(), token: res.access_token })
@@ -96,7 +109,7 @@ export default {
     // use wechat API to filter sensitive content
     async wxFilterSensitive(content: string, replace: string = ''): Promise<string> {
         const accessToken = await this.getWxAccessToken()
-        const url = `${process.env.WX_APP_MSG_CHECK}?access_token=${accessToken}`
+        const url = `${WX_APP_MSG_CHECK}?access_token=${accessToken}`
         const res: WXSecCheckAPI = await this.post(url, { content })
         if (res.errcode === ERR_CODE) return replace
         return content
@@ -175,8 +188,8 @@ export default {
     // upload to oss/cos
     async cosUpload(fileName: string, filePath: string) {
         return await cos.uploadFile({
-            Bucket: process.env.COS_BUCKET,
-            Region: process.env.COS_REGION,
+            Bucket: COS_BUCKET,
+            Region: COS_REGION,
             Key: fileName,
             FilePath: filePath
         })

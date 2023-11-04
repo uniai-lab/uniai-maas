@@ -93,6 +93,7 @@ export default class WeChat extends Service {
         user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
         user.tokenTime = new Date()
         user.wxSessionKey = res.session_key
+
         await $.setCache<UserTokenCache>(`token_${user.id}`, {
             id: user.id,
             token: user.token,
@@ -219,23 +220,23 @@ export default class WeChat extends Service {
     // find or create a dialog
     async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
         const { ctx } = this
+        let resourceName = ''
+        if (resourceId) {
+            // check resource
+            const resource = await ctx.model.Resource.findOne({
+                where: { id: resourceId, isEffect: true, isDel: false }
+            })
+            if (!resource) throw new Error('Can not find the resource')
+            resourceName = resource.fileName
+        }
 
         // create or find the dialog
         const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
-
-        // first create
         if (created) {
-            // free chat initial content
-            let content = `${ctx.__('Hello, I am AI Reading Guy')}\n${ctx.__('Feel free to chat with me')}`
-            // resource chat initial content
-            if (resourceId) {
-                const resource = await ctx.model.Resource.findOne({
-                    where: { id: resourceId, isEffect: true, isDel: false }
-                })
-                if (!resource) throw new Error('Can not find the resource')
-                content = `${ctx.__('I have finished reading the file')} ${resource?.fileName}\n`
-                content += ctx.__('You can ask me questions about this book')
-            }
+            const content =
+                ctx.__('Im AI model') + resourceId
+                    ? ctx.__('finish reading', resourceName)
+                    : ctx.__('feel free to chat')
             res.chats = [
                 await ctx.model.Chat.create({
                     dialogId: res.id,
@@ -244,6 +245,7 @@ export default class WeChat extends Service {
                 })
             ]
         }
+
         return res
     }
 
@@ -254,15 +256,13 @@ export default class WeChat extends Service {
             model: ctx.model.Chat,
             limit,
             order: [['createdAt', 'DESC']],
-            where: {
-                isDel: false,
-                isEffect: true
-            }
+            where: { isDel: false, isEffect: true }
         }
         const dialog = dialogId
             ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
-            : await this.dialog(userId, undefined, include)
-        dialog?.chats.reverse()
+            : await this.dialog(userId, null, include)
+        if (!dialog) throw new Error('Can not find dialog')
+        dialog.chats.reverse()
         return dialog
     }
 

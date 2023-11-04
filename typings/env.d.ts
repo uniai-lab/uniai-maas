@@ -2,9 +2,6 @@
 
 import { AIModelEnum } from '@interface/Enum'
 
-// for env file
-export {}
-
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
@@ -20,9 +17,9 @@ declare global {
             OPENAI_API: string
             OPENAI_API_VERSION: string
             OPENAI_API_KEY: string
-            OPENAI_EMBED_DIM: number
             OPENAI_DEFAULT_CHAT_MODEL: string
             OPENAI_DEFAULT_EMBED_MODEL: string
+            OPENAI_EMBED_DIM: number
 
             // GLM
             GLM_API: string
@@ -76,3 +73,6 @@ declare global {
         }
     }
 }
+
+// for env file
+export {}

@@ -4,8 +4,7 @@
  * down - stop docker
  */
 
-import * as dotenv from 'dotenv'
-dotenv.config()
+import 'dotenv/config'
 import Docker from 'dockerode'
 import * as compose from 'docker-compose'
 import { program } from 'commander'

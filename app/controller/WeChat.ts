@@ -1,9 +1,10 @@
 /** @format */
 
-import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware } from '@eggjs/tegg'
-import { UserContext } from '@interface/Context'
+import { EggLogger } from 'egg'
+import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, Inject } from '@eggjs/tegg'
 import auth from '@middleware/auth'
-import $ from '@util/util'
+import { AIModelEnum, ChatRoleEnum } from '@interface/Enum'
+import { UserContext } from '@interface/Context'
 import {
     SignInRequest,
     UploadResponse,
@@ -16,18 +17,22 @@ import {
     ChatRequest,
     ChatResponse
 } from '@interface/controller/WeChat'
+import $ from '@util/util'
 
 const { DEFAULT_AVATAR_AI, DEFAULT_AVATAR_USER } = process.env
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
+    @Inject()
+    logger: EggLogger
+
     // app configs
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
     async config(@Context() ctx: UserContext) {
         try {
             ctx.service.res.success('Success to list config', await ctx.service.weChat.getConfig())
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -59,7 +64,7 @@ export default class WeChat {
             }
             ctx.service.res.success('Success to WeChat login', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -96,7 +101,7 @@ export default class WeChat {
             }
             ctx.service.res.success('Success to WeChat register', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -106,8 +111,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
+            const userId = ctx.userId as number
             const { user, config } = await ctx.service.weChat.getUserResetChance(userId)
 
             const task: Array<UserTask> = []
@@ -138,7 +142,7 @@ export default class WeChat {
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -148,26 +152,26 @@ export default class WeChat {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
+            const userId = ctx.userId as number
             const { input, dialogId } = params
             if (!input) throw new Error('Input nothing')
 
             const res = await ctx.service.weChat.chat(input, userId, dialogId)
             const data: ChatResponse = {
+                chatId: res.id,
                 type: true,
+                role: ChatRoleEnum.USER,
                 model: res.model,
                 resourceId: res.resourceId,
                 content: res.content,
                 userId,
                 dialogId: res.dialogId,
-                chatId: res.id,
                 avatar: DEFAULT_AVATAR_USER
             }
 
             ctx.service.res.success('Success start chat stream', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -177,26 +181,26 @@ export default class WeChat {
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
     async getChat(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
+            const userId = ctx.userId as number
 
             const res = await ctx.service.weChat.getChat(userId)
             if (!res) return ctx.service.res.success('No chat stream', null)
 
             // filter sensitive
             const data: ChatResponse = {
+                chatId: res.chatId,
                 type: false,
+                role: ChatRoleEnum.ASSISTANT,
                 content: res.model === 'SPARK' ? res.content : $.filterSensitive(res.content),
                 userId,
                 dialogId: res.dialogId,
                 resourceId: res.resourceId,
                 model: res.model,
-                chatId: res.chatId,
                 avatar: DEFAULT_AVATAR_AI
             }
             ctx.service.res.success('Get chat stream', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -205,27 +209,25 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
-            const dialogId = params.dialogId
+            const userId = ctx.userId as number
 
-            const res = await ctx.service.weChat.listChat(userId, dialogId)
-            if (!res) throw new Error('Dialog not found')
+            const res = await ctx.service.weChat.listChat(userId, params.dialogId)
             const data: ChatResponse[] = []
             for (const item of res.chats)
                 data.push({
                     chatId: item.id,
-                    type: item.role === 'user',
-                    content: item.model === 'SPARK' ? item.content : $.filterSensitive(item.content),
+                    role: item.role,
+                    type: item.role === ChatRoleEnum.USER,
+                    content: item.model === AIModelEnum.SPARK ? item.content : $.filterSensitive(item.content),
                     resourceId: item.resourceId,
                     model: item.model,
-                    avatar: item.role === 'user' ? DEFAULT_AVATAR_USER : DEFAULT_AVATAR_AI,
+                    avatar: item.role === ChatRoleEnum.USER ? DEFAULT_AVATAR_USER : DEFAULT_AVATAR_AI,
                     dialogId: res.id,
                     userId: res.userId
                 })
             ctx.service.res.success('Chat result', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -234,13 +236,14 @@ export default class WeChat {
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
     async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
+            const userId = ctx.userId as number
             const file = ctx.request.files[0]
+            const { typeId, fileName } = params
+
             if (!file) throw new Error('No file')
-            const typeId = params.typeId
             if (!typeId) throw new Error('No resource type id')
-            if (params.fileName) file.filename = params.fileName // use customize filename
+
+            file.filename = fileName || file.filename
 
             const res = await ctx.service.weChat.upload(file, userId, typeId)
             const resource: UploadResponse = {
@@ -261,7 +264,7 @@ export default class WeChat {
 
             ctx.service.res.success('success to upload', { resource, dialog })
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }
@@ -270,9 +273,10 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
     async listDialogResource(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
+            const userId = ctx.userId as number
+
             const res = await ctx.service.weChat.listDialog(userId)
+
             const data: DialogResponse[] = []
             for (const item of res)
                 data.push({
@@ -290,7 +294,7 @@ export default class WeChat {
                 })
             ctx.service.res.success('success to list resources', data)
         } catch (e) {
-            ctx.logger.error(e)
+            this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
     }

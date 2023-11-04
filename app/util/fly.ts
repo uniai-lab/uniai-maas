@@ -13,12 +13,7 @@ import { PassThrough, Stream } from 'stream'
 import { SPKChatRequest, SPKChatResponse } from '@interface/Spark'
 import $ from '@util/util'
 
-// IFLYTEK spark model default API info
-const API = process.env.SPARK_API
-const API_KEY = process.env.SPARK_API_KEY
-const API_SECRET = process.env.SPARK_API_SECRET
-const APP_ID = process.env.SPARK_APP_ID
-const VERSION = process.env.SPARK_DEFAULT_MODEL_VERSION
+const { SPARK_API, SPARK_API_KEY, SPARK_API_SECRET, SPARK_APP_ID, SPARK_DEFAULT_MODEL_VERSION } = process.env
 
 export default {
     chat(
@@ -27,7 +22,7 @@ export default {
         top?: number,
         temperature?: number,
         maxLength?: number,
-        version: string = VERSION
+        version: string = SPARK_DEFAULT_MODEL_VERSION
     ) {
         const url = getURL(version)
         const ws = new WebSocket(url)
@@ -39,7 +34,7 @@ export default {
         for (const i in messages) if (messages[i].role === 'system') messages[i].role = 'user'
 
         const input: SPKChatRequest = {
-            header: { app_id: APP_ID },
+            header: { app_id: SPARK_APP_ID },
             parameter: { chat: { domain, temperature, max_tokens: maxLength, top_k: top } },
             payload: { message: { text: messages } }
         }
@@ -90,9 +85,9 @@ function getURL(version: string) {
     const algorithm = 'hmac-sha256'
     const headers = 'host date request-line'
     const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /${version}/chat HTTP/1.1`
-    const signatureSha = crypto.createHmac('sha256', API_SECRET).update(signatureOrigin).digest('hex')
+    const signatureSha = crypto.createHmac('sha256', SPARK_API_SECRET).update(signatureOrigin).digest('hex')
     const signature = Buffer.from(signatureSha, 'hex').toString('base64')
-    const authorizationOrigin = `api_key="${API_KEY}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`
+    const authorizationOrigin = `api_key="${SPARK_API_KEY}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`
     const authorization = Buffer.from(authorizationOrigin).toString('base64')
-    return `${API}/${version}/chat?authorization=${authorization}&date=${date}&host=${host}`
+    return `${SPARK_API}/${version}/chat?authorization=${authorization}&date=${date}&host=${host}`
 }

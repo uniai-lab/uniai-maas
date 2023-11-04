@@ -1,8 +1,8 @@
 /** @format */
 
+import 'dotenv/config'
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'egg'
-import * as dotenv from 'dotenv'
-dotenv.config()
+const { POSTGRES_DB, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_USER } = process.env
 
 export default (appInfo: EggAppInfo) => {
     // override config from framework / plugin
@@ -31,11 +31,11 @@ export default (appInfo: EggAppInfo) => {
 
     config.sequelize = {
         dialect: 'postgres',
-        host: process.env.POSTGRES_HOST,
-        password: process.env.POSTGRES_PASSWORD,
-        port: process.env.POSTGRES_PORT,
-        username: process.env.POSTGRES_USER,
-        database: process.env.POSTGRES_DB
+        host: POSTGRES_HOST,
+        password: POSTGRES_PASSWORD,
+        port: POSTGRES_PORT,
+        username: POSTGRES_USER,
+        database: POSTGRES_DB
     }
 
     config.view = {

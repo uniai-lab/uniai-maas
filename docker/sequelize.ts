@@ -4,8 +4,7 @@
  * drop - drop all the data in database (danger)
  */
 
-import * as dotenv from 'dotenv'
-dotenv.config()
+import 'dotenv/config'
 import { Sequelize } from 'sequelize-typescript'
 import { program } from 'commander'
 
@@ -29,7 +28,21 @@ import configs from './data/config'
 import resourceTypes from './data/resourceType'
 
 // select models
-const models = [Resource, Page, User, PhoneCode, Config, ResourceType, Chat, OpenAILog, Dialog, UserChance, Prompt, Embedding1, Embedding2]
+const models = [
+    Resource,
+    Page,
+    User,
+    PhoneCode,
+    Config,
+    ResourceType,
+    Chat,
+    OpenAILog,
+    Dialog,
+    UserChance,
+    Prompt,
+    Embedding1,
+    Embedding2
+]
 
 // define db
 const db = new Sequelize({
