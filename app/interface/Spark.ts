@@ -52,7 +52,7 @@ export interface SPKChatResponse {
                 total_tokens: number
             }
         }
-        model?: string
-        object?: string
+        model: string
+        object: string
     }
 }

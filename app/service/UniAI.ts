@@ -111,7 +111,7 @@ export default class UniAI extends Service {
         // define return data
         const res: StandardResponse<ChatResponse> = {
             status: 1,
-            data: { content: '', promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            data: { content: '', promptTokens: 0, completionTokens: 0, totalTokens: 0, model: '', object: '' },
             msg: 'success to get chat stream message'
         }
         // count tokens
@@ -144,9 +144,9 @@ export default class UniAI extends Service {
                         const { payload } = obj
                         if (chunk) res.data.content = payload.choices.text[0].content
                         else res.data.content += payload.choices.text[0].content
-                        res.data.completionTokens = payload.usage?.text.completion_tokens
-                        res.data.promptTokens = payload.usage?.text.prompt_tokens
-                        res.data.totalTokens = payload.usage?.text.total_tokens
+                        res.data.completionTokens = payload.usage?.text.completion_tokens || 0
+                        res.data.promptTokens = payload.usage?.text.prompt_tokens || 0
+                        res.data.totalTokens = payload.usage?.text.total_tokens || 0
                         res.data.model = payload.model
                         res.data.object = payload.object
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)

@@ -55,11 +55,11 @@ export interface ImgChangeRequest {
 
 export interface ChatResponse {
     content: string
-    promptTokens?: number
-    completionTokens?: number
-    totalTokens?: number
-    model?: string
-    object?: string
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    model: string
+    object: string
 }
 
 export interface QueryResourceResponse {
@@ -77,14 +77,14 @@ export interface EmbeddingResponse {
 
 export interface ImagineResponse {
     images: string[]
-    info?: string
-    taskId?: string
+    info: string
+    taskId: string
 }
 
 export interface TaskResponse {
-    id?: string
+    id: string
     progress: string
-    image?: string
-    info?: string
-    failReason?: string
+    image: string | null
+    info: string
+    failReason: string | null
 }

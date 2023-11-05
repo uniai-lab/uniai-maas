@@ -48,5 +48,5 @@ export interface MJTaskResponse {
     finishTime: number
     imageUrl: string
     progress: string
-    failReason?: string
+    failReason: string
 }

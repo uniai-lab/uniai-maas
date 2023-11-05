@@ -161,20 +161,26 @@ export default class UniAI {
             if (!prompt) throw new Error('Prompt is empty')
 
             const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)
-            if (model === 'DALLE') {
+
+            if (model === AIModelEnum.DALLE) {
                 const { data } = res as GPTImagineResponse
                 const images: string[] = []
                 for (const item of data) if (item.url) images.push(item.url)
-                ctx.service.res.success('Success to imagine by DALL-E', { images } as ImagineResponse)
+                ctx.service.res.success('Success to imagine by DALL-E', {
+                    images,
+                    taskId: '',
+                    info: ''
+                } as ImagineResponse)
             }
-            if (model === 'SD') {
+            if (model === AIModelEnum.SD) {
                 const { images, info } = res as SDImagineResponse
                 ctx.service.res.success('Success to imagine by Stable Diffusion', {
                     images,
+                    taskId: '',
                     info
                 } as ImagineResponse)
             }
-            if (model === 'SD') {
+            if (model === AIModelEnum.MJ) {
                 const { result, description, code } = res as MJImagineResponse
                 if (code !== 1) throw new Error(description)
                 ctx.service.res.success('Success to imagine by MidJourney', {
@@ -196,6 +202,7 @@ export default class UniAI {
             const { taskId, model } = params
             const res = await ctx.service.uniAI.task(taskId, model)
             if (!res.length) throw new Error('No Tasks found')
+
             if (model === 'MJ') {
                 const tasks = res as MJTaskResponse[]
                 if (taskId && tasks[0].failReason) throw new Error(tasks[0].failReason)
@@ -209,13 +216,16 @@ export default class UniAI {
                     }
                 })
                 ctx.service.res.success('MidJourney task progress', data)
-            } else if (model === 'SD') {
+            }
+            if (model === 'SD') {
                 const tasks = res as SDTaskResponse[]
                 const data: TaskResponse[] = tasks.map(v => {
                     return {
+                        id: v.current_image || '',
                         progress: v.progress.toString(),
-                        image: v.current_image,
-                        info: v.textinfo
+                        image: v.current_image || null,
+                        info: v.textinfo || '',
+                        failReason: v.textinfo || null
                     }
                 })
                 ctx.service.res.success('Stable Diffusion task progress', data)
@@ -229,10 +239,10 @@ export default class UniAI {
     @HTTPMethod({ path: '/change', method: HTTPMethodEnum.POST })
     async change(@Context() ctx: EggContext, @HTTPBody() params: ImgChangeRequest) {
         try {
-            const { action, index, taskId } = params
-            if (!taskId) throw new Error('Param taskId is null')
-            if (!action) throw new Error('Param action is null')
-            const model = params.model || 'MJ'
+            const { action, index, taskId, model } = params
+            if (!taskId) throw new Error('taskId is null')
+            if (!action) throw new Error('action is null')
+
             const res = await ctx.service.uniAI.change(taskId, action, index, model)
             if (model === 'MJ') {
                 ctx.service.res.success('Success text to image by MidJourney', {
