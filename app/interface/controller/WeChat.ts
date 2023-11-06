@@ -1,7 +1,6 @@
 /** @format */
 
 import { AIModelEnum, ChatRoleEnum } from '@interface/Enum'
-import { ChatCompletionRole } from 'openai/resources'
 
 export interface ChatRequest {
     input: string
@@ -13,15 +12,15 @@ export interface ChatResponse {
     content: string
     dialogId: number
     resourceId: number | null
+    chatId: number | null
     model: AIModelEnum | null
     type: boolean
-    role: ChatRoleEnum | ChatCompletionRole
+    role: ChatRoleEnum
     avatar: string
-    chatId?: number
 }
 
 export interface ChatListRequest {
-    dialogId: number
+    dialogId?: number
 }
 
 export interface SignInRequest {
@@ -39,8 +38,7 @@ export interface SignUpRequest {
 }
 
 export interface UploadRequest {
-    typeId: number
-    fileName: string
+    fileName?: string
 }
 
 export interface UploadResponse {

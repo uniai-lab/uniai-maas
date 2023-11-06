@@ -6,13 +6,12 @@
  */
 
 import { Stream } from 'stream'
-import { ChatCompletionMessage } from 'openai/resources'
 import {
     GLMChatRequest,
     GLMChatResponse,
-    GLMChatStreamRequest,
     GLMEmbeddingRequest,
-    GLMEmbeddingResponse
+    GLMEmbeddingResponse,
+    GLMChatMessage
 } from '@interface/GLM'
 import $ from '@util/util'
 
@@ -23,15 +22,15 @@ export default {
         return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${API}/embedding`, { prompt })
     },
     async chat(
-        messages: ChatCompletionMessage[],
+        messages: GLMChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        return await $.post<GLMChatRequest | GLMChatStreamRequest, Stream | GLMChatResponse>(
+        return await $.post<GLMChatRequest, Stream | GLMChatResponse>(
             `${API}/chat`,
-            { messages, stream, temperature, top_p: top, max_tokens: maxLength, model: 'chatglm3-6b-32k' },
+            { messages, stream, temperature, top_p: top, max_tokens: maxLength },
             { responseType: stream ? 'stream' : 'json' }
         )
     }

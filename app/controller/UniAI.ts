@@ -13,7 +13,7 @@ import {
 } from '@eggjs/tegg'
 import { authAdmin } from '@middleware/auth'
 import { Stream } from 'stream'
-import { AIModelEnum } from '@interface/Enum'
+import { ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -25,7 +25,8 @@ import {
     TaskResponse,
     ImgChangeRequest,
     ChatRequest,
-    ChatResponse
+    ChatResponse,
+    QueueRequest
 } from '@interface/controller/UniAI'
 import { GPTChatResponse, GPTImagineResponse } from '@interface/OpenAI'
 import { GLMChatResponse } from '@interface/GLM'
@@ -162,7 +163,7 @@ export default class UniAI {
 
             const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)
 
-            if (model === AIModelEnum.DALLE) {
+            if (model === ImgModelEnum.DALLE) {
                 const { data } = res as GPTImagineResponse
                 const images: string[] = []
                 for (const item of data) if (item.url) images.push(item.url)
@@ -172,7 +173,7 @@ export default class UniAI {
                     info: ''
                 } as ImagineResponse)
             }
-            if (model === AIModelEnum.SD) {
+            if (model === ImgModelEnum.SD) {
                 const { images, info } = res as SDImagineResponse
                 ctx.service.res.success('Success to imagine by Stable Diffusion', {
                     images,
@@ -180,7 +181,7 @@ export default class UniAI {
                     info
                 } as ImagineResponse)
             }
-            if (model === AIModelEnum.MJ) {
+            if (model === ImgModelEnum.MJ) {
                 const { result, description, code } = res as MJImagineResponse
                 if (code !== 1) throw new Error(description)
                 ctx.service.res.success('Success to imagine by MidJourney', {
@@ -258,7 +259,7 @@ export default class UniAI {
     }
     @Middleware(authAdmin())
     @HTTPMethod({ path: '/queue', method: HTTPMethodEnum.POST })
-    async queue(@Context() ctx: EggContext, @HTTPBody() params: { model: AIModelEnum }) {
+    async queue(@Context() ctx: EggContext, @HTTPBody() params: QueueRequest) {
         try {
             const model = params.model || 'MJ'
             const res = await ctx.service.uniAI.queue(model)

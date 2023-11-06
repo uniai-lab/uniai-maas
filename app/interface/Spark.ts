@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatCompletionMessage } from 'openai/resources'
+import { SPKChatRoleEnum } from '@interface/Enum'
 
 // spark chat model request interface
 export interface SPKChatRequest {
@@ -19,9 +19,14 @@ export interface SPKChatRequest {
     }
     payload: {
         message: {
-            text: ChatCompletionMessage[]
+            text: SPKChatMessage[]
         }
     }
+}
+
+export interface SPKChatMessage {
+    role: SPKChatRoleEnum
+    content: string
 }
 
 // spark chat model response interface

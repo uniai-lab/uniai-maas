@@ -1,3 +1,5 @@
+/** @format */
+
 import { WhereOptions } from 'sequelize'
 import {
     Table,
@@ -30,6 +32,7 @@ export class Embedding1 extends Model {
     @Column(DataType.INTEGER)
     resourceId: number
 
+    @AllowNull(false)
     @Column({
         type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
         get() {
@@ -41,7 +44,7 @@ export class Embedding1 extends Model {
             this.setDataValue('embedding', embedding)
         }
     })
-    embedding: number[] | null
+    embedding: number[]
 
     static async similarFindAll(vector: number[], limit?: number, where?: WhereOptions) {
         const db = this.sequelize

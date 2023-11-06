@@ -1,10 +1,14 @@
 /** @format */
 
-export interface UpdateResourceRequest {
-    resourceId: number
-    fileName: string
-    resourceTypeId: number
-    init: boolean
+import { AIModelEnum } from '@interface/Enum'
+
+export interface UploadRequest {
+    userId?: number
+    typeId?: number
+    filename?: string
+    init?: boolean
+    model?: AIModelEnum
+    resourceId?: number
 }
 
 export interface AddFollowRewardRequest {

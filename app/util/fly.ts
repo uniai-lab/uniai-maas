@@ -8,16 +8,15 @@
 import os from 'os'
 import crypto from 'crypto'
 import WebSocket from 'ws'
-import { ChatCompletionMessage } from 'openai/resources'
 import { PassThrough, Stream } from 'stream'
-import { SPKChatRequest, SPKChatResponse } from '@interface/Spark'
+import { SPKChatMessage, SPKChatRequest, SPKChatResponse } from '@interface/Spark'
 import $ from '@util/util'
 
 const { SPARK_API, SPARK_API_KEY, SPARK_API_SECRET, SPARK_APP_ID, SPARK_DEFAULT_MODEL_VERSION } = process.env
 
 export default {
     chat(
-        messages: ChatCompletionMessage[],
+        messages: SPKChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
@@ -30,8 +29,6 @@ export default {
         if (version === 'v2.1') domain = 'generalv2'
         else if (version === 'v3.1') domain = 'generalv3'
         else domain = 'general'
-
-        for (const i in messages) if (messages[i].role === 'system') messages[i].role = 'user'
 
         const input: SPKChatRequest = {
             header: { app_id: SPARK_APP_ID },

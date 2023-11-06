@@ -1,13 +1,18 @@
 /** @format */
 
-export enum AIModelEnum {
+export enum ChatModelEnum {
     GPT = 'GPT',
     GLM = 'GLM',
-    SPARK = 'SPARK',
+    SPARK = 'SPARK'
+}
+export enum ImgModelEnum {
     SD = 'SD',
     DALLE = 'DALLE',
     MJ = 'MJ'
 }
+
+export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum }
+export type AIModelEnum = ChatModelEnum | ImgModelEnum
 
 export enum MJTaskEnum {
     IMAGINE = 'IMAGINE',
@@ -18,10 +23,28 @@ export enum MJTaskEnum {
     BLEND = 'BLEND'
 }
 
-export enum ChatRoleEnum {
+// GPT model roles
+export enum GPTChatRoleEnum {
     SYSTEM = 'system',
     USER = 'user',
     ASSISTANT = 'assistant',
-    FUNCTION = 'function',
+    FUNCTION = 'function'
+}
+
+// Spark model roles
+export enum SPKChatRoleEnum {
+    USER = 'user',
+    ASSISTANT = 'assistant'
+}
+
+// GLM model roles
+export enum GLMChatRoleEnum {
+    SYSTEM = 'system',
+    USER = 'user',
+    ASSISTANT = 'assistant',
     OBSERVATION = 'observation'
 }
+
+// ALL model roles
+export type ChatRoleEnum = GLMChatRoleEnum | GPTChatRoleEnum | SPKChatRoleEnum
+export const ChatRoleEnum = { ...GLMChatRoleEnum, ...GPTChatRoleEnum, ...SPKChatRoleEnum }

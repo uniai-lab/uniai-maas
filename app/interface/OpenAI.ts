@@ -24,4 +24,5 @@ export interface GPTChatStreamRequest extends ChatCompletionCreateParamsStreamin
 export interface GPTImagineRequest extends ImageGenerateParams {}
 export interface GPTImagineResponse extends ImagesResponse {}
 
-export interface ChatMessage extends ChatCompletionMessage {}
+// equal to original ChatCompletionMessage
+export interface GPTChatMessage extends ChatCompletionMessage {}

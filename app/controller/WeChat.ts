@@ -3,7 +3,7 @@
 import { EggLogger } from 'egg'
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, Inject } from '@eggjs/tegg'
 import auth from '@middleware/auth'
-import { AIModelEnum, ChatRoleEnum } from '@interface/Enum'
+import { ChatModelEnum, ChatRoleEnum } from '@interface/Enum'
 import { UserContext } from '@interface/Context'
 import {
     SignInRequest,
@@ -160,7 +160,7 @@ export default class WeChat {
             const data: ChatResponse = {
                 chatId: res.id,
                 type: true,
-                role: ChatRoleEnum.USER,
+                role: res.role,
                 model: res.model,
                 resourceId: res.resourceId,
                 content: res.content,
@@ -218,7 +218,7 @@ export default class WeChat {
                     chatId: item.id,
                     role: item.role,
                     type: item.role === ChatRoleEnum.USER,
-                    content: item.model === AIModelEnum.SPARK ? item.content : $.filterSensitive(item.content),
+                    content: item.model === ChatModelEnum.SPARK ? item.content : $.filterSensitive(item.content),
                     resourceId: item.resourceId,
                     model: item.model,
                     avatar: item.role === ChatRoleEnum.USER ? DEFAULT_AVATAR_USER : DEFAULT_AVATAR_AI,
@@ -238,14 +238,12 @@ export default class WeChat {
         try {
             const userId = ctx.userId as number
             const file = ctx.request.files[0]
-            const { typeId, fileName } = params
-
+            const { fileName } = params
             if (!file) throw new Error('No file')
-            if (!typeId) throw new Error('No resource type id')
 
             file.filename = fileName || file.filename
+            const res = await ctx.service.weChat.addResource(file, userId, 1)
 
-            const res = await ctx.service.weChat.upload(file, userId, typeId)
             const resource: UploadResponse = {
                 id: res.id,
                 typeId: res.typeId,
@@ -260,7 +258,6 @@ export default class WeChat {
             }
             // create dialog
             const dialog = await ctx.service.weChat.dialog(userId, res.id)
-            await ctx.service.weChat.reduceUploadChance(userId)
 
             ctx.service.res.success('success to upload', { resource, dialog })
         } catch (e) {

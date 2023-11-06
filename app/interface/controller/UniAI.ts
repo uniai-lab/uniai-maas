@@ -1,21 +1,25 @@
 /** @format */
 
-import { AIModelEnum } from '@interface/Enum'
-import { ChatCompletionMessage } from 'openai/resources'
+import { AIModelEnum, ChatModelEnum, ImgModelEnum } from '@interface/Enum'
+import { GLMChatMessage } from '@interface/GLM'
+import { GPTChatMessage } from '@interface/OpenAI'
+import { SPKChatMessage } from '@interface/Spark'
+
+export type ChatMessage = GPTChatMessage | GLMChatMessage | SPKChatMessage
 
 export interface ChatRequest {
-    prompts: ChatCompletionMessage[]
+    prompts: ChatMessage[]
     maxLength?: number
     top?: number
     temperature?: number
-    model?: AIModelEnum
+    model?: ChatModelEnum
     subModel?: string
     chunk?: boolean
     stream?: boolean
 }
 
 export interface QueryResourceRequest {
-    prompts: ChatCompletionMessage[]
+    prompts: ChatMessage[]
     model?: AIModelEnum
     resourceId?: number
     maxPage?: number
@@ -38,19 +42,22 @@ export interface ImagineRequest {
     width?: number
     height?: number
     num?: number
-    model?: AIModelEnum
+    model?: ImgModelEnum
 }
 
 export interface TaskRequest {
-    model: AIModelEnum
+    model: ImgModelEnum
     taskId: string
 }
 
 export interface ImgChangeRequest {
-    model: AIModelEnum
+    model: ImgModelEnum
     taskId: string
     action: string
     index?: number
+}
+export interface QueueRequest {
+    model: ImgModelEnum
 }
 
 export interface ChatResponse {
@@ -87,4 +94,12 @@ export interface TaskResponse {
     image: string | null
     info: string
     failReason: string | null
+}
+
+export interface ResourcePage {
+    id: number
+    content: string
+    similar: number
+    page: number
+    resourceId: number
 }

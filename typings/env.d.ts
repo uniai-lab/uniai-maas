@@ -1,6 +1,6 @@
 /** @format */
 
-import { AIModelEnum } from '@interface/Enum'
+import { ChatModelEnum } from '@interface/Enum'
 
 declare global {
     namespace NodeJS {
@@ -57,9 +57,9 @@ declare global {
             WX_APP_ACCESS_TOKEN_URL: string
             WX_APP_PHONE_URL: string
             WX_APP_MSG_CHECK: string
-            WX_DEFAULT_CHAT_MODEL: AIModelEnum
-            WX_DEFAULT_RESOURCE_MODEL: AIModelEnum
-            WX_DEFAULT_EMBED_MODEL: AIModelEnum
+            WX_DEFAULT_CHAT_MODEL: ChatModelEnum
+            WX_DEFAULT_RESOURCE_MODEL: ChatModelEnum
+            WX_DEFAULT_EMBED_MODEL: ChatModelEnum
 
             // tencent oss
             COS_SECRET_ID: string

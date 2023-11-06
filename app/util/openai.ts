@@ -14,9 +14,9 @@ import {
     GPTEmbeddingRequest,
     GPTEmbeddingResponse,
     GPTImagineRequest,
-    GPTImagineResponse
+    GPTImagineResponse,
+    GPTChatMessage
 } from '@interface/OpenAI'
-import { ChatCompletionMessage } from 'openai/resources'
 
 const { OPENAI_API, OPENAI_API_KEY, OPENAI_API_VERSION, OPENAI_DEFAULT_CHAT_MODEL, OPENAI_DEFAULT_EMBED_MODEL } =
     process.env
@@ -32,7 +32,7 @@ export default {
         )
     },
     async chat(
-        messages: ChatCompletionMessage[],
+        messages: GPTChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,

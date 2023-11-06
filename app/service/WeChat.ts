@@ -2,28 +2,24 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { EggFile } from 'egg-multipart'
-import { statSync } from 'fs'
 import { IncludeOptions, Op } from 'sequelize'
-import { random } from 'lodash'
 import md5 from 'md5'
 import { Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
-import { ChatCompletionMessage } from 'openai/resources'
-import { Resource } from '@model/Resource'
-import { AIModelEnum, ChatRoleEnum } from '@interface/Enum'
+import { ChatModelEnum, ChatRoleEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
 import { ConfigResponse } from '@interface/controller/WeChat'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import $ from '@util/util'
+import { ChatMessage } from '@interface/controller/UniAI'
+import { EggFile } from 'egg-multipart'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
-const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const ERROR_CHAT_ID = 0.1
 const {
     WX_DEFAULT_CHAT_MODEL,
@@ -186,57 +182,24 @@ export default class WeChat extends Service {
         })
     }
 
-    // user upload file
-    async upload(file: EggFile, userId: number, typeId: number): Promise<Resource> {
-        const { ctx } = this
-
-        // limit upload file size
-        const fileSize = statSync(file.filepath).size
-        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File exceeds 5MB')
-
-        // detect file type from buffer
-        const { text, ext } = await $.extractText(file.filepath)
-        if (!ext) throw new Error('Fail to detect file type')
-        if (!text) throw new Error('Fail to extract content text')
-
-        // uploading
-        const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${ext}`, file.filepath)
-
-        // embedding
-        return await ctx.service.uniAI.embedding(
-            WX_DEFAULT_EMBED_MODEL,
-            0,
-            text,
-            file.filename,
-            'https://' + upload.Location,
-            fileSize,
-            userId,
-            typeId
-        )
-    }
-
-    // async saveImage(userId: number, typeId: number, path: string, file: EggFile, buff: Buffer) {}
-
     // find or create a dialog
     async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
         const { ctx } = this
-        let resourceName = ''
+        let name = ''
         if (resourceId) {
             // check resource
             const resource = await ctx.model.Resource.findOne({
                 where: { id: resourceId, isEffect: true, isDel: false }
             })
             if (!resource) throw new Error('Can not find the resource')
-            resourceName = resource.fileName
+            name = resource.fileName
         }
 
         // create or find the dialog
         const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
         if (created) {
             const content =
-                ctx.__('Im AI model') + resourceId
-                    ? ctx.__('finish reading', resourceName)
-                    : ctx.__('feel free to chat')
+                ctx.__('Im AI model') + resourceId ? ctx.__('finish reading', name) : ctx.__('feel free to chat')
             res.chats = [
                 await ctx.model.Chat.create({
                     dialogId: res.id,
@@ -287,31 +250,28 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
         const resourceId = dialog.resourceId
 
-        const prompts: ChatCompletionMessage[] = []
+        const prompts: ChatMessage[] = []
 
         // add related resource
         if (resourceId) {
             let content = `${ctx.__('you are')}${ctx.__('document content start')}`
             // query resource
-            const pages = await ctx.service.uniAI.queryResource(
-                [{ role: 'user', content: input }],
-                resourceId,
-                WX_DEFAULT_EMBED_MODEL,
-                PAGE_LIMIT
-            )
+            const query = [{ role: ChatRoleEnum.USER, content: input }]
+            const pages = await ctx.service.uniAI.queryResource(query, resourceId, WX_DEFAULT_EMBED_MODEL, PAGE_LIMIT)
+            // add resource to prompt
             for (const item of pages) content += `\n${item.content}`
             content += `\n${ctx.__('document content end')}${ctx.__('answer according to')}`
-            prompts.push({ role: 'system', content })
+            prompts.push({ role: ChatRoleEnum.SYSTEM, content })
         }
 
         // add user chat history
-        for (const { role, content } of dialog.chats) prompts.push({ role, content })
+        for (const { role, content } of dialog.chats) prompts.push({ role: role, content })
 
-        prompts.push({ role: 'user', content: input })
+        prompts.push({ role: ChatRoleEnum.USER, content: input })
 
         console.log(prompts)
 
-        const model: AIModelEnum = resourceId ? WX_DEFAULT_RESOURCE_MODEL : WX_DEFAULT_CHAT_MODEL
+        const model: ChatModelEnum = resourceId ? WX_DEFAULT_RESOURCE_MODEL : WX_DEFAULT_CHAT_MODEL
 
         // set chat stream cache
         const cache: ChatStreamCache = {
@@ -385,16 +345,33 @@ export default class WeChat extends Service {
         if (res && new Date().getTime() - res.time > CHAT_STREAM_EXPIRE) return await $.removeCache(`chat_${userId}`)
         return res
     }
-
-    // reduce user upload chance
-    async reduceUploadChance(userId: number) {
+    async addResource(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this
-        const user = await ctx.model.User.findByPk(userId, { include: { model: ctx.model.UserChance } })
-        if (!user || !user.chance) throw new Error('Fail to find user')
+        const chance = await ctx.model.UserChance.findOne({
+            where: { userId },
+            attributes: ['id', 'uploadChanceFree', 'uploadChance']
+        })
+        if (!chance) throw new Error('Fail to find user')
+        if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
 
-        if (user.chance.uploadChanceFree > 0) await user.chance.decrement({ uploadChanceFree: 1 })
-        else if (user.chance.uploadChance > 0) await user.chance.decrement({ uploadChance: 1 })
-        else throw new Error('Chance of upload not enough, waiting for one week')
+        const upload = await ctx.service.uniAI.upload(file)
+        const res = await ctx.service.uniAI.embedding(
+            WX_DEFAULT_EMBED_MODEL,
+            undefined,
+            upload.content,
+            upload.fileName,
+            upload.filePath,
+            upload.fileSize,
+            userId,
+            typeId
+        )
+
+        if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
+        else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
+        else throw new Error('Fail to reduce upload chance')
+        console.log('111111')
+
+        return res
     }
 
     // get user and reset free chat/upload chance

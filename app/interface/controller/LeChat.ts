@@ -1,7 +1,7 @@
 /** @format */
 
-import { AIModelEnum } from '@interface/Enum'
-import { ChatCompletionMessage } from 'openai/resources'
+import { ChatModelEnum } from '@interface/Enum'
+import { ChatMessage } from '@interface/controller/UniAI'
 
 export interface SignInRequest {
     username: string
@@ -20,20 +20,20 @@ export interface UserInfoResponse {
 }
 
 export interface ChatRequest {
-    prompts: ChatCompletionMessage[]
+    prompts: ChatMessage[]
     maxLength?: number
     top?: number
     temperature?: number
-    model?: AIModelEnum
+    model?: ChatModelEnum
     subModel?: string
     chunk?: boolean
 }
 
 export interface ChatResponse {
     content: string
-    promptTokens?: number
-    completionTokens?: number
-    totalTokens?: number
-    model?: string
-    object?: string
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    model: string
+    object: string
 }
