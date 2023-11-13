@@ -183,18 +183,13 @@ export default class UniAI extends Service {
         if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File exceeds 5MB')
 
         // detect file type from buffer
-        const { text, ext } = await $.extractText(file.filepath)
-        if (!text) throw new Error('Fail to extract content text')
+        const { content, ext } = await $.extractContent(file.filepath)
+        if (!content) throw new Error('Fail to extract content text')
         if (!ext) throw new Error('Fail to detect file type')
 
         // uploading
         const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${ext}`, file.filepath)
-        return {
-            content: text,
-            fileName: file.filename,
-            filePath: 'https://' + upload.Location,
-            fileSize
-        }
+        return { content, fileName: file.filename, filePath: `https://${upload.Location}`, fileSize }
     }
 
     // create embedding

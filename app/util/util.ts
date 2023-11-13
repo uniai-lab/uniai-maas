@@ -6,10 +6,10 @@
  */
 
 import crypto from 'crypto'
-import pdf from 'pdf-parse'
+import pdf from '@cyber2024/pdf-parse-fixed'
 import { extname } from 'path'
-import mammoth from 'mammoth'
-import { readFileSync } from 'fs'
+import libreoffice from 'libreoffice-convert'
+import { readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
@@ -147,17 +147,26 @@ export default {
         }
         return decode(nTokens)
     },
+    async convertPDF(path: string) {
+        return new Promise<string>((resolve, reject) => {
+            libreoffice.convert(readFileSync(path), '.pdf', undefined, (err, data) => {
+                if (err) reject(err)
+                else {
+                    path = path.replace(extname(path), '.pdf')
+                    writeFileSync(path, data)
+                    return resolve(path)
+                }
+            })
+        })
+    },
     // extract text from file buffer
-    async extractText(path: string) {
-        const data: { text?: string; ext?: string } = {}
-        data.ext = extname(path).replace('.', '').toLowerCase()
-        console.log(data.ext)
-        if (data.ext === 'pdf') {
-            data.text = (await pdf(readFileSync(path))).text
-        } else if (data.ext === 'doc' || data.ext === 'docx') {
-            data.text = (await mammoth.extractRawText({ path })).value
-        }
-        return data
+    async extractContent(path: string) {
+        const ext = extname(path)
+        const office = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']
+        if (office.includes(ext)) path = await this.convertPDF(path)
+        console.log(path)
+        const content = (await pdf(readFileSync(path))).text
+        return { ext, content }
     },
     tinyText(text: string): string {
         return text.replace(/[\n\r]{2,}/g, '\n').trim()
