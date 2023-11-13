@@ -2,7 +2,9 @@
 
 import 'dotenv/config'
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'egg'
+
 const { POSTGRES_DB, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_USER } = process.env
+const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', 'jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
 
 export default (appInfo: EggAppInfo) => {
     // override config from framework / plugin
@@ -22,7 +24,7 @@ export default (appInfo: EggAppInfo) => {
     config.multipart = {
         mode: 'file',
         fileSize: '5mb',
-        whitelist: ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', 'jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
+        whitelist: WHITELIST
     }
     config.static = {
         prefix: '/public',
@@ -48,14 +50,8 @@ export default (appInfo: EggAppInfo) => {
 
     config.i18n = { defaultLocale: 'zh-CN' }
 
-    // use for cookie sign key, should change to your own and keep security
-    const bizConfig = {
-        sourceUrl: `https://github.com/eggjs/examples/tree/master/${appInfo.name}`
-    }
-
     // the return config will combines to EggAppConfig
     return {
-        ...config,
-        ...bizConfig
+        ...config
     }
 }

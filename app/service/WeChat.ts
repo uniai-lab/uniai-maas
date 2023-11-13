@@ -2,6 +2,7 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
+import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import md5 from 'md5'
 import { Stream } from 'stream'
@@ -12,9 +13,8 @@ import { ConfigResponse } from '@interface/controller/WeChat'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
-import $ from '@util/util'
 import { ChatMessage } from '@interface/controller/UniAI'
-import { EggFile } from 'egg-multipart'
+import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -265,7 +265,7 @@ export default class WeChat extends Service {
         }
 
         // add user chat history
-        for (const { role, content } of dialog.chats) prompts.push({ role: role, content })
+        for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
 
         prompts.push({ role: ChatRoleEnum.USER, content: input })
 
@@ -369,7 +369,6 @@ export default class WeChat extends Service {
         if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
         else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
         else throw new Error('Fail to reduce upload chance')
-        console.log('111111')
 
         return res
     }

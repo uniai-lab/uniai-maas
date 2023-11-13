@@ -9,7 +9,11 @@ import {
     ImagesResponse,
     ChatCompletionCreateParamsNonStreaming,
     ChatCompletionCreateParamsStreaming,
-    ChatCompletionMessage
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionFunctionMessageParam
 } from 'openai/resources'
 
 export interface GPTChatResponse extends ChatCompletion {}
@@ -25,4 +29,9 @@ export interface GPTImagineRequest extends ImageGenerateParams {}
 export interface GPTImagineResponse extends ImagesResponse {}
 
 // equal to original ChatCompletionMessage
-export interface GPTChatMessage extends ChatCompletionMessage {}
+export type GPTChatMessage =
+    | ChatCompletionSystemMessageParam
+    | ChatCompletionUserMessageParam
+    | ChatCompletionAssistantMessageParam
+    | ChatCompletionToolMessageParam
+    | ChatCompletionFunctionMessageParam

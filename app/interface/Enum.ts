@@ -28,7 +28,8 @@ export enum GPTChatRoleEnum {
     SYSTEM = 'system',
     USER = 'user',
     ASSISTANT = 'assistant',
-    FUNCTION = 'function'
+    FUNCTION = 'function',
+    TOOL = 'tool'
 }
 
 // Spark model roles

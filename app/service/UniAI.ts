@@ -63,7 +63,7 @@ export default class UniAI extends Service {
         const pages: ResourcePage[] = []
 
         for (const { content } of prompts) {
-            if (!content) continue
+            if (!content || typeof content !== 'string') continue
             const query = content.trim()
             if (model === AIModelEnum.GPT) {
                 const embed = await gpt.embedding([query])
