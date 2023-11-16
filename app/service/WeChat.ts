@@ -34,10 +34,7 @@ const {
 export default class WeChat extends Service {
     // get app configs to user
     async getConfig() {
-        const res = await this.ctx.model.Config.findAll({
-            where: { isDel: false, isEffect: true },
-            attributes: ['key', 'value', 'isJson']
-        })
+        const res = await this.ctx.model.Config.findAll({ attributes: ['key', 'value', 'isJson'] })
         const data: ConfigResponse = {}
         for (const item of res) data[item.key] = item.isJson ? $.json(item.value) : item.value
         return data
@@ -48,8 +45,13 @@ export default class WeChat extends Service {
         const { ctx } = this
 
         // get access_token, openid, unionid
-        const url = `${WX_APP_AUTH_URL}?grant_type=authorization_code&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}&js_code=${code}`
-        const res = await $.get<undefined, WXAuthCodeAPI>(url)
+        const url = WX_APP_AUTH_URL
+        const res = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(url, {
+            grant_type: 'authorization_code',
+            appid: WX_APP_ID,
+            secret: WX_APP_SECRET,
+            js_code: code
+        })
         if (!res.openid || !res.session_key) throw new Error('Fail to get openid or session key')
 
         const config = await this.getConfig()
@@ -199,7 +201,7 @@ export default class WeChat extends Service {
         const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
         if (created) {
             const content =
-                ctx.__('Im AI model') + resourceId ? ctx.__('finish reading', name) : ctx.__('feel free to chat')
+                ctx.__('Im AI model') + (resourceId ? ctx.__('finish reading', name) : ctx.__('feel free to chat'))
             res.chats = [
                 await ctx.model.Chat.create({
                     dialogId: res.id,

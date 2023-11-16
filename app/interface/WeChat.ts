@@ -1,6 +1,12 @@
 /** @format */
+interface WXAuthCodeRequest {
+    grant_type: 'authorization_code'
+    appid: string
+    secret: string
+    js_code: string
+}
 
-interface WXAuthCodeAPI {
+interface WXAuthCodeResponse {
     openid?: string
     unionid?: string
     session_key?: string
