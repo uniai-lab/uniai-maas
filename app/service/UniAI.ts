@@ -110,7 +110,7 @@ export default class UniAI extends Service {
         if (model === ChatModelEnum.GPT)
             return await gpt.chat(prompts as GPTChatMessage[], stream, top, temperature, maxLength, subModel)
         else if (model === ChatModelEnum.GLM)
-            return await glm.chat(prompts as GLMChatMessage[], stream, top, temperature, maxLength)
+            return await glm.chat(prompts as GLMChatMessage[], stream, top, temperature, maxLength, subModel)
         else if (model === ChatModelEnum.SPARK)
             return await fly.chat(prompts as SPKChatMessage[], stream, top, temperature, maxLength, subModel)
         else throw new Error('Chat model not found')

@@ -23,6 +23,9 @@ declare global {
 
             // GLM
             GLM_API: string
+            GLM_API_REMOTE: string
+            GLM_API_KEY: string
+            GLM_DEFAULT_CHAT_MODEL: string
             TEXT2VEC_EMBED_DIM: number
 
             // Spark

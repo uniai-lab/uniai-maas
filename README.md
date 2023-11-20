@@ -63,14 +63,17 @@ ADMIN_TOKEN=    # admin token
 # OPENAI GPT
 OPENAI_API=http://8.214.93.3
 OPENAI_API_VERSION=v1
-OPENAI_API_KEY=     # OpenAI API key    
+OPENAI_API_KEY=                                     # OpenAI API key    
 OPENAI_EMBED_DIM=1536
-OPENAI_DEFAULT_CHAT_MODEL=gpt-4     # gpt-4 | gpt-3.5-turbo
-OPENAI_DEFAULT_EMBED_MODEL=text-embedding-ada-002 # 001 | 002
+OPENAI_DEFAULT_CHAT_MODEL=gpt-4                     # gpt-4 | gpt-3.5-turbo
+OPENAI_DEFAULT_EMBED_MODEL=text-embedding-ada-002   # 001 | 002
 
 # GLM
-GLM_API=http://10.144.1.7:8100 # visit https://github.com/uni-openai/GLM-API
-TEXT2VEC_EMBED_DIM=1024 # use https://huggingface.co/GanymedeNil/text2vec-large-chinese
+GLM_API=http://10.144.1.7:8100              # https://github.com/uni-openai/GLM-API
+GLM_API_REMOTE=https://open.bigmodel.cn     # remote ZHIPU chatglm API
+GLM_API_KEY=                                # ZHIPU AI api key
+GLM_DEFAULT_CHAT_MODEL=chatglm3-6b-32k      # chatglm3-6b-32k | chatglm-turbo
+TEXT2VEC_EMBED_DIM=1024                     # https://huggingface.co/GanymedeNil/text2vec-large-chinese
 
 
 # SPARK
@@ -92,8 +95,8 @@ REDIS_HOST=10.144.1.7       # Redis cache host url
 REDIS_PORT=6379             # Redis cache host port
 
 # WeChat
-WX_APP_ID=    # wechat app id
-WX_APP_SECRET=     # wechat app secret
+WX_APP_ID=                      # wechat app id
+WX_APP_SECRET=                  # wechat app secret
 WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
 WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
 WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber

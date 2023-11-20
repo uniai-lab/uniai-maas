@@ -6,7 +6,7 @@
  */
 
 import os from 'os'
-import crypto from 'crypto'
+import { createHmac } from 'crypto'
 import WebSocket from 'ws'
 import { PassThrough, Stream } from 'stream'
 import { SPKChatMessage, SPKChatRequest, SPKChatResponse } from '@interface/Spark'
@@ -82,7 +82,7 @@ function getURL(version: string) {
     const algorithm = 'hmac-sha256'
     const headers = 'host date request-line'
     const signatureOrigin = `host: ${host}\ndate: ${date}\nGET /${version}/chat HTTP/1.1`
-    const signatureSha = crypto.createHmac('sha256', SPARK_API_SECRET).update(signatureOrigin).digest('hex')
+    const signatureSha = createHmac('sha256', SPARK_API_SECRET).update(signatureOrigin).digest('hex')
     const signature = Buffer.from(signatureSha, 'hex').toString('base64')
     const authorizationOrigin = `api_key="${SPARK_API_KEY}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`
     const authorization = Buffer.from(authorizationOrigin).toString('base64')
