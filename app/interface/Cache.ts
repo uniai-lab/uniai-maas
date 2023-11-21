@@ -8,7 +8,8 @@ export interface ChatStreamCache {
     content: string
     time: number
     resourceId: number | null
-    model: ChatModelEnum
+    model: ChatModelEnum | null
+    subModel: string | null
 }
 
 export interface UserTokenCache {

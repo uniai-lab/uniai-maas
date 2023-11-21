@@ -5,7 +5,7 @@ import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import md5 from 'md5'
-import { Stream } from 'stream'
+import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { ChatModelEnum, ChatRoleEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
@@ -88,7 +88,7 @@ export default class WeChat extends Service {
         }
 
         // user is existed, update session key
-        user.token = md5(`${res.openid}${new Date().getTime()}${code}`)
+        user.token = md5(`${res.openid}${Date.now()}${code}`)
         user.tokenTime = new Date()
         user.wxSessionKey = res.session_key
 
@@ -252,24 +252,25 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
         const resourceId = dialog.resourceId
 
+        const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
         // add related resource
         if (resourceId) {
-            let content = `${ctx.__('you are')}${ctx.__('document content start')}`
+            let content = ctx.__('document content start')
             // query resource
-            const query = [{ role: ChatRoleEnum.USER, content: input }]
+            const query = [{ role: USER, content: input }]
             const pages = await ctx.service.uniAI.queryResource(query, resourceId, WX_DEFAULT_EMBED_MODEL, PAGE_LIMIT)
             // add resource to prompt
             for (const item of pages) content += `\n${item.content}`
-            content += `\n${ctx.__('document content end')}${ctx.__('answer according to')}`
-            prompts.push({ role: ChatRoleEnum.SYSTEM, content })
+            content += `\n${ctx.__('document content end')}\n${ctx.__('answer according to')}`
+            prompts.push({ role: SYSTEM, content })
         }
 
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
 
-        prompts.push({ role: ChatRoleEnum.USER, content: input })
+        prompts.push({ role: USER, content: input })
 
         console.log(prompts)
 
@@ -282,38 +283,43 @@ export default class WeChat extends Service {
             content: '',
             resourceId,
             model,
-            time: new Date().getTime()
+            subModel: '',
+            time: Date.now()
         }
         await $.setCache(`chat_${userId}`, cache)
 
         // start chat stream
-        const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as Stream
-        const parser = createParser(event => {
+        const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as PassThrough
+        const parser = createParser(e => {
             try {
-                if (event.type === 'event') {
+                if (e.type === 'event') {
                     if (model === 'GPT') {
-                        const obj = $.json<GPTChatStreamResponse>(event.data)
-                        if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
+                        const obj = $.json<GPTChatStreamResponse>(e.data)
+                        cache.content += obj?.choices[0].delta.content
+                        cache.subModel = obj?.model || null
                     }
                     if (model === 'GLM') {
-                        const obj = $.json<GLMChatStreamResponse>(event.data)
-                        if (obj?.choices[0].delta?.content) cache.content += obj.choices[0].delta.content
+                        const obj = $.json<GLMChatStreamResponse>(e.data)
+                        cache.content += obj?.choices[0].delta.content
+                        cache.subModel = obj?.model || null
                     }
                     if (model === 'SPARK') {
-                        const obj = $.json<SPKChatResponse>(event.data)
-                        if (obj?.payload.choices.text[0].content) cache.content += obj.payload.choices.text[0].content
+                        const obj = $.json<SPKChatResponse>(e.data)
+                        cache.content += obj?.payload.choices.text[0].content
+                        cache.subModel = obj?.payload.model || null
                     }
                     $.setCache(`chat_${userId}`, cache)
                 }
             } catch (e) {
                 cache.chatId = ERROR_CHAT_ID
+                cache.content = (e as Error).message
                 $.setCache(`chat_${userId}`, cache)
             }
         })
 
         // add listen stream
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-        stream.on('error', (e: Error) => {
+        stream.on('error', e => {
             cache.content = e.message
             cache.chatId = ERROR_CHAT_ID
             $.setCache(`chat_${userId}`, cache)
@@ -327,24 +333,26 @@ export default class WeChat extends Service {
                 const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
                     resourceId,
-                    role: ChatRoleEnum.ASSISTANT,
+                    role: ASSISTANT,
                     content: cache.content,
-                    model
+                    model: cache.model,
+                    subModel: cache.subModel
                 })
                 cache.chatId = chat.id
             } else cache.chatId = ERROR_CHAT_ID
             $.setCache(`chat_${userId}`, cache)
         })
+        stream.on('close', () => parser.reset())
 
         // save user prompt
-        return await ctx.model.Chat.create({ dialogId: dialog.id, role: ChatRoleEnum.USER, content: input })
+        return await ctx.model.Chat.create({ dialogId: dialog.id, role: USER, content: input })
     }
 
     // get current chat stream by userId
     async getChat(userId: number) {
         const res = await $.getCache<ChatStreamCache>(`chat_${userId}`)
         // expire, remove chat cache
-        if (res && new Date().getTime() - res.time > CHAT_STREAM_EXPIRE) return await $.removeCache(`chat_${userId}`)
+        if (res && Date.now() - res.time > CHAT_STREAM_EXPIRE) return await $.removeCache(`chat_${userId}`)
         return res
     }
     async addResource(file: EggFile, userId: number, typeId: number) {

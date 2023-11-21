@@ -20,6 +20,7 @@ import {
     GLMTurboChatResponse
 } from '@interface/GLM'
 import $ from '@util/util'
+import { GLMChatRoleEnum } from '@interface/Enum'
 
 const { GLM_API, GLM_API_KEY, GLM_API_REMOTE, GLM_DEFAULT_CHAT_MODEL } = process.env
 
@@ -42,13 +43,29 @@ export default {
                 { responseType: stream ? 'stream' : 'json' }
             )
         } else if (subModel === 'chatglm-turbo') {
+            // recreate prompt for chatglm-turbo
+            const prompt: GLMChatMessage[] = []
+            let input = ''
+            const { SYSTEM, USER, ASSISTANT } = GLMChatRoleEnum
+            for (const { role, content } of messages)
+                if (role === SYSTEM) {
+                    prompt.push({ role: USER, content })
+                    prompt.push({ role: ASSISTANT, content: 'Yes' })
+                } else if (role === USER) input += `\n${content}`
+                else {
+                    prompt.push({ role: USER, content: input.trim() })
+                    prompt.push({ role: ASSISTANT, content })
+                    input = ''
+                }
+            prompt.push({ role: USER, content: input.trim() })
+
             const invoke = stream ? 'sse-invoke' : 'invoke'
             const url = `${GLM_API_REMOTE}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
             const token = generateToken(GLM_API_KEY, 60 * 1000)
             const headers = { 'Content-Type': 'application/json', Authorization: token }
             const response = await $.post<GLMTurboChatRequest, Stream | GLMTurboChatResponse>(
                 url,
-                { prompt: messages, temperature, top_p: top },
+                { prompt, temperature, top_p: top },
                 { headers, responseType: stream ? 'stream' : 'json' }
             )
             // check response
@@ -56,13 +73,14 @@ export default {
             if (res.code && res.code !== 200) throw new Error(res.msg)
 
             if (stream) {
-                const res = response as Stream
+                const res = response as PassThrough
                 const output = new PassThrough()
                 const parser = createParser(e => {
                     if (e.type === 'event') {
-                        const content = e.data.trim()
+                        const content = e.data
+                        const id = e.id || ''
                         const json: GLMChatStreamResponse = {
-                            id: '0',
+                            id,
                             model: 'chatglm-turbo',
                             object: 'chat.completion.chunk',
                             created: Date.now(),
@@ -74,10 +92,11 @@ export default {
                 res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
                 res.on('error', e => output.destroy(e))
                 res.on('end', () => output.end())
+                res.on('close', () => parser.reset())
                 return output
             } else {
                 const res = response as GLMTurboChatResponse
-                if (!res.data) throw new Error('Empty chat result')
+                if (!res.data) throw new Error('Empty chat data response')
                 const message = res.data.choices[0]
                 message.content = message.content.replace(/^"|"$/g, '').trim()
                 return {

@@ -173,6 +173,7 @@ export default class UniAI extends Service {
             stream.end()
         })
         message.on('end', () => stream.end())
+        message.on('close', () => parser.reset())
         return stream
     }
 

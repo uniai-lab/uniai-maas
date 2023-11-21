@@ -14,7 +14,7 @@ export default function auth() {
         const id = parseInt(ctx.get('id'))
         const token = ctx.get('token')
         const user = await $.getCache<UserTokenCache>(`token_${id}`)
-        const now = new Date().getTime()
+        const now = Date.now()
 
         // check user auth in redis
         if (user && user.id === id && user.token === token && now - user.time < EXPIRE) ctx.userId = user.id

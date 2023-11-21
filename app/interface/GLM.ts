@@ -53,6 +53,14 @@ export interface GLMTurboResponseData {
     task_status: 'PROCESSING' | 'SUCCESS' | 'FAIL' // 处理状态
     usage: Usage // 模型调用的 tokens 数量统计
 }
+
+export interface GLMChatMessage {
+    role: GLMChatRoleEnum
+    content: string | null
+    metadata?: string | null
+    tools?: {}[] | null
+}
+
 interface Choice {
     role: 'assistant'
     content: string
@@ -62,11 +70,4 @@ interface Usage {
     prompt_tokens: number // 用户输入的 tokens 数量
     completion_tokens: number // 模型输出的 tokens 数量
     total_tokens: number // 总 tokens 数量
-}
-
-export interface GLMChatMessage {
-    role: GLMChatRoleEnum
-    content: string | null
-    metadata?: string | null
-    tools?: {}[] | null
 }

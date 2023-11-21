@@ -95,7 +95,7 @@ export default {
     // get wechat access token for wx miniapp
     async getWxAccessToken(): Promise<string> {
         const s = await this.getCache<WXAccessToken>('wx_access_token')
-        if (s && new Date().getTime() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) {
+        if (s && Date.now() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) {
             return s.token
         } else {
             const url = `${WX_APP_ACCESS_TOKEN_URL}?grant_type=client_credential&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}`

@@ -43,6 +43,9 @@ export class Chat extends Model {
     @Column(DataType.STRING)
     model: ChatModelEnum | null
 
+    @Column(DataType.STRING)
+    subModel: string | null
+
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
