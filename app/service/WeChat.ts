@@ -5,9 +5,9 @@ import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import md5 from 'md5'
-import { PassThrough } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
-import { ChatModelEnum, ChatRoleEnum } from '@interface/Enum'
+import { ChatModelEnum, ChatRoleEnum, OSSEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
 import { ConfigResponse } from '@interface/controller/WeChat'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
@@ -15,6 +15,7 @@ import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
 import $ from '@util/util'
+import { basename, extname } from 'path'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -355,26 +356,18 @@ export default class WeChat extends Service {
         if (res && Date.now() - res.time > CHAT_STREAM_EXPIRE) return await $.removeCache(`chat_${userId}`)
         return res
     }
+    // add a new resource
     async addResource(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this
         const chance = await ctx.model.UserChance.findOne({
             where: { userId },
-            attributes: ['id', 'uploadChanceFree', 'uploadChance']
+            attributes: ['uploadChanceFree', 'uploadChance']
         })
         if (!chance) throw new Error('Fail to find user')
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
 
-        const upload = await ctx.service.uniAI.upload(file)
-        const res = await ctx.service.uniAI.embedding(
-            WX_DEFAULT_EMBED_MODEL,
-            undefined,
-            upload.content,
-            upload.fileName,
-            upload.filePath,
-            upload.fileSize,
-            userId,
-            typeId
-        )
+        const upload = await ctx.service.uniAI.upload(file, userId, typeId)
+        const res = await ctx.service.uniAI.embedding(WX_DEFAULT_EMBED_MODEL, upload.id)
 
         if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
         else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
@@ -382,7 +375,49 @@ export default class WeChat extends Service {
 
         return res
     }
+    // preview file, to imgs
+    async resource(id: number) {
+        const { ctx } = this
+        const res = await ctx.model.Resource.findByPk(id, {
+            attributes: ['id', 'fileName', 'fileSize', 'fileExt', 'filePath'],
+            include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
+        })
+        if (!res) throw new Error('Can not find the resource')
+        if (!res.pages.length) {
+            const [oss, name] = res.filePath.split('/')
+            const stream = await $.getOSS(name, oss as OSSEnum)
+            const path = await $.getStreamFile(stream, name)
+            // convert to page imgs
+            const { imgs } = await $.convertIMG(path)
+            if (!imgs.length) throw new Error('Fail to convert to imgs')
 
+            // upload and save page imgs
+            const pages: string[] = []
+            for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSSEnum.MIN))
+            res.pages = await ctx.model.Page.bulkCreate(
+                pages.map((v, i) => {
+                    return {
+                        resourceId: res.id,
+                        page: i + 1,
+                        filePath: v
+                    }
+                })
+            )
+        }
+        return res
+    }
+    async file(path: string) {
+        const http = path.split('/')[0]
+        const type = extname(path)
+        const name = basename(path)
+        if (Object.values(OSSEnum).includes(http as OSSEnum)) {
+            const file = await $.getOSS(name, http as OSSEnum)
+            return { file, name, type }
+        } else {
+            const file = await $.get<undefined, Readable>(path, undefined, { responseType: 'stream' })
+            return { file, name, type }
+        }
+    }
     // get user and reset free chat/upload chance
     async getUserResetChance(id: number) {
         const { ctx } = this

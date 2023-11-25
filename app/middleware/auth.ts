@@ -13,6 +13,8 @@ export default function auth() {
         // find user by token
         const id = parseInt(ctx.get('id'))
         const token = ctx.get('token')
+        if (!id || !token) return ctx.service.res.noAuth()
+
         const user = await $.getCache<UserTokenCache>(`token_${id}`)
         const now = Date.now()
 
@@ -24,11 +26,12 @@ export default function auth() {
                 where: { id, token, isDel: false, isEffect: true },
                 attributes: ['id', 'tokenTime']
             })
-            const time = user?.tokenTime?.getTime() || 0
-            if (user && now - time < EXPIRE) {
-                await $.setCache<UserTokenCache>(`token_${id}`, { id, token, time })
-                ctx.userId = user.id
-            } else return ctx.service.res.noAuth()
+            if (!user) return ctx.service.res.noAuth()
+            const time = user.tokenTime?.getTime() || 0
+            if (now - time > EXPIRE) return ctx.service.res.noAuth()
+
+            await $.setCache<UserTokenCache>(`token_${id}`, { id, token, time })
+            ctx.userId = user.id
         }
         await next()
     }

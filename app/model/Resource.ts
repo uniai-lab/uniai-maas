@@ -105,18 +105,27 @@ export class Resource extends Model {
     tokens: number
 
     @AllowNull(false)
+    @Default('')
     @Column(DataType.STRING)
     fileName: string
 
     @AllowNull(false)
+    @Default(0)
     @Column(DataType.INTEGER)
     fileSize: number
 
     @AllowNull(false)
+    @Default('')
     @Column(DataType.STRING)
     filePath: string
 
     @AllowNull(false)
+    @Default('')
+    @Column(DataType.STRING)
+    fileExt: string
+
+    @AllowNull(false)
+    @Default(0)
     @Column(DataType.INTEGER)
     userId: number
 

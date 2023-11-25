@@ -32,8 +32,22 @@ export interface EmbeddingRequest {
     fileName?: string
     filePath?: string
     fileSize?: number
+    fileExt?: string
     typeId?: number
     model?: AIModelEnum
+}
+
+export interface UploadRequest {
+    fileName?: string
+}
+export interface UploadResponse {
+    id: number
+    content: string
+    fileName: string
+    filePath: string
+    fileSize: number
+    fileExt: string
+    page: number
 }
 
 export interface ImagineRequest {

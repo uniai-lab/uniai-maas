@@ -50,7 +50,7 @@ declare global {
             POSTGRES_DB: string
 
             // cache redis
-            REDIS_PORT: number
+            REDIS_PORT: string
             REDIS_HOST: string
 
             // wechat API
@@ -69,6 +69,13 @@ declare global {
             COS_SECRET_KEY: string
             COS_BUCKET: string
             COS_REGION: string
+
+            // minio
+            MINIO_ACCESS_KEY: string
+            MINIO_SECRET_KEY: string
+            MINIO_END_POINT: string
+            MINIO_PORT: string
+            MINIO_BUCKET: string
 
             // google search
             GOOGLE_SEARCH_API_TOKEN: string

@@ -1,10 +1,8 @@
-# @format
-
 version: '3.5'
 
 services:
-    pgvector:
-        container_name: pgvector
+    pgector:
+        container_name: uniai-pgvector
         privileged: true
         image: ankane/pgvector:latest
         restart: always
@@ -15,10 +13,3 @@ services:
             - POSTGRES_DB=${POSTGRES_DB}
         ports:
             - ${POSTGRES_PORT}:${POSTGRES_PORT}
-    cache:
-        container_name: redis
-        privileged: true
-        image: redis:latest
-        restart: always
-        ports:
-            - ${REDIS_PORT}:6379

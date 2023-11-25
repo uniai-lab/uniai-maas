@@ -37,6 +37,7 @@ export default class Admin {
                 upload.content,
                 upload.fileName,
                 upload.filePath,
+                upload.fileExt,
                 upload.fileSize,
                 userId,
                 typeId

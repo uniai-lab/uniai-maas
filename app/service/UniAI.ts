@@ -5,7 +5,7 @@ import { Service } from 'egg'
 import { PassThrough, Stream } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { Resource } from '@model/Resource'
-import { AIModelEnum, ChatModelEnum, ImgModelEnum, MJTaskEnum } from '@interface/Enum'
+import { AIModelEnum, ChatModelEnum, ImgModelEnum, MJTaskEnum, OSSEnum } from '@interface/Enum'
 import { ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
 import { GPTChatMessage, GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatMessage, GLMChatStreamResponse } from '@interface/GLM'
@@ -17,12 +17,12 @@ import sd from '@util/sd'
 import mj from '@util/mj'
 import $ from '@util/util'
 import { statSync } from 'fs'
-import { random } from 'lodash'
 import { EggFile } from 'egg-multipart'
+import { extname } from 'path'
 
 const MAX_PAGE = 6
 const MAX_TOKEN = 8192
-const SAME_SIMILARITY = 0.01
+const SAME_DISTANCE = 0.01
 const TOKEN_PAGE_FIRST = 768
 const TOKEN_PAGE_SPLIT_L1 = 2048
 const TOKEN_PAGE_SPLIT_L2 = 1024
@@ -127,10 +127,10 @@ export default class UniAI extends Service {
         }
         // count tokens
         const stream = new PassThrough()
-        const parser = createParser(event => {
-            if (event.type === 'event') {
+        const parser = createParser(e => {
+            if (e.type === 'event') {
                 if (model === 'GPT') {
-                    const obj = $.json<GPTChatStreamResponse>(event.data)
+                    const obj = $.json<GPTChatStreamResponse>(e.data)
                     if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
@@ -140,7 +140,7 @@ export default class UniAI extends Service {
                     }
                 }
                 if (model === 'GLM') {
-                    const obj = $.json<GLMChatStreamResponse>(event.data)
+                    const obj = $.json<GLMChatStreamResponse>(e.data)
                     if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
                         else res.data.content += obj.choices[0].delta.content
@@ -150,7 +150,7 @@ export default class UniAI extends Service {
                     }
                 }
                 if (model === 'SPARK') {
-                    const obj = $.json<SPKChatResponse>(event.data)
+                    const obj = $.json<SPKChatResponse>(e.data)
                     if (obj?.payload.choices.text[0].content) {
                         const { payload } = obj
                         if (chunk) res.data.content = payload.choices.text[0].content
@@ -178,19 +178,60 @@ export default class UniAI extends Service {
     }
 
     // upload file
-    async upload(file: EggFile) {
+    async upload(file: EggFile, userId: number = 0, typeId: number = 1) {
+        const { ctx } = this
         // limit upload file size
         const fileSize = statSync(file.filepath).size
-        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File exceeds 5MB')
+        const fileName = file.filename
+        let filePath = file.filepath
+        const fileExt = extname(filePath).replace('.', '')
+        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File size exceeds limit')
 
-        // detect file type from buffer
-        const { content, ext } = await $.extractContent(file.filepath)
+        // get content
+        const { pdf, content } = await $.convertText(filePath)
         if (!content) throw new Error('Fail to extract content text')
-        if (!ext) throw new Error('Fail to detect file type')
+        // split first page
+        const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
+        if (!firstPage[0]) throw new Error('Fail to split first page')
 
-        // uploading
-        const upload = await $.cosUpload(`${new Date().getTime()}${random(1000, 9999)}.${ext}`, file.filepath)
-        return { content, fileName: file.filename, filePath: `https://${upload.Location}`, fileSize }
+        // embedding first page and check similarity
+        const res = await glm.embedding([firstPage[0]])
+        const embedding = res.data[0]
+        const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_DISTANCE)
+        let resource = resources[0]
+
+        if (!resource) {
+            // convert to page imgs
+            const { imgs } = await $.convertIMG(pdf)
+            if (!imgs.length) throw new Error('Fail to convert to imgs')
+
+            // uploading original file and page imgs
+            filePath = await $.putOSS(filePath, OSSEnum.MIN)
+            const pages: string[] = []
+            for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSSEnum.MIN))
+
+            // save to db
+            resource = await ctx.model.Resource.create(
+                {
+                    page: pages.length,
+                    content,
+                    typeId,
+                    userId,
+                    fileName,
+                    filePath,
+                    fileSize,
+                    fileExt,
+                    embedding2: embedding,
+                    pages: pages.map((filePath, i) => {
+                        return { page: i + 1, filePath }
+                    }),
+                    tokens: $.countTokens(content)
+                },
+                { include: ctx.model.Page }
+            )
+        }
+
+        return resource
     }
 
     // create embedding
@@ -200,42 +241,56 @@ export default class UniAI extends Service {
         content?: string,
         fileName?: string,
         filePath?: string,
+        fileExt?: string,
         fileSize?: number,
         userId: number = 0,
         typeId: number = 1
     ) {
         const { ctx } = this
         let resource: Resource | null = null
+        let embedding: number[] | null = null
 
         // find by resource id
         if (resourceId) {
             resource = await ctx.model.Resource.findByPk(resourceId)
-            if (!resource) throw new Error('Can not find existed resource by id')
+            if (!resource) throw new Error('Can not find resource by id')
             content = resource.content
             fileName = resource.fileName
             filePath = resource.filePath
             fileSize = resource.fileSize
+            fileExt = resource.fileExt
+            embedding = resource.embedding2
         }
-        if (!content) throw new Error('File content is empty')
+        // try to find by content
+        else {
+            if (!content) throw new Error('File content is empty')
+            content = $.tinyText(content)
+            // split first page
+            const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
+            if (!firstPage[0]) throw new Error('First page can not be split')
+
+            // embedding first page
+            const res = await glm.embedding([firstPage[0]])
+            embedding = res.data[0]
+
+            // find resource by embedding
+            const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_DISTANCE)
+            resource = resources[0]
+            if (resource) {
+                fileName = resource.fileName
+                filePath = resource.filePath
+                fileSize = resource.fileSize
+                fileExt = resource.fileExt
+            }
+        }
+
+        // check again
         if (!fileName) throw new Error('File name is empty')
         if (!filePath) throw new Error('File path is empty')
         if (!fileSize) throw new Error('File size is empty')
-
-        content = $.tinyText(content)
-
-        // split first page
-        const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
-        if (!firstPage[0]) throw new Error('First page can not be split')
-
-        // embedding first page
-        const res = await glm.embedding([firstPage[0]])
-        const embedding = res.data[0]
-
-        // find by embedding similarity
-        if (!resourceId) {
-            const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_SIMILARITY)
-            resource = resources[0]
-        }
+        if (!content) throw new Error('File content is empty')
+        fileExt = fileExt || extname(filePath)
+        if (!fileExt) throw new Error('File extension is empty')
 
         // split pages
         const tokens = $.countTokens(content)
@@ -246,11 +301,7 @@ export default class UniAI extends Service {
         const splitPage: string[] = $.splitPage(content, split)
         if (!splitPage.length) throw new Error('Content can not be split')
 
-        if (resource) {
-            resource.embedding2 = embedding
-            resource.page = splitPage.length
-            await resource.save()
-        } else {
+        if (!resource)
             resource = await ctx.model.Resource.create({
                 page: splitPage.length,
                 content,
@@ -259,14 +310,15 @@ export default class UniAI extends Service {
                 fileName,
                 filePath,
                 fileSize,
+                fileExt,
                 embedding2: embedding,
                 tokens: $.countTokens(content)
             })
-        }
 
         if (!resource) throw new Error('Fail to create embed resource')
         resourceId = resource.id
 
+        // embedding resource
         if (model === AIModelEnum.GPT) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             const res = await gpt.embedding(splitPage)

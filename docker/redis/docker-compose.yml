@@ -1,0 +1,10 @@
+version: '3.5'
+
+services:
+  cache:
+    container_name: uniai-redis
+    privileged: true
+    image: redis:latest
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379

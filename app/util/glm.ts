@@ -62,18 +62,16 @@ export default {
             const invoke = stream ? 'sse-invoke' : 'invoke'
             const url = `${GLM_API_REMOTE}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
             const token = generateToken(GLM_API_KEY, 60 * 1000)
-            const headers = { 'Content-Type': 'application/json', Authorization: token }
-            const response = await $.post<GLMTurboChatRequest, Stream | GLMTurboChatResponse>(
+            const res = await $.post<GLMTurboChatRequest, Stream | GLMTurboChatResponse>(
                 url,
                 { prompt, temperature, top_p: top },
-                { headers, responseType: stream ? 'stream' : 'json' }
+                {
+                    headers: { 'Content-Type': 'application/json', Authorization: token },
+                    responseType: stream ? 'stream' : 'json'
+                }
             )
-            // check response
-            const res = response as GLMTurboChatResponse
-            if (res.code && res.code !== 200) throw new Error(res.msg)
 
-            if (stream) {
-                const res = response as PassThrough
+            if (res instanceof Stream) {
                 const output = new PassThrough()
                 const parser = createParser(e => {
                     if (e.type === 'event') {
@@ -95,8 +93,10 @@ export default {
                 res.on('close', () => parser.reset())
                 return output
             } else {
-                const res = response as GLMTurboChatResponse
+                // check res
+                if (res.code && res.code !== 200) throw new Error(res.msg)
                 if (!res.data) throw new Error('Empty chat data response')
+
                 const message = res.data.choices[0]
                 message.content = message.content.replace(/^"|"$/g, '').trim()
                 return {

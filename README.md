@@ -2,18 +2,19 @@
 
 # <img src="./logo.png" width=31 height=31 /> UniAI
 
-[简体中文版](./README_CN.md)
+[简体中文说明](./README_CN.md)
 
 ![Framework](./framework.png)
 
 ## Integrated Models
 
 -   [OpenAI GPT](https://platform.openai.com)
+-   [IFLYTEK Spark](https://xinghuo.xfyun.cn)
+-   [THUDM ChatGLM3](https://github.com/THUDM/ChatGLM3)
+-   [ZHIPU ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
+-   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 -   [OpenAI DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
--   [THUDM ChatGLM3](https://github.com/THUDM/ChatGLM3)
--   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
--   [IFLYTEK Spark](https://xinghuo.xfyun.cn)
 
 ## Samples
 
@@ -21,22 +22,21 @@ Who are using UniAI and where can I experience it?
 
 ![wechat miniapps](./miniapp-qrcode.png)
 
-_Notice: All of the above mini app samples depend on GLM model by UniAI!_
-
 ## About UniAI
 
-UniAI is designed to simplify your interactions with mutiple and complex AI models.
+UniAI is designed to simplify your interactions with multiple and complex AI models.
 
-We aim to provide an API-based platform that integrates various AI models and utilities.
+We aim to provide a united API-based platform that integrates various AI models and utilities.
 
 ## Requirements
 
 Before you start, make sure you have:
 
--   Node.js >= 18.x
--   TypeScript >= 4.x
+-   Node.js >= 18 <https://github.com/nvm-sh/nvm>
 -   Docker
 -   Docker-compose
+-   LibreOffice
+-   node-canvas: <https://www.npmjs.com/package/canvas>
 
 ## Getting Started
 
@@ -63,7 +63,7 @@ ADMIN_TOKEN=    # admin token
 # OPENAI GPT
 OPENAI_API=http://8.214.93.3
 OPENAI_API_VERSION=v1
-OPENAI_API_KEY=                                     # OpenAI API key    
+OPENAI_API_KEY=                                     # OpenAI API key
 OPENAI_EMBED_DIM=1536
 OPENAI_DEFAULT_CHAT_MODEL=gpt-4                     # gpt-4 | gpt-3.5-turbo
 OPENAI_DEFAULT_EMBED_MODEL=text-embedding-ada-002   # 001 | 002
@@ -103,7 +103,7 @@ WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 WX_DEFAULT_CHAT_MODEL=SPARK     # wechat default chat model
 WX_DEFAULT_RESOURCE_MODEL=GLM   # wechat default resource chat model
-WX_DEFAULT_EMBED_MODEL=GPT      # wechat default embed model
+WX_DEFAULT_EMBED_MODEL=GLM      # wechat default embed model
 
 
 # COS, OSS storage
@@ -133,9 +133,19 @@ npm -g install yarn
 yarn
 ```
 
+Install LibreOfficeL
+
+```bash
+sudo apt install libreoffice
+```
+
 ### Start Database
 
 If you don't have a vector database such as PostgresSQL (pgvector), you can start one using Docker and Docker-compose:
+
+```bash
+sudo apt install docker.io docker-compose
+```
 
 ```bash
 yarn docker up pgvector

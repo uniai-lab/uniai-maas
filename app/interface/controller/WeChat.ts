@@ -53,6 +53,17 @@ export interface UploadResponse {
     createdAt: Date
     updatedAt: Date
 }
+export interface ResourceRequest {
+    resourceId: number
+}
+export interface ResourceResponse {
+    id: number
+    name: string
+    size: number
+    ext: string
+    path: string
+    pages: string[]
+}
 
 export interface DialogResponse {
     dialogId: number

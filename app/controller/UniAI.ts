@@ -13,7 +13,7 @@ import {
 } from '@eggjs/tegg'
 import { authAdmin } from '@middleware/auth'
 import { Stream } from 'stream'
-import { ImgModelEnum } from '@interface/Enum'
+import { ChatModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -26,7 +26,9 @@ import {
     ImgChangeRequest,
     ChatRequest,
     ChatResponse,
-    QueueRequest
+    QueueRequest,
+    UploadRequest,
+    UploadResponse
 } from '@interface/controller/UniAI'
 import { GPTChatResponse, GPTImagineResponse } from '@interface/OpenAI'
 import { GLMChatResponse } from '@interface/GLM'
@@ -47,8 +49,8 @@ export default class UniAI {
             if (!prompts.length) throw new Error('Empty prompts')
 
             const res = await ctx.service.uniAI.chat(prompts, stream, model, top, temperature, maxLength, subModel)
-            if (stream) ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
-            else if (model === 'GPT') {
+            if (res instanceof Stream) ctx.body = ctx.service.uniAI.parseSSE(res, model, chunk)
+            else if (model === ChatModelEnum.GPT) {
                 // chat to GPT
                 const { choices, model, object, usage } = res as GPTChatResponse
                 if (choices[0].message?.content)
@@ -61,7 +63,7 @@ export default class UniAI {
                         object
                     } as ChatResponse)
                 else throw new Error('Error to chat to GPT')
-            } else if (model === 'GLM') {
+            } else if (model === ChatModelEnum.GLM) {
                 // chat to GLM
                 const { choices, model, object, usage } = res as GLMChatResponse
                 if (choices[0].message?.content)
@@ -74,7 +76,7 @@ export default class UniAI {
                         object
                     } as ChatResponse)
                 else throw new Error('Error to chat to GLM')
-            } else if (model === 'SPARK') {
+            } else if (model === ChatModelEnum.SPARK) {
                 // chat to SPARK
                 const { payload } = res as SPKChatResponse
                 if (payload.choices.text[0].content)
@@ -126,10 +128,35 @@ export default class UniAI {
     }
 
     @Middleware(authAdmin())
+    @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
+    async upload(@Context() ctx: EggContext, @HTTPBody() params: UploadRequest) {
+        try {
+            const file = ctx.request.files[0]
+            const { fileName } = params
+            if (!file) throw new Error('No file')
+            file.filename = fileName || file.filename
+
+            const res = await ctx.service.uniAI.upload(file)
+            ctx.service.res.success('Success to upload resource', {
+                id: res.id,
+                content: res.content,
+                fileName: res.fileName,
+                filePath: res.filePath,
+                fileSize: res.fileSize,
+                fileExt: res.fileExt,
+                page: res.page
+            } as UploadResponse)
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    @Middleware(authAdmin())
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         try {
-            const { content, fileName, filePath, fileSize, model, id } = params
+            const { content, fileName, filePath, fileExt, fileSize, model, id } = params
             const userId = 0
             const typeId = 1
 
@@ -139,6 +166,7 @@ export default class UniAI {
                 content,
                 fileName,
                 filePath,
+                fileExt,
                 fileSize,
                 userId,
                 typeId

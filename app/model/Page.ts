@@ -1,6 +1,5 @@
 /** @format */
 
-import { WhereOptions } from 'sequelize'
 import {
     Table,
     Column,
@@ -32,49 +31,10 @@ export class Page extends Model {
     @Column(DataType.INTEGER)
     resourceId: number
 
-    @Column({
-        type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
-        get() {
-            const raw = this.getDataValue('embedding')
-            return raw ? JSON.parse(raw) : null
-        },
-        set(v: number[] | null) {
-            if (Array.isArray(v)) this.setDataValue('embedding', JSON.stringify([...v]))
-            else this.setDataValue('embedding', null)
-        }
-    })
-    embedding: number[] | null
-
-    static async similarFindAll(vector: number[], limit?: number, where?: WhereOptions) {
-        const db = this.sequelize
-        return await this.findAll({
-            order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
-            where: where,
-            limit
-        })
-    }
-
-    @Column({
-        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
-        get() {
-            const raw = this.getDataValue('embedding2')
-            return raw ? JSON.parse(raw) : null
-        },
-        set(v: number[] | null) {
-            if (Array.isArray(v)) this.setDataValue('embedding2', JSON.stringify([...v]))
-            else this.setDataValue('embedding2', null)
-        }
-    })
-    embedding2: number[] | null
-
-    static async similarFindAll2(vector: number[], limit?: number, where?: WhereOptions) {
-        const db = this.sequelize
-        return await this.findAll({
-            order: db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' ASC`),
-            where: where,
-            limit
-        })
-    }
+    @AllowNull(false)
+    @Default('')
+    @Column(DataType.STRING)
+    filePath: string
 
     @AllowNull(false)
     @Default('')

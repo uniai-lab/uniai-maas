@@ -46,6 +46,12 @@ export enum GLMChatRoleEnum {
     OBSERVATION = 'observation'
 }
 
+export enum OSSEnum {
+    OSS = 'oss',
+    COS = 'cos',
+    MIN = 'minio'
+}
+
 // ALL model roles
 export type ChatRoleEnum = GLMChatRoleEnum | GPTChatRoleEnum | SPKChatRoleEnum
 export const ChatRoleEnum = { ...GLMChatRoleEnum, ...GPTChatRoleEnum, ...SPKChatRoleEnum }

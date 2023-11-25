@@ -1,9 +1,18 @@
 /** @format */
 
 import { EggLogger } from 'egg'
-import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, Inject } from '@eggjs/tegg'
+import {
+    HTTPController,
+    HTTPMethod,
+    HTTPMethodEnum,
+    Context,
+    HTTPBody,
+    Middleware,
+    Inject,
+    HTTPQuery
+} from '@eggjs/tegg'
 import auth from '@middleware/auth'
-import { ChatModelEnum, ChatRoleEnum } from '@interface/Enum'
+import { ChatRoleEnum } from '@interface/Enum'
 import { UserContext } from '@interface/Context'
 import {
     SignInRequest,
@@ -15,9 +24,10 @@ import {
     UploadRequest,
     DialogResponse,
     ChatRequest,
-    ChatResponse
+    ChatResponse,
+    ResourceRequest,
+    ResourceResponse
 } from '@interface/controller/WeChat'
-import $ from '@util/util'
 
 const { DEFAULT_AVATAR_AI, DEFAULT_AVATAR_USER } = process.env
 
@@ -191,7 +201,7 @@ export default class WeChat {
                 chatId: res.chatId,
                 type: false,
                 role: ChatRoleEnum.ASSISTANT,
-                content: res.model === 'SPARK' ? res.content : $.filterSensitive(res.content),
+                content: res.content,
                 userId,
                 dialogId: res.dialogId,
                 resourceId: res.resourceId,
@@ -218,7 +228,7 @@ export default class WeChat {
                     chatId: item.id,
                     role: item.role,
                     type: item.role === ChatRoleEnum.USER,
-                    content: item.model === ChatModelEnum.SPARK ? item.content : $.filterSensitive(item.content),
+                    content: item.content,
                     resourceId: item.resourceId,
                     model: item.model,
                     avatar: item.role === ChatRoleEnum.USER ? DEFAULT_AVATAR_USER : DEFAULT_AVATAR_AI,
@@ -259,7 +269,44 @@ export default class WeChat {
             // create dialog
             const dialog = await ctx.service.weChat.dialog(userId, res.id)
 
-            ctx.service.res.success('success to upload', { resource, dialog })
+            ctx.service.res.success('Success to upload', { resource, dialog })
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    @HTTPMethod({ path: '/resource', method: HTTPMethodEnum.POST })
+    async resource(@Context() ctx: UserContext, @HTTPBody() params: ResourceRequest) {
+        try {
+            if (!params.resourceId) throw new Error('Resource ID is null')
+            const res = await ctx.service.weChat.resource(params.resourceId)
+            const data: ResourceResponse = {
+                id: res.id,
+                name: res.fileName,
+                size: res.fileSize,
+                ext: res.fileExt,
+                path: res.filePath,
+                pages: res.pages.map(v => v.filePath)
+            }
+            ctx.service.res.success('Success view resource', data)
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
+    async file(@Context() ctx: UserContext, @HTTPQuery() path: string) {
+        try {
+            if (!path) throw new Error('Path is null')
+            const { file, name, type } = await ctx.service.weChat.file(path)
+
+            // set headers
+            ctx.response.type = type
+            if (!['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(type)) ctx.attachment(name)
+
+            ctx.body = file
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -289,7 +336,7 @@ export default class WeChat {
                     typeName: item.resource.type.type,
                     typeDesc: item.resource.type.description
                 })
-            ctx.service.res.success('success to list resources', data)
+            ctx.service.res.success('Success to list resources', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)

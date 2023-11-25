@@ -7,9 +7,11 @@
 
 import crypto from 'crypto'
 import pdf from '@cyber2024/pdf-parse-fixed'
-import { extname } from 'path'
+import { tmpdir } from 'os'
 import libreoffice from 'libreoffice-convert'
-import { readFileSync, writeFileSync } from 'fs'
+import * as pdf2img from 'pdf-to-img'
+import { basename, extname, join } from 'path'
+import { createWriteStream, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
@@ -19,8 +21,13 @@ import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
 import Filter from 'mint-filter'
 import COS from 'cos-nodejs-sdk-v5'
+import * as MINIO from 'minio'
 import Redis from 'ioredis'
+import { OSSEnum } from '@interface/Enum'
+import { Stream, Readable } from 'stream'
+import { fromBuffer, fromFile, fromStream } from 'file-type'
 
+const FILE_EXT = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']
 const MIN_SPLIT_SIZE = 400
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
 const ERR_CODE = 87014
@@ -36,13 +43,25 @@ const {
     WX_APP_SECRET,
     WX_APP_MSG_CHECK,
     COS_BUCKET,
-    COS_REGION
+    COS_REGION,
+    MINIO_ACCESS_KEY,
+    MINIO_END_POINT,
+    MINIO_PORT,
+    MINIO_SECRET_KEY,
+    MINIO_BUCKET
 } = process.env
 
 // redis cache
-const redis = new Redis(REDIS_PORT, REDIS_HOST)
+const redis = new Redis(parseInt(REDIS_PORT), REDIS_HOST)
 // tencent cos service
 const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
+const minio = new MINIO.Client({
+    endPoint: MINIO_END_POINT,
+    accessKey: MINIO_ACCESS_KEY,
+    secretKey: MINIO_SECRET_KEY,
+    port: parseInt(MINIO_PORT),
+    useSSL: false
+})
 // sensitive words filter
 const json = JSON.parse(readFileSync(`${ROOT_PATH}/config/sensitive.json`, 'utf-8'))
 const filter = new Filter(json)
@@ -147,6 +166,7 @@ export default {
         }
         return decode(nTokens)
     },
+    // convert office files to pdf
     async convertPDF(path: string) {
         return new Promise<string>((resolve, reject) => {
             libreoffice.convert(readFileSync(path), '.pdf', undefined, (err, data) => {
@@ -154,19 +174,31 @@ export default {
                 else {
                     path = path.replace(extname(path), '.pdf')
                     writeFileSync(path, data)
-                    return resolve(path)
+                    resolve(path)
                 }
             })
         })
     },
-    // extract text from file buffer
-    async extractContent(path: string) {
-        const ext = extname(path)
-        const office = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']
-        if (office.includes(ext)) path = await this.convertPDF(path)
-        console.log(path)
-        const content = (await pdf(readFileSync(path))).text
-        return { ext, content }
+    // convert pdf to imgs, path require .pdf file
+    async convertIMG(path: string) {
+        // if not pdf, firstly convert to pdf
+        if (extname(path) !== '.pdf') path = await this.convertPDF(path)
+        const imgs: string[] = []
+        let count = 0
+        for await (const page of await pdf2img.pdf(path, { scale: 2 })) {
+            count++
+            const img = `${path.replace(extname(path), '')}-page${count}.png`
+            writeFileSync(img, page)
+            imgs.push(img)
+        }
+        return { pdf: path, imgs }
+    },
+    // extract content from pdf
+    async convertText(path: string) {
+        const ext = extname(path).replace('.', '')
+        if (FILE_EXT.includes(ext)) path = await this.convertPDF(path)
+        const file = await pdf(readFileSync(path))
+        return { pdf: path, content: this.tinyText(file.text) }
     },
     tinyText(text: string): string {
         return text.replace(/[\n\r]{2,}/g, '\n').trim()
@@ -195,13 +227,39 @@ export default {
         return reg.test(num)
     },
     // upload to oss/cos
-    async cosUpload(fileName: string, filePath: string) {
-        return await cos.uploadFile({
-            Bucket: COS_BUCKET,
-            Region: COS_REGION,
-            Key: fileName,
-            FilePath: filePath
+    async putOSS(path: string, oss: OSSEnum = OSSEnum.MIN) {
+        const name = basename(path)
+        if (oss === OSSEnum.COS)
+            await cos.uploadFile({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name, FilePath: path })
+        else if (oss === OSSEnum.MIN) await minio.fPutObject(MINIO_BUCKET, name, path)
+        else throw new Error('OSS type not found')
+        return `${oss}/${name}`
+    },
+    // download from oss
+    async getOSS(name: string, oss: OSSEnum = OSSEnum.COS) {
+        if (oss === OSSEnum.COS) {
+            const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
+            return Readable.from(res.Body)
+        } else if ((oss = OSSEnum.MIN)) {
+            const res = await minio.getObject(MINIO_BUCKET, name)
+            return res
+        } else throw new Error('OSS type not found')
+    },
+    getStreamFile(stream: Stream, name: string) {
+        return new Promise<string>((resolve, reject) => {
+            const path = join(tmpdir(), name)
+            const file = createWriteStream(path)
+            stream
+                .pipe(file)
+                .on('error', reject)
+                .on('finish', () => resolve(path))
         })
+    },
+    // detect file types
+    async fileType(file: string | Readable | Buffer) {
+        if (typeof file === 'string') return await fromFile(file)
+        else if (file instanceof Readable) return await fromStream(file)
+        else if (file instanceof Buffer) return await fromBuffer(file)
     },
     // get redis cache
     async getCache<T>(key: string | number) {

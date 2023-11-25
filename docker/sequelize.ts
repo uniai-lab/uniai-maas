@@ -49,7 +49,7 @@ const db = new Sequelize({
     dialect: 'postgres',
     host: process.env.POSTGRES_HOST,
     password: process.env.POSTGRES_PASSWORD,
-    port: parseInt(process.env.POSTGRES_PORT as string),
+    port: process.env.POSTGRES_PORT as unknown as number,
     username: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
     models,
