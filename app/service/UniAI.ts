@@ -182,10 +182,12 @@ export default class UniAI extends Service {
         const { ctx } = this
         // limit upload file size
         const fileSize = statSync(file.filepath).size
+        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File size exceeds limit')
         const fileName = file.filename
         let filePath = file.filepath
-        const fileExt = extname(filePath).replace('.', '')
-        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File size exceeds limit')
+        const ext = await $.fileType(filePath)
+        if (!ext) throw new Error('Can not detect file type')
+        const fileExt = ext.ext
 
         // get content
         const { pdf, content } = await $.convertText(filePath)
@@ -206,9 +208,9 @@ export default class UniAI extends Service {
             if (!imgs.length) throw new Error('Fail to convert to imgs')
 
             // uploading original file and page imgs
-            filePath = await $.putOSS(filePath, OSSEnum.MIN)
+            filePath = await $.putOSS(filePath, process.env.OSS_TYPE)
             const pages: string[] = []
-            for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSSEnum.MIN))
+            for (const i in imgs) pages.push(await $.putOSS(imgs[i], process.env.OSS_TYPE))
 
             // save to db
             resource = await ctx.model.Resource.create(
@@ -289,7 +291,7 @@ export default class UniAI extends Service {
         if (!filePath) throw new Error('File path is empty')
         if (!fileSize) throw new Error('File size is empty')
         if (!content) throw new Error('File content is empty')
-        fileExt = fileExt || extname(filePath)
+        fileExt = fileExt || extname(filePath).replace('.', '')
         if (!fileExt) throw new Error('File extension is empty')
 
         // split pages
@@ -315,7 +317,7 @@ export default class UniAI extends Service {
                 tokens: $.countTokens(content)
             })
 
-        if (!resource) throw new Error('Fail to create embed resource')
+        if (!resource) throw new Error('Fail to create resource for embedding')
         resourceId = resource.id
 
         // embedding resource
@@ -356,27 +358,31 @@ export default class UniAI extends Service {
         num: number = 1,
         width: number = 1024,
         height: number = 1024,
-        model: ImgModelEnum = ImgModelEnum.MJ
+        model: ImgModelEnum = ImgModelEnum.DALLE
     ) {
-        if (model === 'SD') return sd.imagine(prompt, nPrompt, width, height, num)
-        else if (model === 'DALLE') return gpt.imagine(prompt, nPrompt, width, height, num)
-        else if (model === 'MJ') return mj.imagine(prompt, nPrompt, width, height)
+        const { SD, DALLE, MJ } = ImgModelEnum
+        if (model === SD) return sd.imagine(prompt, nPrompt, width, height, num)
+        else if (model === DALLE) return gpt.imagine(prompt, nPrompt, width, height, num)
+        else if (model === MJ) return mj.imagine(prompt, nPrompt, width, height)
         else throw new Error('Image imagine model not found')
     }
 
     task(id: string, model: ImgModelEnum = ImgModelEnum.MJ) {
-        if (model === 'MJ') return mj.task(id)
-        else if (model === 'SD') return sd.task()
+        const { SD, MJ } = ImgModelEnum
+        if (model === MJ) return mj.task(id)
+        else if (model === SD) return sd.task()
         else throw new Error('Image task model not found')
     }
 
     change(id: string, action: string, index?: number, model: ImgModelEnum = ImgModelEnum.MJ) {
-        if (model === 'MJ') return mj.change(id, action as MJTaskEnum, index)
+        const { MJ } = ImgModelEnum
+        if (model === MJ) return mj.change(id, action as MJTaskEnum, index)
         else throw new Error('Image change model not found')
     }
 
     queue(model: ImgModelEnum = ImgModelEnum.MJ) {
-        if (model === 'MJ') return mj.queue()
+        const { MJ } = ImgModelEnum
+        if (model === MJ) return mj.queue()
         else throw new Error('Image queue model not found')
     }
 }

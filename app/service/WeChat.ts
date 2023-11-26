@@ -179,7 +179,17 @@ export default class WeChat extends Service {
             order: [['updatedAt', 'DESC']],
             include: {
                 model: ctx.model.Resource,
-                attributes: ['id', 'page', 'tokens', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'typeId'],
+                attributes: [
+                    'id',
+                    'page',
+                    'tokens',
+                    'fileName',
+                    'fileSize',
+                    'filePath',
+                    'fileExt',
+                    'updatedAt',
+                    'typeId'
+                ],
                 include: [{ model: ctx.model.ResourceType, attributes: ['type', 'description'] }]
             }
         })
@@ -361,7 +371,7 @@ export default class WeChat extends Service {
         const { ctx } = this
         const chance = await ctx.model.UserChance.findOne({
             where: { userId },
-            attributes: ['uploadChanceFree', 'uploadChance']
+            attributes: ['id', 'uploadChanceFree', 'uploadChance']
         })
         if (!chance) throw new Error('Fail to find user')
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
@@ -406,12 +416,18 @@ export default class WeChat extends Service {
         }
         return res
     }
+    // generate file url
+    url(path: string, name?: string) {
+        const { ctx } = this
+        return `${ctx.request.protocol}://${ctx.request.host}/wechat/file?path=${path}` + (name ? `&name=${name}` : '')
+    }
+    // get file
     async file(path: string) {
-        const http = path.split('/')[0]
+        const http = path.split('/')[0] as OSSEnum
         const type = extname(path)
         const name = basename(path)
-        if (Object.values(OSSEnum).includes(http as OSSEnum)) {
-            const file = await $.getOSS(name, http as OSSEnum)
+        if (Object.values(OSSEnum).includes(http)) {
+            const file = await $.getOSS(name, http)
             return { file, name, type }
         } else {
             const file = await $.get<undefined, Readable>(path, undefined, { responseType: 'stream' })

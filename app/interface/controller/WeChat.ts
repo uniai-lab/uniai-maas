@@ -73,10 +73,11 @@ export interface DialogResponse {
     fileSize: number
     fileName: string
     filePath: string
+    fileExt: string
     updatedAt: Date
     typeId: number
-    typeName: string
-    typeDesc: string
+    type: string
+    description: string
 }
 
 export type UserinfoResponse = {

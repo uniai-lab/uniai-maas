@@ -27,7 +27,7 @@ export interface QueryResourceRequest {
 }
 
 export interface EmbeddingRequest {
-    id?: number
+    resourceId?: number
     content?: string
     fileName?: string
     filePath?: string
@@ -40,6 +40,7 @@ export interface EmbeddingRequest {
 export interface UploadRequest {
     fileName?: string
 }
+
 export interface UploadResponse {
     id: number
     content: string
@@ -60,18 +61,18 @@ export interface ImagineRequest {
 }
 
 export interface TaskRequest {
-    model: ImgModelEnum
     taskId: string
+    model?: ImgModelEnum
 }
 
 export interface ImgChangeRequest {
-    model: ImgModelEnum
     taskId: string
     action: string
+    model?: ImgModelEnum
     index?: number
 }
 export interface QueueRequest {
-    model: ImgModelEnum
+    model?: ImgModelEnum
 }
 
 export interface ChatResponse {
@@ -94,12 +95,14 @@ export interface EmbeddingResponse {
     id: number
     page: number
     tokens: number
+    model: AIModelEnum
 }
 
 export interface ImagineResponse {
     images: string[]
     info: string
     taskId: string
+    model: ImgModelEnum
 }
 
 export interface TaskResponse {

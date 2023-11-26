@@ -248,10 +248,9 @@ export default class WeChat {
         try {
             const userId = ctx.userId as number
             const file = ctx.request.files[0]
-            const { fileName } = params
             if (!file) throw new Error('No file')
+            file.filename = params.fileName || file.filename
 
-            file.filename = fileName || file.filename
             const res = await ctx.service.weChat.addResource(file, userId, 1)
 
             const resource: UploadResponse = {
@@ -276,20 +275,23 @@ export default class WeChat {
         }
     }
 
+    @Middleware(auth())
     @HTTPMethod({ path: '/resource', method: HTTPMethodEnum.POST })
     async resource(@Context() ctx: UserContext, @HTTPBody() params: ResourceRequest) {
         try {
-            if (!params.resourceId) throw new Error('Resource ID is null')
-            const res = await ctx.service.weChat.resource(params.resourceId)
+            const { resourceId } = params
+            if (!resourceId) throw new Error('Resource ID is null')
+
+            const res = await ctx.service.weChat.resource(resourceId)
             const data: ResourceResponse = {
                 id: res.id,
                 name: res.fileName,
                 size: res.fileSize,
                 ext: res.fileExt,
-                path: res.filePath,
-                pages: res.pages.map(v => v.filePath)
+                path: ctx.service.weChat.url(res.filePath, res.fileName),
+                pages: res.pages.map(v => ctx.service.weChat.url(v.filePath))
             }
-            ctx.service.res.success('Success view resource', data)
+            ctx.service.res.success('Success get resource', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -297,16 +299,17 @@ export default class WeChat {
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: UserContext, @HTTPQuery() path: string) {
+    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         try {
             if (!path) throw new Error('Path is null')
-            const { file, name, type } = await ctx.service.weChat.file(path)
+            const res = await ctx.service.weChat.file(path)
+            name = name || res.name
 
             // set headers
-            ctx.response.type = type
-            if (!['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(type)) ctx.attachment(name)
+            ctx.response.type = res.type
+            ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`)
 
-            ctx.body = file
+            ctx.body = res.file
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -322,19 +325,20 @@ export default class WeChat {
             const res = await ctx.service.weChat.listDialog(userId)
 
             const data: DialogResponse[] = []
-            for (const item of res)
+            for (const { id, resource } of res)
                 data.push({
-                    dialogId: item.id,
-                    resourceId: item.resource.id,
-                    page: item.resource.page,
-                    totalTokens: item.resource.tokens,
-                    fileName: item.resource.fileName,
-                    fileSize: item.resource.fileSize,
-                    filePath: item.resource.filePath,
-                    updatedAt: item.resource.updatedAt,
-                    typeId: item.resource.typeId,
-                    typeName: item.resource.type.type,
-                    typeDesc: item.resource.type.description
+                    dialogId: id,
+                    resourceId: resource.id,
+                    page: resource.page,
+                    totalTokens: resource.tokens,
+                    fileName: resource.fileName,
+                    fileSize: resource.fileSize,
+                    fileExt: resource.fileExt,
+                    filePath: ctx.service.weChat.url(resource.filePath, resource.fileName),
+                    updatedAt: resource.updatedAt,
+                    typeId: resource.typeId,
+                    type: resource.type.type,
+                    description: resource.type.description
                 })
             ctx.service.res.success('Success to list resources', data)
         } catch (e) {

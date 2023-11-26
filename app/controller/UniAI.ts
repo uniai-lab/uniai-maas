@@ -13,7 +13,7 @@ import {
 } from '@eggjs/tegg'
 import { authAdmin } from '@middleware/auth'
 import { Stream } from 'stream'
-import { ChatModelEnum, ImgModelEnum } from '@interface/Enum'
+import { AIModelEnum, ChatModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -132,20 +132,12 @@ export default class UniAI {
     async upload(@Context() ctx: EggContext, @HTTPBody() params: UploadRequest) {
         try {
             const file = ctx.request.files[0]
-            const { fileName } = params
             if (!file) throw new Error('No file')
-            file.filename = fileName || file.filename
+            file.filename = params.fileName || file.filename
 
-            const res = await ctx.service.uniAI.upload(file)
-            ctx.service.res.success('Success to upload resource', {
-                id: res.id,
-                content: res.content,
-                fileName: res.fileName,
-                filePath: res.filePath,
-                fileSize: res.fileSize,
-                fileExt: res.fileExt,
-                page: res.page
-            } as UploadResponse)
+            const { id, content, fileName, filePath, fileSize, fileExt, page } = await ctx.service.uniAI.upload(file)
+            const data: UploadResponse = { id, content, fileName, filePath, fileSize, fileExt, page }
+            ctx.service.res.success('Success to upload resource', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -156,13 +148,14 @@ export default class UniAI {
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         try {
-            const { content, fileName, filePath, fileExt, fileSize, model, id } = params
+            const { resourceId, content, fileName, filePath, fileExt, fileSize } = params
             const userId = 0
             const typeId = 1
+            const model = params.model || AIModelEnum.GLM
 
-            const res = await ctx.service.uniAI.embedding(
+            const { id, tokens, page } = await ctx.service.uniAI.embedding(
                 model,
-                id,
+                resourceId,
                 content,
                 fileName,
                 filePath,
@@ -171,11 +164,8 @@ export default class UniAI {
                 userId,
                 typeId
             )
-            ctx.service.res.success('Success to embed context', {
-                id: res.id,
-                tokens: res.tokens,
-                page: res.page
-            } as EmbeddingResponse)
+            const data: EmbeddingResponse = { id, tokens, page, model }
+            ctx.service.res.success('Success to embed text', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -186,38 +176,29 @@ export default class UniAI {
     @HTTPMethod({ path: '/imagine', method: HTTPMethodEnum.POST })
     async imagine(@Context() ctx: EggContext, @HTTPBody() params: ImagineRequest) {
         try {
-            const { prompt, negativePrompt, num, width, height, model } = params
+            const { prompt, negativePrompt, num, width, height } = params
+            const model = params.model || ImgModelEnum.DALLE
             if (!prompt) throw new Error('Prompt is empty')
 
             const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)
+            const data: ImagineResponse = { images: [], model, info: '', taskId: '' }
 
             if (model === ImgModelEnum.DALLE) {
-                const { data } = res as GPTImagineResponse
                 const images: string[] = []
-                for (const item of data) if (item.url) images.push(item.url)
-                ctx.service.res.success('Success to imagine by DALL-E', {
-                    images,
-                    taskId: '',
-                    info: ''
-                } as ImagineResponse)
+                for (const item of (res as GPTImagineResponse).data) if (item.url) images.push(item.url)
+                data.images = images
             }
             if (model === ImgModelEnum.SD) {
                 const { images, info } = res as SDImagineResponse
-                ctx.service.res.success('Success to imagine by Stable Diffusion', {
-                    images,
-                    taskId: '',
-                    info
-                } as ImagineResponse)
+                data.images = images
+                data.info = info
             }
             if (model === ImgModelEnum.MJ) {
-                const { result, description, code } = res as MJImagineResponse
-                if (code !== 1) throw new Error(description)
-                ctx.service.res.success('Success to imagine by MidJourney', {
-                    images: [],
-                    taskId: result,
-                    info: description
-                } as ImagineResponse)
+                const { result, description } = res as MJImagineResponse
+                data.taskId = result
+                data.info = description
             }
+            ctx.service.res.success('Success to imagine', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -228,37 +209,37 @@ export default class UniAI {
     @HTTPMethod({ path: '/task', method: HTTPMethodEnum.POST })
     async task(@Context() ctx: EggContext, @HTTPBody() params: TaskRequest) {
         try {
-            const { taskId, model } = params
-            const res = await ctx.service.uniAI.task(taskId, model)
-            if (!res.length) throw new Error('No Tasks found')
+            const { taskId } = params
+            const model = params.model || ImgModelEnum.MJ
 
-            if (model === 'MJ') {
+            const res = await ctx.service.uniAI.task(taskId, model)
+            if (!res.length) throw new Error('Task not found')
+
+            const data: TaskResponse[] = []
+            if (model === ImgModelEnum.MJ) {
                 const tasks = res as MJTaskResponse[]
-                if (taskId && tasks[0].failReason) throw new Error(tasks[0].failReason)
-                const data: TaskResponse[] = tasks.map(v => {
-                    return {
-                        id: v.id,
-                        progress: v.progress,
-                        image: v.imageUrl,
-                        info: v.description,
-                        failReason: v.failReason
-                    }
-                })
-                ctx.service.res.success('MidJourney task progress', data)
+                if (tasks[0].failReason) throw new Error(tasks[0].failReason)
+                for (const { id, progress, imageUrl, description, failReason } of tasks)
+                    data.push({
+                        id,
+                        progress,
+                        image: imageUrl,
+                        info: description,
+                        failReason
+                    })
             }
-            if (model === 'SD') {
+            if (model === ImgModelEnum.SD) {
                 const tasks = res as SDTaskResponse[]
-                const data: TaskResponse[] = tasks.map(v => {
-                    return {
+                for (const v of tasks)
+                    data.push({
                         id: v.current_image || '',
                         progress: v.progress.toString(),
                         image: v.current_image || null,
                         info: v.textinfo || '',
                         failReason: v.textinfo || null
-                    }
-                })
-                ctx.service.res.success('Stable Diffusion task progress', data)
+                    })
             }
+            ctx.service.res.success('Success to task progress', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -268,18 +249,18 @@ export default class UniAI {
     @HTTPMethod({ path: '/change', method: HTTPMethodEnum.POST })
     async change(@Context() ctx: EggContext, @HTTPBody() params: ImgChangeRequest) {
         try {
-            const { action, index, taskId, model } = params
+            const { action, index, taskId } = params
+            const model = params.model || ImgModelEnum.MJ
             if (!taskId) throw new Error('taskId is null')
             if (!action) throw new Error('action is null')
 
             const res = await ctx.service.uniAI.change(taskId, action, index, model)
-            if (model === 'MJ') {
-                ctx.service.res.success('Success text to image by MidJourney', {
-                    images: [],
-                    taskId: res.result,
-                    info: res.description
-                } as ImagineResponse)
+            const data: ImagineResponse = { images: [], taskId: '', info: '', model }
+            if (model === ImgModelEnum.MJ) {
+                data.taskId = res.result
+                data.info = res.description
             }
+            ctx.service.res.success('Success image change', res)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -289,9 +270,14 @@ export default class UniAI {
     @HTTPMethod({ path: '/queue', method: HTTPMethodEnum.POST })
     async queue(@Context() ctx: EggContext, @HTTPBody() params: QueueRequest) {
         try {
-            const model = params.model || 'MJ'
+            const model = params.model || ImgModelEnum.MJ
             const res = await ctx.service.uniAI.queue(model)
-            if (model === 'MJ') ctx.service.res.success('Image task queue', res)
+            const data: TaskResponse[] = []
+            if (model === ImgModelEnum.MJ) {
+                for (const { id, progress, imageUrl, description, failReason } of res)
+                    data.push({ id, progress, image: imageUrl, info: description, failReason })
+            }
+            ctx.service.res.success('Success image queue', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)

@@ -15,13 +15,15 @@ const TOKEN = process.env.MID_JOURNEY_TOKEN
 const headers = { 'mj-api-secret': TOKEN }
 
 export default {
-    imagine(prompt: string, nPrompt: string = '', width: number = 1, height: number = 1) {
+    async imagine(prompt: string, nPrompt: string = '', width: number = 1, height: number = 1) {
         const aspect = $.getAspect(width, height)
-        return $.post<MJImagineRequest, MJImagineResponse>(
+        const res = await $.post<MJImagineRequest, MJImagineResponse>(
             `${API}/mj/submit/imagine`,
             { prompt: `${prompt} --ar ${aspect} ${nPrompt ? '--no ' + nPrompt : ''}` },
             { headers }
         )
+        if (res.code !== 1) throw new Error(res.description)
+        return res
     },
     async task(id: string) {
         if (id) return [await $.get<null, MJTaskResponse>(`${API}/mj/task/${id}/fetch`, null, { headers })]

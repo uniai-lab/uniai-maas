@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum } from '@interface/Enum'
+import { ChatModelEnum, OSSEnum } from '@interface/Enum'
 
 declare global {
     namespace NodeJS {
@@ -64,6 +64,7 @@ declare global {
             WX_DEFAULT_RESOURCE_MODEL: ChatModelEnum
             WX_DEFAULT_EMBED_MODEL: ChatModelEnum
 
+            OSS_TYPE: OSSEnum
             // tencent oss
             COS_SECRET_ID: string
             COS_SECRET_KEY: string
