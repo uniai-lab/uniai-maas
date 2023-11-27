@@ -8,7 +8,7 @@ import 'dotenv/config'
 import { Sequelize } from 'sequelize-typescript'
 import { program } from 'commander'
 
-// tables
+// import tables
 import { Resource } from '../app/model/Resource'
 import { Page } from '../app/model/Page'
 import { User } from '../app/model/User'
@@ -22,26 +22,28 @@ import { UserChance } from '../app/model/UserChance'
 import { Prompt } from '../app/model/Prompt'
 import { Embedding1 } from '../app/model/Embedding1'
 import { Embedding2 } from '../app/model/Embedding2'
+import { Announce } from '../app/model/Announce'
 
-// initial data source
+// import initial data source
 import configs from './data/config'
 import resourceTypes from './data/resourceType'
 
-// select models
+// list table models
 const models = [
-    Resource,
-    Page,
-    User,
-    PhoneCode,
-    Config,
-    ResourceType,
-    Chat,
-    OpenAILog,
-    Dialog,
-    UserChance,
-    Prompt,
-    Embedding1,
-    Embedding2
+    Resource, // resource table, for documents, images, videos, audios, other media files
+    Page, // resource split pages for document files (libreoffice)
+    User, // users
+    PhoneCode, // send verify message code records
+    Config, // global configs for apps
+    ResourceType, // types of resource
+    Chat, // chats
+    OpenAILog, // logs
+    Dialog, // user dialogs, free chat or resource chat
+    UserChance, // user chances, belong to users
+    Prompt, // prompts
+    Embedding1, // embeddings from text-embedding-ada-002
+    Embedding2, // embeddings from text2vec-large-chinese
+    Announce // announcements from admin
 ]
 
 // define db
@@ -86,7 +88,7 @@ async function count(table: string): Promise<void> {
     console.log(res)
     await db.close()
 }
-// qurty data by id
+// query data by id
 async function query(table: string, id: number): Promise<void> {
     await db.authenticate()
     const res = await db.models[table].findByPk(id)

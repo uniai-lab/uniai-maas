@@ -52,6 +52,7 @@ export interface UploadResponse {
     userId: number
     createdAt: Date
     updatedAt: Date
+    dialogId: number
 }
 export interface ResourceRequest {
     resourceId: number
@@ -150,4 +151,10 @@ export interface ConfigTask {
 
 export interface UserTask extends ConfigTask {
     flag?: boolean
+}
+
+export interface AnnounceResponse {
+    title: string
+    content: string
+    closeable: boolean
 }

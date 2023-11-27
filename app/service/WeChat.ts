@@ -41,10 +41,14 @@ export default class WeChat extends Service {
         return data
     }
 
+    // get announcements
+    async announce() {
+        return await this.ctx.model.Announce.findAll({ where: { open: true } })
+    }
+
     // use wechat to login, get code, return new user
     async signIn(code: string, fid?: number) {
         const { ctx } = this
-
         // get access_token, openid, unionid
         const url = WX_APP_AUTH_URL
         const res = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(url, {
@@ -83,7 +87,10 @@ export default class WeChat extends Service {
             // add free chat dialog
             await this.dialog(user.id)
             // add default dialog resource
-            if (config.INIT_RESOURCE_ID) await this.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
+            if (config.INIT_RESOURCE_ID) {
+                const count = await ctx.model.Resource.count({ where: { id: config.INIT_RESOURCE_ID } })
+                if (count) await this.dialog(user.id, parseInt(config.INIT_RESOURCE_ID))
+            }
             // give share reward
             if (fid) await this.shareReward(fid)
         }
@@ -367,7 +374,7 @@ export default class WeChat extends Service {
         return res
     }
     // add a new resource
-    async addResource(file: EggFile, userId: number, typeId: number) {
+    async upload(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this
         const chance = await ctx.model.UserChance.findOne({
             where: { userId },
@@ -377,13 +384,12 @@ export default class WeChat extends Service {
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
 
         const upload = await ctx.service.uniAI.upload(file, userId, typeId)
-        const res = await ctx.service.uniAI.embedding(WX_DEFAULT_EMBED_MODEL, upload.id)
+        const resource = await ctx.service.uniAI.embedding(WX_DEFAULT_EMBED_MODEL, upload.id)
 
         if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
         else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
         else throw new Error('Fail to reduce upload chance')
-
-        return res
+        return resource
     }
     // preview file, to imgs
     async resource(id: number) {
@@ -418,8 +424,8 @@ export default class WeChat extends Service {
     }
     // generate file url
     url(path: string, name?: string) {
-        const { ctx } = this
-        return `${ctx.request.protocol}://${ctx.request.host}/wechat/file?path=${path}` + (name ? `&name=${name}` : '')
+        const { protocol, host } = this.ctx.request
+        return `${protocol}://${host}/wechat/file?path=${path}` + (name ? `&name=${name}` : '')
     }
     // get file
     async file(path: string) {

@@ -3,6 +3,7 @@
 /* eslint-disable */
 
 import 'egg';
+import ExportAnnounce from '../../../app/model/Announce';
 import ExportChat from '../../../app/model/Chat';
 import ExportConfig from '../../../app/model/Config';
 import ExportDialog from '../../../app/model/Dialog';
@@ -19,6 +20,7 @@ import ExportUserChance from '../../../app/model/UserChance';
 
 declare module 'egg' {
   interface IModel {
+    Announce: ReturnType<typeof ExportAnnounce>;
     Chat: ReturnType<typeof ExportChat>;
     Config: ReturnType<typeof ExportConfig>;
     Dialog: ReturnType<typeof ExportDialog>;

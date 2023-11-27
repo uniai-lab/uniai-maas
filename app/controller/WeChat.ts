@@ -26,7 +26,8 @@ import {
     ChatRequest,
     ChatResponse,
     ResourceRequest,
-    ResourceResponse
+    ResourceResponse,
+    AnnounceResponse
 } from '@interface/controller/WeChat'
 
 const { DEFAULT_AVATAR_AI, DEFAULT_AVATAR_USER } = process.env
@@ -41,6 +42,27 @@ export default class WeChat {
     async config(@Context() ctx: UserContext) {
         try {
             ctx.service.res.success('Success to list config', await ctx.service.weChat.getConfig())
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    // announcement
+    @HTTPMethod({ path: '/announce', method: HTTPMethodEnum.GET })
+    async announce(@Context() ctx: UserContext) {
+        try {
+            const res = await ctx.service.weChat.announce()
+            ctx.service.res.success(
+                'Success to list announcements',
+                res.map(({ title, content, closeable }) => {
+                    return {
+                        title,
+                        content,
+                        closeable
+                    }
+                }) as AnnounceResponse[]
+            )
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -251,10 +273,12 @@ export default class WeChat {
             if (!file) throw new Error('No file')
             file.filename = params.fileName || file.filename
 
-            const res = await ctx.service.weChat.addResource(file, userId, 1)
+            const res = await ctx.service.weChat.upload(file, userId, 1)
+            const dialog = await ctx.service.weChat.dialog(userId, res.id)
 
-            const resource: UploadResponse = {
+            const data: UploadResponse = {
                 id: res.id,
+                dialogId: dialog.id,
                 typeId: res.typeId,
                 page: res.page,
                 tokens: res.tokens,
@@ -265,10 +289,8 @@ export default class WeChat {
                 createdAt: res.createdAt,
                 updatedAt: res.updatedAt
             }
-            // create dialog
-            const dialog = await ctx.service.weChat.dialog(userId, res.id)
 
-            ctx.service.res.success('Success to upload', { resource, dialog })
+            ctx.service.res.success('Success to upload', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
