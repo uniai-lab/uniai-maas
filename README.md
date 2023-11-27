@@ -10,7 +10,7 @@
 
 -   [OpenAI GPT](https://platform.openai.com)
 -   [IFLYTEK Spark](https://xinghuo.xfyun.cn)
--   [THUDM ChatGLM3](https://github.com/THUDM/ChatGLM3)
+-   [THUDM ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
 -   [ZHIPU ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
 -   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 -   [OpenAI DALL-E](https://platform.openai.com)
@@ -32,11 +32,11 @@ We aim to provide a united API-based platform that integrates various AI models 
 
 Before you start, make sure you have:
 
--   Node.js >= 18 <https://github.com/nvm-sh/nvm>
--   Docker
--   Docker-compose
--   LibreOffice
--   node-canvas: <https://www.npmjs.com/package/canvas>
+-   Node.js >= 16 <https://github.com/nvm-sh/nvm>
+-   Docker & Docker-compose
+-   LibreOffice (libreoffice-convert)
+-   pdf-to-img (canvas-node): <https://www.npmjs.com/package/canvas>
+-   pdf2pic (GraphicsMagick): <https://github.com/yakovmeister/pdf2image/blob/HEAD/docs/gm-installation.md>
 
 ## Getting Started
 
@@ -105,12 +105,20 @@ WX_DEFAULT_CHAT_MODEL=SPARK     # wechat default chat model
 WX_DEFAULT_RESOURCE_MODEL=GLM   # wechat default resource chat model
 WX_DEFAULT_EMBED_MODEL=GLM      # wechat default embed model
 
+OSS_TYPE=minio
 
 # COS, OSS storage
 COS_SECRET_ID=      # tencent cos/oss secret id
 COS_SECRET_KEY=     # tencent cos/oss secret key
 COS_BUCKET=         # tencent cos/oss bucket
 COS_REGION=         # tencent cos/oss region
+
+# MINIO storage
+MINIO_ACCESS_KEY=
+MINIO_SECRET_KEY=
+MINIO_END_POINT=localhost
+MINIO_PORT=9000
+MINIO_BUCKET=uniai
 
 # Google Search
 GOOGLE_SEARCH_API_TOKEN=

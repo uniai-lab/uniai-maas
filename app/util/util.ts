@@ -9,7 +9,8 @@ import crypto from 'crypto'
 import pdf from '@cyber2024/pdf-parse-fixed'
 import { tmpdir } from 'os'
 import libreoffice from 'libreoffice-convert'
-import * as pdf2img from 'pdf-to-img'
+import * as pdf2pic from 'pdf2pic'
+// import * as pdf2img from 'pdf-to-img'
 import { basename, extname, join } from 'path'
 import { createWriteStream, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
@@ -184,6 +185,17 @@ export default {
         // if not pdf, firstly convert to pdf
         if (extname(path) !== '.pdf') path = await this.convertPDF(path)
         const imgs: string[] = []
+        const pages = await pdf2pic
+            .fromPath(path, { density: 100, preserveAspectRatio: true })
+            .bulk(-1, { responseType: 'buffer' })
+        for (const { buffer, page } of pages)
+            if (buffer && page) {
+                const img = `${path.replace(extname(path), '')}-page${page}.png`
+                writeFileSync(img, buffer)
+                imgs.push(img)
+            }
+        /*
+        // use pdf-to-img
         let count = 0
         for await (const page of await pdf2img.pdf(path, { scale: 2 })) {
             count++
@@ -191,6 +203,7 @@ export default {
             writeFileSync(img, page)
             imgs.push(img)
         }
+        */
         return { pdf: path, imgs }
     },
     // extract content from pdf

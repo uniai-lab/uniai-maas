@@ -23,6 +23,7 @@ import $ from '@util/util'
 import { GLMChatRoleEnum } from '@interface/Enum'
 
 const { GLM_API, GLM_API_KEY, GLM_API_REMOTE, GLM_DEFAULT_CHAT_MODEL } = process.env
+const EXPIRE_IN = 10 * 1000
 
 export default {
     async embedding(prompt: string[]) {
@@ -61,7 +62,7 @@ export default {
 
             const invoke = stream ? 'sse-invoke' : 'invoke'
             const url = `${GLM_API_REMOTE}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
-            const token = generateToken(GLM_API_KEY, 60 * 1000)
+            const token = generateToken(GLM_API_KEY, EXPIRE_IN)
             const res = await $.post<GLMTurboChatRequest, Stream | GLMTurboChatResponse>(
                 url,
                 { prompt, temperature, top_p: top },
@@ -113,22 +114,26 @@ export default {
 }
 
 // expiresIn: milliseconds
-function generateToken(apiKey: string, expiresIn: number) {
-    const [id, secret] = apiKey.split('.')
-
+function generateToken(key: string, expire: number) {
+    const [id, secret] = key.split('.')
+    const timestamp = Date.now()
     // @ts-ignore
-    return jwt.sign(
-        {
-            api_key: id,
-            exp: Date.now() + expiresIn,
-            timestamp: Date.now()
-        },
-        secret,
-        {
-            header: {
-                alg: 'HS256',
-                sign_type: 'SIGN'
-            }
-        }
-    )
+    const token: string = jwt.sign({ api_key: id, timestamp, exp: timestamp + expire }, secret, {
+        header: { alg: 'HS256', sign_type: 'SIGN' }
+    })
+    return token
+    /*
+    const cache = await $.getCache<GLMTurboTokenCache>('glm_token')
+    const timestamp = Date.now()
+    if (cache && timestamp - cache.timestamp < expire) return cache.token
+    else {
+        // @ts-ignore
+        const token = jwt.sign({ api_key: id, timestamp, exp: timestamp + expire }, secret, {
+            header: { alg: 'HS256', sign_type: 'SIGN' }
+        })
+        console.log('expire', token)
+        $.setCache<GLMTurboTokenCache>('glm_token', { token, timestamp })
+        return token
+    }
+    */
 }

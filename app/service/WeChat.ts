@@ -403,7 +403,7 @@ export default class WeChat extends Service {
 
             // upload and save page imgs
             const pages: string[] = []
-            for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSSEnum.MIN))
+            for (const i in imgs) pages.push(await $.putOSS(imgs[i], process.env.OSS_TYPE))
             res.pages = await ctx.model.Page.bulkCreate(
                 pages.map((v, i) => {
                     return {

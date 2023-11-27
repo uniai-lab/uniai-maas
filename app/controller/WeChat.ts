@@ -275,7 +275,7 @@ export default class WeChat {
         }
     }
 
-    @Middleware(auth())
+    // @Middleware(auth())
     @HTTPMethod({ path: '/resource', method: HTTPMethodEnum.POST })
     async resource(@Context() ctx: UserContext, @HTTPBody() params: ResourceRequest) {
         try {
