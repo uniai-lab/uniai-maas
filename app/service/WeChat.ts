@@ -404,7 +404,7 @@ export default class WeChat extends Service {
             const stream = await $.getOSS(name, oss as OSSEnum)
             const path = await $.getStreamFile(stream, name)
             // convert to page imgs
-            const { imgs } = await $.convertIMG(path)
+            const imgs = await $.convertIMG(path)
             if (!imgs.length) throw new Error('Fail to convert to imgs')
 
             // upload and save page imgs

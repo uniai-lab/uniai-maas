@@ -190,7 +190,7 @@ export default class UniAI extends Service {
         const fileExt = ext.ext
 
         // get content
-        const { pdf, content } = await $.convertText(filePath)
+        const { content, page } = await $.convertText(filePath)
         if (!content) throw new Error('Fail to extract content text')
         // split first page
         const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
@@ -203,34 +203,22 @@ export default class UniAI extends Service {
         let resource = resources[0]
 
         if (!resource) {
-            // convert to page imgs
-            const { imgs } = await $.convertIMG(pdf)
-            if (!imgs.length) throw new Error('Fail to convert to imgs')
-
             // uploading original file and page imgs
             filePath = await $.putOSS(filePath, process.env.OSS_TYPE)
-            const pages: string[] = []
-            for (const i in imgs) pages.push(await $.putOSS(imgs[i], process.env.OSS_TYPE))
 
             // save to db
-            resource = await ctx.model.Resource.create(
-                {
-                    page: pages.length,
-                    content,
-                    typeId,
-                    userId,
-                    fileName,
-                    filePath,
-                    fileSize,
-                    fileExt,
-                    embedding2: embedding,
-                    pages: pages.map((filePath, i) => {
-                        return { page: i + 1, filePath }
-                    }),
-                    tokens: $.countTokens(content)
-                },
-                { include: ctx.model.Page }
-            )
+            resource = await ctx.model.Resource.create({
+                page,
+                content,
+                typeId,
+                userId,
+                fileName,
+                filePath,
+                fileSize,
+                fileExt,
+                embedding2: embedding,
+                tokens: $.countTokens(content)
+            })
         }
 
         return resource

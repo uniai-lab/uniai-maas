@@ -184,15 +184,16 @@ export default {
     async convertIMG(path: string) {
         // if not pdf, firstly convert to pdf
         if (extname(path) !== '.pdf') path = await this.convertPDF(path)
-        const imgs: string[] = []
         const pages = await pdf2pic
             .fromPath(path, { density: 100, preserveAspectRatio: true })
             .bulk(-1, { responseType: 'buffer' })
+        const imgs = Array(pages.length).fill('')
+
         for (const { buffer, page } of pages)
             if (buffer && page) {
                 const img = `${path.replace(extname(path), '')}-page${page}.png`
                 writeFileSync(img, buffer)
-                imgs.push(img)
+                imgs[page - 1] = img
             }
         /*
         // use pdf-to-img
@@ -204,14 +205,14 @@ export default {
             imgs.push(img)
         }
         */
-        return { pdf: path, imgs }
+        return imgs
     },
     // extract content from pdf
     async convertText(path: string) {
         const ext = extname(path).replace('.', '')
         if (FILE_EXT.includes(ext)) path = await this.convertPDF(path)
         const file = await pdf(readFileSync(path))
-        return { pdf: path, content: this.tinyText(file.text) }
+        return { content: this.tinyText(file.text), page: file.numpages }
     },
     tinyText(text: string): string {
         return text.replace(/[\n\r]{2,}/g, '\n').trim()
