@@ -65,6 +65,7 @@
         "sentence-splitter": "^4.3.0",
         "sequelize": "^6.34.0",
         "sequelize-typescript": "^2.1.5",
+        "uuid": "^9.0.1",
         "ws": "^8.14.2"
     },
     "devDependencies": {
@@ -79,6 +80,7 @@
         "@types/node": "^20.8.10",
         "@types/sbd": "^1.0.4",
         "@types/sequelize": "^4.28.17",
+        "@types/uuid": "^9.0.7",
         "@types/validator": "^13.11.5",
         "@types/ws": "^8.5.8",
         "@typescript-eslint/eslint-plugin": "^6.9.1",
@@ -94,6 +96,7 @@
         "eslint-config-prettier": "^9.0.0",
         "eslint-plugin-prettier": "^5.0.1",
         "mocha": "^10.2.0",
+        "node-gyp": "^10.0.1",
         "prettier": "^3.0.3",
         "ts-node": "^10.9.1",
         "typescript": "5.2.2"

@@ -301,16 +301,17 @@ export default class WeChat {
     @HTTPMethod({ path: '/resource', method: HTTPMethodEnum.POST })
     async resource(@Context() ctx: UserContext, @HTTPBody() params: ResourceRequest) {
         try {
-            const { resourceId } = params
-            if (!resourceId) throw new Error('Resource ID is null')
+            const { id } = params
+            if (!id) throw new Error('Resource ID is null')
 
-            const res = await ctx.service.weChat.resource(resourceId)
+            const res = await ctx.service.weChat.resource(id)
+            const path = ctx.service.weChat.url(res.filePath, res.fileName)
             const data: ResourceResponse = {
                 id: res.id,
                 name: res.fileName,
                 size: res.fileSize,
                 ext: res.fileExt,
-                path: ctx.service.weChat.url(res.filePath, res.fileName),
+                path,
                 pages: res.pages.map(v => ctx.service.weChat.url(v.filePath))
             }
             ctx.service.res.success('Success get resource', data)
@@ -328,7 +329,7 @@ export default class WeChat {
             name = name || res.name
 
             // set headers
-            ctx.response.type = res.type
+            ctx.response.type = res.ext
             ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`)
 
             ctx.body = res.file

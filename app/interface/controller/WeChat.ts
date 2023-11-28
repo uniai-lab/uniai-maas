@@ -55,7 +55,7 @@ export interface UploadResponse {
     dialogId: number
 }
 export interface ResourceRequest {
-    resourceId: number
+    id: number
 }
 export interface ResourceResponse {
     id: number

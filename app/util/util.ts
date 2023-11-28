@@ -1,8 +1,8 @@
 /**
- * Common utils for this project
+ * Common utility functions for the web project.
  *
- * @format
- * @devilyouwei
+ * @format prettier
+ * @author devilyouwei
  */
 
 import crypto from 'crypto'
@@ -12,7 +12,7 @@ import libreoffice from 'libreoffice-convert'
 import * as pdf2pic from 'pdf2pic'
 // import * as pdf2img from 'pdf-to-img'
 import { basename, extname, join } from 'path'
-import { createWriteStream, readFileSync, writeFileSync } from 'fs'
+import { createReadStream, createWriteStream, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
@@ -25,13 +25,20 @@ import COS from 'cos-nodejs-sdk-v5'
 import * as MINIO from 'minio'
 import Redis from 'ioredis'
 import { OSSEnum } from '@interface/Enum'
-import { Stream, Readable } from 'stream'
-import { fromBuffer, fromFile, fromStream } from 'file-type'
+import { Readable } from 'stream'
+import { FileTypeResult, fromBuffer, fromFile, fromStream } from 'file-type'
+import uuid from 'uuid'
 
+// Supported file extensions
 const FILE_EXT = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']
+// Minimum split size for text
 const MIN_SPLIT_SIZE = 400
+// Access token expiration time (milliseconds)
 const ACCESS_TOKEN_EXPIRE = 3600 * 1000
+// Error code for WX sensitive API
 const ERR_CODE = 87014
+
+// Environment variables
 const {
     REDIS_PORT,
     REDIS_HOST,
@@ -52,10 +59,11 @@ const {
     MINIO_BUCKET
 } = process.env
 
-// redis cache
+// Redis cache
 const redis = new Redis(parseInt(REDIS_PORT), REDIS_HOST)
-// tencent cos service
+// Tencent COS service
 const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
+// MinIO client
 const minio = new MINIO.Client({
     endPoint: MINIO_END_POINT,
     accessKey: MINIO_ACCESS_KEY,
@@ -63,14 +71,21 @@ const minio = new MINIO.Client({
     port: parseInt(MINIO_PORT),
     useSSL: false
 })
-// sensitive words filter
+// Sensitive words filter
 const json = JSON.parse(readFileSync(`${ROOT_PATH}/config/sensitive.json`, 'utf-8'))
 const filter = new Filter(json)
-// search engine API
+// Google Custom Search API
 const customsearch = google.customsearch('v1')
 
 export default {
-    // http get request
+    /**
+     * Performs an HTTP GET request.
+     *
+     * @param url - The URL to make the request to.
+     * @param params - Optional request parameters.
+     * @param config - Optional Axios request configuration.
+     * @returns A Promise that resolves with the response data.
+     */
     async get<RequestT = any, ResponseT = any>(
         url: string,
         params?: RequestT,
@@ -78,27 +93,54 @@ export default {
     ): Promise<ResponseT> {
         return (await axios.get(url, { params, ...config })).data
     },
-    // http post request
+
+    /**
+     * Performs an HTTP POST request.
+     *
+     * @param url - The URL to make the request to.
+     * @param body - The request body.
+     * @param config - Optional Axios request configuration.
+     * @returns A Promise that resolves with the response data.
+     */
     async post<RequestT, ResponseT>(url: string, body?: RequestT, config?: AxiosRequestConfig): Promise<ResponseT> {
         return (await axios.post(url, body, config)).data
     },
-    // search online
+
+    /**
+     * Searches online using Google Custom Search.
+     *
+     * @param prompt - The search query.
+     * @param num - The number of search results to return.
+     * @returns A Promise that resolves with the search results.
+     */
     async search(prompt: string, num: number) {
         return (
             await customsearch.cse.list({
                 auth: GOOGLE_SEARCH_API_TOKEN,
                 cx: GOOGLE_SEARCH_ENGINE_ID,
                 q: prompt,
-                num // 返回搜索结果数量
+                num // Number of search results to return
             })
         ).data
     },
-    // extract text from an URL
+
+    /**
+     * Extracts text from a URL.
+     *
+     * @param url - The URL to extract text from.
+     * @returns A Promise that resolves with the extracted text.
+     */
     async url2text(url: string) {
         const html = (await this.get(url, undefined, { timeout: 5000 })) as string
         return this.html2text(html)
     },
-    // extract text from HTML
+
+    /**
+     * Extracts text from HTML content.
+     *
+     * @param html - The HTML content to extract text from.
+     * @returns The extracted text.
+     */
     html2text(html: string) {
         return convert(html, {
             selectors: [
@@ -108,12 +150,24 @@ export default {
             ]
         })
     },
-    // filter sensitive words and replace
+
+    /**
+     * Filters sensitive words in content and optionally replaces them.
+     *
+     * @param content - The content to filter.
+     * @param replace - Optional replacement for sensitive words.
+     * @returns The filtered content.
+     */
     filterSensitive(content: string, replace: string = '') {
         return this.jsonFilterSensitive(content, replace)
     },
-    // get wechat access token for wx miniapp
-    async getWxAccessToken(): Promise<string> {
+
+    /**
+     * Retrieves the WeChat access token for a mini-app.
+     *
+     * @returns A Promise that resolves with the access token.
+     */
+    async getWxAccessToken() {
         const s = await this.getCache<WXAccessToken>('wx_access_token')
         if (s && Date.now() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) {
             return s.token
@@ -126,21 +180,44 @@ export default {
             } else throw new Error(`${res.errcode}:${res.errmsg}`)
         }
     },
-    // use wechat API to filter sensitive content
-    async wxFilterSensitive(content: string, replace: string = ''): Promise<string> {
+
+    /**
+     * Uses the WeChat API to filter sensitive content.
+     *
+     * @param content - The content to filter.
+     * @param replace - Optional replacement for sensitive content.
+     * @returns A Promise that resolves with the filtered content.
+     */
+    async wxFilterSensitive(content: string, replace: string = '') {
         const accessToken = await this.getWxAccessToken()
         const url = `${WX_APP_MSG_CHECK}?access_token=${accessToken}`
         const res: WXSecCheckAPI = await this.post(url, { content })
         if (res.errcode === ERR_CODE) return replace
         return content
     },
-    // use local json to filter sensitive content
-    jsonFilterSensitive(content: string, replace: string = ''): string {
+
+    /**
+     * Filters sensitive content using a local JSON file.
+     *
+     * @param content - The content to filter.
+     * @param replace - Optional replacement for sensitive content.
+     * @returns The filtered content.
+     */
+    jsonFilterSensitive(content: string, replace: string = '') {
         return replace ? (filter.verify(content) ? content : replace) : filter.filter(content).text
     },
-    // decrypt data from wechat phone API
-    decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string): WXDecodedData {
-        // base64 decode
+
+    /**
+     * Decrypts data from WeChat phone API.
+     *
+     * @param encryptedData - The encrypted data to decrypt.
+     * @param iv - The initialization vector.
+     * @param sessionKey - The session key.
+     * @param appid - The app ID.
+     * @returns The decrypted data.
+     */
+    decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string) {
+        // Base64 decode
         const encryptedDataBuffer = Buffer.from(encryptedData, 'base64')
         const ivBuffer = Buffer.from(iv, 'base64')
         const sessionKeyBuffer = Buffer.from(sessionKey, 'base64')
@@ -154,10 +231,25 @@ export default {
         if (decodedData.watermark.appid !== appid) throw new Error('Invalid decrypted data')
         return decodedData
     },
-    // count tokens in the text, by GPT2
+
+    /**
+     * Counts the number of tokens in the text using GPT-2.
+     *
+     * @param text - The text to count tokens in.
+     * @returns The number of tokens.
+     */
     countTokens(text: string): number {
         return encode(text).length
     },
+
+    /**
+     * Slices the text into a specified number of tokens starting from a given index.
+     *
+     * @param text - The text to slice.
+     * @param slice - The number of tokens to slice.
+     * @param from - The starting index for slicing (default is 0).
+     * @returns The sliced text.
+     */
     subTokens(text: string, slice: number, from: number = 0) {
         const tokens = encode(text)
         const nTokens: number[] = []
@@ -167,7 +259,13 @@ export default {
         }
         return decode(nTokens)
     },
-    // convert office files to pdf
+
+    /**
+     * Converts office files to PDF format.
+     *
+     * @param path - The path to the office file.
+     * @returns A Promise that resolves with the path to the converted PDF file.
+     */
     async convertPDF(path: string) {
         return new Promise<string>((resolve, reject) => {
             libreoffice.convert(readFileSync(path), '.pdf', undefined, (err, data) => {
@@ -180,44 +278,71 @@ export default {
             })
         })
     },
-    // convert pdf to imgs, path require .pdf file
+
+    /**
+     * Converts a PDF file to images.
+     *
+     * @param path - The path to the PDF file.
+     * @returns A Promise that resolves with an array of image paths.
+     */
     async convertIMG(path: string) {
-        // if not pdf, firstly convert to pdf
-        if (extname(path) !== '.pdf') path = await this.convertPDF(path)
+        // If not a PDF, first convert to PDF
+        const ext = extname(path)
+        if (ext !== '.pdf') path = await this.convertPDF(path)
+        // convert to img buffers
         const pages = await pdf2pic
             .fromPath(path, { density: 100, preserveAspectRatio: true })
             .bulk(-1, { responseType: 'buffer' })
-        const imgs = Array(pages.length).fill('')
+        const imgs = Array<string>(pages.length).fill('')
 
+        // save to local
         for (const { buffer, page } of pages)
             if (buffer && page) {
-                const img = `${path.replace(extname(path), '')}-page${page}.png`
+                const img = `${path.replace(ext, '')}-page${page}.png`
                 writeFileSync(img, buffer)
                 imgs[page - 1] = img
             }
-        /*
-        // use pdf-to-img
-        let count = 0
+        /* Use pdf-to-img
+        let count = 0;
         for await (const page of await pdf2img.pdf(path, { scale: 2 })) {
-            count++
-            const img = `${path.replace(extname(path), '')}-page${count}.png`
-            writeFileSync(img, page)
-            imgs.push(img)
+            count++;
+            const img = `${path.replace(extname(path), '')}-page${count}.png`;
+            writeFileSync(img, page);
+            imgs.push(img);
         }
         */
         return imgs
     },
-    // extract content from pdf
+
+    /**
+     * Extracts content from a PDF file.
+     *
+     * @param path - The path to the PDF file.
+     * @returns An object containing the extracted content and the number of pages.
+     */
     async convertText(path: string) {
-        const ext = extname(path).replace('.', '')
-        if (FILE_EXT.includes(ext)) path = await this.convertPDF(path)
+        if (extname(path) !== '.pdf') path = await this.convertPDF(path)
         const file = await pdf(readFileSync(path))
         return { content: this.tinyText(file.text), page: file.numpages }
     },
+
+    /**
+     * Reduces multiple consecutive newlines to a single newline.
+     *
+     * @param text - The text to process.
+     * @returns The processed text.
+     */
     tinyText(text: string): string {
         return text.replace(/[\n\r]{2,}/g, '\n').trim()
     },
-    // split a long document text into pages by sentences
+
+    /**
+     * Splits a long document text into pages by sentences.
+     *
+     * @param text - The text to split.
+     * @param min - The minimum number of tokens per page.
+     * @returns An array of pages.
+     */
     splitPage(text: string, min: number = MIN_SPLIT_SIZE) {
         const paragraph = this.tinyText(text)
             .split(/[。？！]/g)
@@ -236,11 +361,25 @@ export default {
         if (tmp.length) arr.push(tmp.trim())
         return arr
     },
-    checkPhone(num: string): boolean {
+
+    /**
+     * Checks if a given string is a valid phone number.
+     *
+     * @param num - The phone number to check.
+     * @returns True if the phone number is valid; otherwise, false.
+     */
+    checkPhone(num: string) {
         const reg = /^1[3456789]{1}\d{9}$/
         return reg.test(num)
     },
-    // upload to oss/cos
+
+    /**
+     * Uploads a file to Object Storage Service (OSS)
+     *
+     * @param path - The path to the file to upload.
+     * @param oss - The OSS type (default is minio).
+     * @returns The URL of the uploaded file.
+     */
     async putOSS(path: string, oss: OSSEnum = OSSEnum.MIN) {
         const name = basename(path)
         if (oss === OSSEnum.COS)
@@ -249,33 +388,105 @@ export default {
         else throw new Error('OSS type not found')
         return `${oss}/${name}`
     },
-    // download from oss
+
+    /**
+     * Downloads a file from an Object Storage Service (OSS).
+     *
+     * @param name - The name of the file to download.
+     * @param oss - The type of OSS (COS or MIN) to use. Defaults to COS.
+     * @returns A readable stream of the downloaded file.
+     * @throws An error if the OSS type is not found.
+     */
     async getOSS(name: string, oss: OSSEnum = OSSEnum.COS) {
         if (oss === OSSEnum.COS) {
             const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
             return Readable.from(res.Body)
-        } else if ((oss = OSSEnum.MIN)) {
+        } else if (oss === OSSEnum.MIN) {
             const res = await minio.getObject(MINIO_BUCKET, name)
             return res
         } else throw new Error('OSS type not found')
     },
-    getStreamFile(stream: Stream, name: string) {
-        return new Promise<string>((resolve, reject) => {
-            const path = join(tmpdir(), name)
-            const file = createWriteStream(path)
+
+    /**
+     * get file from http URL as a readable stream.
+     *
+     * @param url The URL from which to fetch the file.
+     * @returns A Promise that resolves to a Readable stream of the fetched file.
+     * @throws Will throw an error if the HTTP request fails or if the URL is invalid.
+     */
+    async getHttpFile(url: string) {
+        return await this.get<undefined, Readable>(url, undefined, { responseType: 'stream' })
+    },
+
+    /**
+     * Synchronously creates a readable stream from a local file.
+     *
+     * @param filePath The path to the local file to be read.
+     * @returns A Readable stream of the file content.
+     * @throws Will throw an error if the file does not exist or cannot be accessed.
+     */
+    getLocalFile(filePath: string) {
+        return createReadStream(filePath)
+    },
+
+    /**
+     * Gets a readable stream for a file located at the specified path.
+     *
+     * @param path - The path, url, oss to the file.
+     * @returns A readable stream of the file.
+     */
+    async getFileStream(path: string) {
+        const oss = path.split('/')[0] as OSSEnum
+        const name = basename(path)
+
+        if (Object.values(OSSEnum).includes(oss)) return await this.getOSS(name, oss)
+        else if (path.startsWith('http://') || path.startsWith('https://')) return await this.getHttpFile(path)
+        else return this.getLocalFile(path)
+    },
+
+    /**
+     * Retrieves a file from a readable stream and saves it to a local path.
+     *
+     * @param stream - The readable stream of the file.
+     * @param name - The name of the file to be saved.
+     * @returns A Promise that resolves to the local path of the saved file.
+     */
+    async getStreamFile(stream: Readable, name?: string) {
+        if (!name) {
+            const { ext } = await this.fileType(stream)
+            name = `${uuid.v4()}.${ext}`
+        }
+        const path = join(tmpdir(), name)
+        const file = createWriteStream(path)
+        return new Promise<string>((resolve, reject) =>
             stream
                 .pipe(file)
                 .on('error', reject)
                 .on('finish', () => resolve(path))
-        })
+        )
     },
-    // detect file types
+
+    /**
+     * Detects the file type of a given file, whether it's a path, readable stream, or buffer.
+     *
+     * @param file - The file to detect the type of (path, readable stream, or buffer).
+     * @returns The detected file type.
+     */
     async fileType(file: string | Readable | Buffer) {
-        if (typeof file === 'string') return await fromFile(file)
-        else if (file instanceof Readable) return await fromStream(file)
-        else if (file instanceof Buffer) return await fromBuffer(file)
+        let type: FileTypeResult | undefined
+        if (typeof file === 'string') type = await fromFile(file)
+        else if (file instanceof Readable) type = await fromStream(file)
+        else if (file instanceof Buffer) type = await fromBuffer(file)
+        if (!type) throw new Error('Can not detect file type')
+        return type
     },
-    // get redis cache
+
+    /**
+     * Retrieves data from Redis cache.
+     *
+     * @param key - The key to use for cache retrieval.
+     * @returns The cached data as a generic type T.
+     */
     async getCache<T>(key: string | number) {
         try {
             const value = await redis.get(key.toString())
@@ -285,16 +496,39 @@ export default {
             return undefined
         }
     },
-    // set redis cache
+
+    /**
+     * Sets data in Redis cache with an optional expiration time.
+     *
+     * @param key - The key to use for cache storage.
+     * @param value - The data to store in the cache.
+     * @param expire - Optional expiration time in seconds.
+     */
     async setCache<T>(key: string | number, value: T, expire?: number) {
-        if (expire) await redis.setex(key.toString(), expire, JSON.stringify(value))
-        else await redis.set(key.toString(), JSON.stringify(value))
+        if (expire) {
+            await redis.setex(key.toString(), expire, JSON.stringify(value))
+        } else {
+            await redis.set(key.toString(), JSON.stringify(value))
+        }
     },
-    // set redis cache
+
+    /**
+     * Removes data from Redis cache.
+     *
+     * @param key - The key to use for cache removal.
+     * @returns Always returns undefined.
+     */
     async removeCache(key: string | number) {
         await redis.del(key.toString())
         return undefined
     },
+
+    /**
+     * Parses JSON from a string and returns it as a generic type T.
+     *
+     * @param str - The JSON string to parse.
+     * @returns The parsed JSON as a generic type T.
+     */
     json<T>(str: string) {
         try {
             return JSON.parse(str.trim()) as T
@@ -302,13 +536,37 @@ export default {
             return undefined
         }
     },
+
+    /**
+     * Calculates the cosine similarity between two numeric arrays.
+     *
+     * @param v1 - The first numeric array.
+     * @param v2 - The second numeric array.
+     * @returns The cosine similarity value between the two arrays.
+     */
     cosine(v1: number[], v2: number[]) {
         return similarity.cosine(v1, v2)
     },
-    getGCD(a: number, b: number): number {
+
+    /**
+     * Computes the greatest common divisor (GCD) of two numbers using Euclidean algorithm.
+     *
+     * @param a - The first number.
+     * @param b - The second number.
+     * @returns The GCD of the two numbers.
+     */
+    getGCD(a: number, b: number) {
         if (b === 0) return a
         return this.getGCD(b, a % b)
     },
+
+    /**
+     * Calculates and returns the aspect ratio of a width and height.
+     *
+     * @param width - The width dimension.
+     * @param height - The height dimension.
+     * @returns The aspect ratio in the format "width:height".
+     */
     getAspect(width: number, height: number) {
         if (!width || !height) return '1:1'
 

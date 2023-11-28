@@ -180,23 +180,21 @@ export default class UniAI extends Service {
     // upload file
     async upload(file: EggFile, userId: number = 0, typeId: number = 1) {
         const { ctx } = this
+
         // limit upload file size
         const fileSize = statSync(file.filepath).size
         if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File size exceeds limit')
         const fileName = file.filename
-        let filePath = file.filepath
-        const ext = await $.fileType(filePath)
-        if (!ext) throw new Error('Can not detect file type')
-        const fileExt = ext.ext
+        let filePath = file.filepath // local tmp file path
+        const { ext } = await $.fileType(filePath)
 
         // get content
         const { content, page } = await $.convertText(filePath)
         if (!content) throw new Error('Fail to extract content text')
-        // split first page
+
+        // split and embedding first page
         const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
         if (!firstPage[0]) throw new Error('Fail to split first page')
-
-        // embedding first page and check similarity
         const res = await glm.embedding([firstPage[0]])
         const embedding = res.data[0]
         const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_DISTANCE)
@@ -215,7 +213,7 @@ export default class UniAI extends Service {
                 fileName,
                 filePath,
                 fileSize,
-                fileExt,
+                fileExt: ext,
                 embedding2: embedding,
                 tokens: $.countTokens(content)
             })
@@ -279,8 +277,9 @@ export default class UniAI extends Service {
         if (!filePath) throw new Error('File path is empty')
         if (!fileSize) throw new Error('File size is empty')
         if (!content) throw new Error('File content is empty')
+        // filePath can be oss, http, local
         fileExt = fileExt || extname(filePath).replace('.', '')
-        if (!fileExt) throw new Error('File extension is empty')
+        if (!fileExt) throw new Error('Can not detect file extension')
 
         // split pages
         const tokens = $.countTokens(content)

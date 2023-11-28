@@ -384,25 +384,30 @@ export default class WeChat extends Service {
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
 
         const upload = await ctx.service.uniAI.upload(file, userId, typeId)
-        const resource = await ctx.service.uniAI.embedding(WX_DEFAULT_EMBED_MODEL, upload.id)
+        const res = await ctx.service.uniAI.embedding(WX_DEFAULT_EMBED_MODEL, upload.id)
+        // process resource, split pages
+        await this.resource(res.id)
 
+        // reduce chance
         if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
         else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
         else throw new Error('Fail to reduce upload chance')
-        return resource
+        return res
     }
-    // preview file, to imgs
+    // find resource, pages by ID
     async resource(id: number) {
         const { ctx } = this
         const res = await ctx.model.Resource.findByPk(id, {
             attributes: ['id', 'fileName', 'fileSize', 'fileExt', 'filePath'],
             include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
         })
-        if (!res) throw new Error('Can not find the resource')
+        if (!res) throw new Error('Can not find the resource by ID')
         if (!res.pages.length) {
-            const [oss, name] = res.filePath.split('/')
-            const stream = await $.getOSS(name, oss as OSSEnum)
-            const path = await $.getStreamFile(stream, name)
+            // download file to local path
+            const name = basename(res.filePath)
+            const file = await $.getFileStream(res.filePath)
+            const path = await $.getStreamFile(file, name)
+
             // convert to page imgs
             const imgs = await $.convertIMG(path)
             if (!imgs.length) throw new Error('Fail to convert to imgs')
@@ -429,16 +434,10 @@ export default class WeChat extends Service {
     }
     // get file
     async file(path: string) {
-        const http = path.split('/')[0] as OSSEnum
-        const type = extname(path)
+        const ext = extname(path)
         const name = basename(path)
-        if (Object.values(OSSEnum).includes(http)) {
-            const file = await $.getOSS(name, http)
-            return { file, name, type }
-        } else {
-            const file = await $.get<undefined, Readable>(path, undefined, { responseType: 'stream' })
-            return { file, name, type }
-        }
+        const file = await $.getFileStream(path)
+        return { file, name, ext }
     }
     // get user and reset free chat/upload chance
     async getUserResetChance(id: number) {
