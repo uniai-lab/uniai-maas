@@ -402,11 +402,11 @@ export default class WeChat extends Service {
             include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
         })
         if (!res) throw new Error('Can not find the resource by ID')
+        console.log(res.filePath)
         if (!res.pages.length) {
             // download file to local path
-            const name = basename(res.filePath)
             const file = await $.getFileStream(res.filePath)
-            const path = await $.getStreamFile(file, name)
+            const path = await $.getStreamFile(file, basename(res.filePath))
 
             // convert to page imgs
             const imgs = await $.convertIMG(path)

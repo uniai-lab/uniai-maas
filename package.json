@@ -9,7 +9,7 @@
     "scripts": {
         "start": "egg-scripts start --daemon --title=uniai-app --port 3300",
         "stop": "egg-scripts stop --title=uniai-app",
-        "dev": "egg-bin dev --port 3300",
+        "dev": "egg-bin dev --port 3000",
         "ets": "ets",
         "test-local": "egg-bin test -p",
         "test": "npm run lint -- --fix && npm run test-local",

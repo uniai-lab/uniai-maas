@@ -287,8 +287,8 @@ export default {
      */
     async convertIMG(path: string) {
         // If not a PDF, first convert to PDF
-        const ext = extname(path)
-        if (ext !== '.pdf') path = await this.convertPDF(path)
+        if (extname(path) !== '.pdf') path = await this.convertPDF(path)
+
         // convert to img buffers
         const pages = await pdf2pic
             .fromPath(path, { density: 100, preserveAspectRatio: true })
@@ -298,7 +298,7 @@ export default {
         // save to local
         for (const { buffer, page } of pages)
             if (buffer && page) {
-                const img = `${path.replace(ext, '')}-page${page}.png`
+                const img = `${path.replace(extname(path), '')}-page${page}.png`
                 writeFileSync(img, buffer)
                 imgs[page - 1] = img
             }
