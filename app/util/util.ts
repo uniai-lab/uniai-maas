@@ -9,8 +9,8 @@ import crypto from 'crypto'
 import pdf from '@cyber2024/pdf-parse-fixed'
 import { tmpdir } from 'os'
 import libreoffice from 'libreoffice-convert'
-import * as pdf2pic from 'pdf2pic'
-// import * as pdf2img from 'pdf-to-img'
+// import * as pdf2pic from 'pdf2pic'
+import * as pdf2img from 'pdf-to-img'
 import { basename, extname, join } from 'path'
 import { createReadStream, createWriteStream, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
@@ -26,11 +26,8 @@ import * as MINIO from 'minio'
 import Redis from 'ioredis'
 import { OSSEnum } from '@interface/Enum'
 import { Readable } from 'stream'
-import { FileTypeResult, fromBuffer, fromFile, fromStream } from 'file-type'
-import uuid from 'uuid'
+import * as uuid from 'uuid'
 
-// Supported file extensions
-const FILE_EXT = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']
 // Minimum split size for text
 const MIN_SPLIT_SIZE = 400
 // Access token expiration time (milliseconds)
@@ -289,12 +286,13 @@ export default {
         // If not a PDF, first convert to PDF
         if (extname(path) !== '.pdf') path = await this.convertPDF(path)
 
+        /*
         // convert to img buffers
         const pages = await pdf2pic
             .fromPath(path, { density: 100, preserveAspectRatio: true })
             .bulk(-1, { responseType: 'buffer' })
-        const imgs = Array<string>(pages.length).fill('')
 
+        const imgs = Array<string>(pages.length).fill('')
         // save to local
         for (const { buffer, page } of pages)
             if (buffer && page) {
@@ -302,15 +300,14 @@ export default {
                 writeFileSync(img, buffer)
                 imgs[page - 1] = img
             }
-        /* Use pdf-to-img
-        let count = 0;
-        for await (const page of await pdf2img.pdf(path, { scale: 2 })) {
-            count++;
-            const img = `${path.replace(extname(path), '')}-page${count}.png`;
-            writeFileSync(img, page);
-            imgs.push(img);
+            */
+        const imgs: string[] = []
+        const pages = await pdf2img.pdf(path, { scale: 2 })
+        for (const i in pages) {
+            const img = `${path.replace(extname(path), '')}-page${i}.png`
+            writeFileSync(img, await pages[i]())
+            imgs.push(img)
         }
-        */
         return imgs
     },
 
@@ -378,7 +375,7 @@ export default {
      *
      * @param path - The path to the file to upload.
      * @param oss - The OSS type (default is minio).
-     * @returns The URL of the uploaded file.
+     * @returns The URL of the uploaded file on oss, e.g., cos/aaa.pdf minio/bbb.pdf oss/ccc.pdf.
      */
     async putOSS(path: string, oss: OSSEnum = OSSEnum.MIN) {
         const name = basename(path)
@@ -448,37 +445,17 @@ export default {
      * Retrieves a file from a readable stream and saves it to a local path.
      *
      * @param stream - The readable stream of the file.
-     * @param name - The name of the file to be saved.
+     * @param name - The file name to be saved, generate a new uuid filename if undefined.
      * @returns A Promise that resolves to the local path of the saved file.
      */
-    async getStreamFile(stream: Readable, name?: string) {
-        if (!name) {
-            const { ext } = await this.fileType(stream)
-            name = `${uuid.v4()}.${ext}`
-        }
-        const path = join(tmpdir(), name)
-        const file = createWriteStream(path)
+    async getStreamFile(stream: Readable, name: string) {
+        const path = join(tmpdir(), `${uuid.v4()}${extname(name)}`)
         return new Promise<string>((resolve, reject) =>
             stream
-                .pipe(file)
+                .pipe(createWriteStream(path))
                 .on('error', reject)
                 .on('finish', () => resolve(path))
         )
-    },
-
-    /**
-     * Detects the file type of a given file, whether it's a path, readable stream, or buffer.
-     *
-     * @param file - The file to detect the type of (path, readable stream, or buffer).
-     * @returns The detected file type.
-     */
-    async fileType(file: string | Readable | Buffer) {
-        let type: FileTypeResult | undefined
-        if (typeof file === 'string') type = await fromFile(file)
-        else if (file instanceof Readable) type = await fromStream(file)
-        else if (file instanceof Buffer) type = await fromBuffer(file)
-        if (!type) throw new Error('Can not detect file type')
-        return type
     },
 
     /**
@@ -504,12 +481,8 @@ export default {
      * @param value - The data to store in the cache.
      * @param expire - Optional expiration time in seconds.
      */
-    async setCache<T>(key: string | number, value: T, expire?: number) {
-        if (expire) {
-            await redis.setex(key.toString(), expire, JSON.stringify(value))
-        } else {
-            await redis.set(key.toString(), JSON.stringify(value))
-        }
+    async setCache<T>(key: string | number, value: T) {
+        await redis.set(key.toString(), JSON.stringify(value))
     },
 
     /**
@@ -520,7 +493,6 @@ export default {
      */
     async removeCache(key: string | number) {
         await redis.del(key.toString())
-        return undefined
     },
 
     /**

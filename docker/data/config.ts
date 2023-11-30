@@ -3,17 +3,17 @@ const menu = [
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
         title: '5MB',
-        tip: '单个文档限制'
+        tip: '单个文档'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
-        title: '10个文档',
-        tip: '每周上传次数'
+        title: '10个',
+        tip: '每周上传'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
-        title: '299次对话',
-        tip: '每周对话次数'
+        title: '99次',
+        tip: '每周对话'
     }
 ]
 
@@ -26,7 +26,7 @@ const task = [
     },
     {
         title: '关注公众号',
-        tip: '对话次数+100',
+        tip: '对话次数+50',
         button: '立即关注',
         type: 2 // 关注
     }
@@ -84,7 +84,7 @@ export default [
     },
     {
         key: 'DEFAULT_FREE_CHAT_CHANCE',
-        value: 299
+        value: 99
     },
     {
         key: 'DEFAULT_FREE_UPLOAD_CHANCE',
@@ -92,15 +92,15 @@ export default [
     },
     {
         key: 'SHARE_REWARD_CHAT_CHANCE',
-        value: 100
+        value: 50
     },
     {
         key: 'SHARE_REWARD_UPLOAD_CHANCE',
-        value: 10
+        value: 5
     },
     {
         key: 'FOLLOW_REWARD_CHAT_CHANCE',
-        value: 100
+        value: 50
     },
     {
         key: 'INIT_RESOURCE_ID',

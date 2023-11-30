@@ -5,7 +5,7 @@ import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import md5 from 'md5'
-import { PassThrough, Readable } from 'stream'
+import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { ChatModelEnum, ChatRoleEnum, OSSEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
@@ -28,7 +28,8 @@ const {
     WX_DEFAULT_EMBED_MODEL,
     WX_APP_ID,
     WX_APP_AUTH_URL,
-    WX_APP_SECRET
+    WX_APP_SECRET,
+    OSS_TYPE
 } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -402,11 +403,18 @@ export default class WeChat extends Service {
             include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
         })
         if (!res) throw new Error('Can not find the resource by ID')
-        console.log(res.filePath)
         if (!res.pages.length) {
             // download file to local path
-            const file = await $.getFileStream(res.filePath)
-            const path = await $.getStreamFile(file, basename(res.filePath))
+            console.log(res.filePath)
+            const stream = await $.getFileStream(res.filePath)
+            const oss = res.filePath.split('/')[0] as OSSEnum
+            // if oss type is not consistent, generate a new file name, upload file and update resource filePath
+            const path = await $.getStreamFile(stream, basename(res.filePath))
+            if (oss !== OSS_TYPE) {
+                // update new filePath and fileExt
+                res.filePath = await $.putOSS(path, OSS_TYPE)
+                res.fileExt = extname(path).replace('.', '')
+            }
 
             // convert to page imgs
             const imgs = await $.convertIMG(path)
@@ -414,7 +422,7 @@ export default class WeChat extends Service {
 
             // upload and save page imgs
             const pages: string[] = []
-            for (const i in imgs) pages.push(await $.putOSS(imgs[i], process.env.OSS_TYPE))
+            for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSS_TYPE))
             res.pages = await ctx.model.Page.bulkCreate(
                 pages.map((v, i) => {
                     return {
@@ -424,6 +432,8 @@ export default class WeChat extends Service {
                     }
                 })
             )
+            res.page = pages.length
+            return await res.save()
         }
         return res
     }

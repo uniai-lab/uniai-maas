@@ -186,7 +186,7 @@ export default class UniAI extends Service {
         if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File size exceeds limit')
         const fileName = file.filename
         let filePath = file.filepath // local tmp file path
-        const { ext } = await $.fileType(filePath)
+        const fileExt = extname(filePath).replace('.', '')
 
         // get content
         const { content, page } = await $.convertText(filePath)
@@ -213,7 +213,7 @@ export default class UniAI extends Service {
                 fileName,
                 filePath,
                 fileSize,
-                fileExt: ext,
+                fileExt,
                 embedding2: embedding,
                 tokens: $.countTokens(content)
             })

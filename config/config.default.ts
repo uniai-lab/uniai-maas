@@ -4,7 +4,7 @@ import 'dotenv/config'
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'egg'
 
 const { POSTGRES_DB, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_USER } = process.env
-const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', 'jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
+const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
 
 export default (appInfo: EggAppInfo) => {
     // override config from framework / plugin
