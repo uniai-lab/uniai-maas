@@ -20,7 +20,7 @@ import { convert } from 'html-to-text'
 import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
 import Filter from 'mint-filter'
-import COS from 'cos-nodejs-sdk-v5'
+// import COS from 'cos-nodejs-sdk-v5'
 import * as MINIO from 'minio'
 import Redis from 'ioredis'
 import { OSSEnum } from '@interface/Enum'
@@ -38,16 +38,16 @@ const ERR_CODE = 87014
 const {
     REDIS_PORT,
     REDIS_HOST,
-    COS_SECRET_ID,
-    COS_SECRET_KEY,
+    // COS_SECRET_ID,
+    // COS_SECRET_KEY,
     GOOGLE_SEARCH_API_TOKEN,
     GOOGLE_SEARCH_ENGINE_ID,
     WX_APP_ACCESS_TOKEN_URL,
     WX_APP_ID,
     WX_APP_SECRET,
     WX_APP_MSG_CHECK,
-    COS_BUCKET,
-    COS_REGION,
+    // COS_BUCKET,
+    // COS_REGION,
     MINIO_ACCESS_KEY,
     MINIO_END_POINT,
     MINIO_PORT,
@@ -58,7 +58,7 @@ const {
 // Redis cache
 const redis = new Redis(parseInt(REDIS_PORT), REDIS_HOST)
 // Tencent COS service
-const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
+// const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
 // MinIO client
 const minio = new MINIO.Client({
     endPoint: MINIO_END_POINT,
@@ -365,9 +365,8 @@ export default {
      */
     async putOSS(path: string, oss: OSSEnum = OSSEnum.MIN) {
         const name = basename(path)
-        if (oss === OSSEnum.COS)
-            await cos.uploadFile({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name, FilePath: path })
-        else if (oss === OSSEnum.MIN) await minio.fPutObject(MINIO_BUCKET, name, path)
+        if (oss === OSSEnum.MIN) await minio.fPutObject(MINIO_BUCKET, name, path)
+        //if (oss === OSSEnum.COS) await cos.uploadFile({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name, FilePath: path })
         else throw new Error('OSS type not found')
         return `${oss}/${name}`
     },
@@ -381,10 +380,11 @@ export default {
      * @throws An error if the OSS type is not found.
      */
     async getOSS(name: string, oss: OSSEnum = OSSEnum.COS) {
-        if (oss === OSSEnum.COS) {
-            const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
-            return Readable.from(res.Body)
-        } else if (oss === OSSEnum.MIN) return await minio.getObject(MINIO_BUCKET, name)
+        if (oss === OSSEnum.MIN) return await minio.getObject(MINIO_BUCKET, name)
+        // if (oss === OSSEnum.COS) {
+        // const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
+        // return Readable.from(res.Body)
+        // }
         else throw new Error('OSS type not found')
     },
 
