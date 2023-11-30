@@ -16,6 +16,7 @@ import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
 import $ from '@util/util'
 import { basename, extname } from 'path'
+import { statSync } from 'fs'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -405,7 +406,6 @@ export default class WeChat extends Service {
         if (!res) throw new Error('Can not find the resource by ID')
         if (!res.pages.length) {
             // download file to local path
-            console.log(res.filePath)
             const stream = await $.getFileStream(res.filePath)
             const oss = res.filePath.split('/')[0] as OSSEnum
             // if oss type is not consistent, generate a new file name, upload file and update resource filePath
@@ -414,6 +414,7 @@ export default class WeChat extends Service {
                 // update new filePath and fileExt
                 res.filePath = await $.putOSS(path, OSS_TYPE)
                 res.fileExt = extname(path).replace('.', '')
+                res.fileSize = statSync(path).size
             }
 
             // convert to page imgs

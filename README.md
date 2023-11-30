@@ -36,7 +36,6 @@ Before you start, make sure you have:
 -   Docker & Docker-compose
 -   LibreOffice (libreoffice-convert)
 -   pdf-to-img (canvas-node): <https://www.npmjs.com/package/canvas>
--   pdf2pic (GraphicsMagick): <https://github.com/yakovmeister/pdf2image/blob/HEAD/docs/gm-installation.md>
 
 ## Getting Started
 
