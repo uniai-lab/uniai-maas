@@ -29,6 +29,7 @@ import {
     ResourceResponse,
     AnnounceResponse
 } from '@interface/controller/WeChat'
+import { extname } from 'path'
 
 const { DEFAULT_AVATAR_AI, DEFAULT_AVATAR_USER } = process.env
 
@@ -325,12 +326,12 @@ export default class WeChat {
     async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         try {
             if (!path) throw new Error('Path is null')
+
             const res = await ctx.service.weChat.file(path)
             name = name || res.name
 
-            // set headers
-            ctx.response.type = res.ext
-            ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`)
+            ctx.response.type = extname(name)
+            ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`) // 强制浏览器下载，设置下载的文件名
 
             ctx.body = res.file
         } catch (e) {

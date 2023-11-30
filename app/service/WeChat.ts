@@ -440,15 +440,14 @@ export default class WeChat extends Service {
     }
     // generate file url
     url(path: string, name?: string) {
-        const { protocol, host } = this.ctx.request
-        return `${protocol}://${host}/wechat/file?path=${path}` + (name ? `&name=${name}` : '')
+        const { host } = this.ctx.request
+        return `https://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
     }
     // get file
     async file(path: string) {
-        const ext = extname(path)
-        const name = basename(path)
         const file = await $.getFileStream(path)
-        return { file, name, ext }
+        const name = basename(path)
+        return { file, name }
     }
     // get user and reset free chat/upload chance
     async getUserResetChance(id: number) {
