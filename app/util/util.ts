@@ -11,7 +11,7 @@ import { tmpdir } from 'os'
 import libreoffice from 'libreoffice-convert'
 import * as pdf2img from 'pdf-to-img'
 import { basename, extname, join } from 'path'
-import { createReadStream, createWriteStream, readFileSync, writeFileSync } from 'fs'
+import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
@@ -384,10 +384,8 @@ export default {
         if (oss === OSSEnum.COS) {
             const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
             return Readable.from(res.Body)
-        } else if (oss === OSSEnum.MIN) {
-            const res = await minio.getObject(MINIO_BUCKET, name)
-            return res
-        } else throw new Error('OSS type not found')
+        } else if (oss === OSSEnum.MIN) return await minio.getObject(MINIO_BUCKET, name)
+        else throw new Error('OSS type not found')
     },
 
     /**
@@ -408,8 +406,9 @@ export default {
      * @returns A Readable stream of the file content.
      * @throws Will throw an error if the file does not exist or cannot be accessed.
      */
-    getLocalFile(filePath: string) {
-        return createReadStream(filePath)
+    getLocalFile(path: string) {
+        if (existsSync(path)) return createReadStream(path)
+        else throw new Error('File path not found')
     },
 
     /**
