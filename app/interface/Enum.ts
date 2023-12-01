@@ -10,9 +10,28 @@ export enum ImgModelEnum {
     DALLE = 'DALLE',
     MJ = 'MJ'
 }
-
+export enum GPTSubModel {
+    GPT3 = 'gpt-3.5-turbo',
+    GPT4 = 'gpt-4'
+}
+export enum GLMSubModel {
+    LOCAL = 'chatglm3-6b-32k',
+    TURBO = 'chatglm-turbo'
+}
+export enum SPKSubModel {
+    V1 = 'v1.1',
+    V2 = 'v2.1',
+    V3 = 'v3.1'
+}
+export const SPKSubModelDomain = {
+    [SPKSubModel.V1]: 'general',
+    [SPKSubModel.V2]: 'generalv2',
+    [SPKSubModel.V3]: 'generalv3'
+}
 export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum }
 export type AIModelEnum = ChatModelEnum | ImgModelEnum
+export const ChatSubModelEnum = { ...GPTSubModel, ...GLMSubModel, ...SPKSubModel }
+export type ChatSubModelEnum = GPTSubModel | GLMSubModel | SPKSubModel
 
 export enum MJTaskEnum {
     IMAGINE = 'IMAGINE',

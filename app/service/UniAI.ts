@@ -2,10 +2,19 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { PassThrough, Stream } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { Resource } from '@model/Resource'
-import { AIModelEnum, ChatModelEnum, ImgModelEnum, MJTaskEnum, OSSEnum } from '@interface/Enum'
+import {
+    AIModelEnum,
+    ChatModelEnum,
+    ChatSubModelEnum,
+    GLMSubModel,
+    GPTSubModel,
+    ImgModelEnum,
+    MJTaskEnum,
+    SPKSubModel
+} from '@interface/Enum'
 import { ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
 import { GPTChatMessage, GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatMessage, GLMChatStreamResponse } from '@interface/GLM'
@@ -105,19 +114,40 @@ export default class UniAI extends Service {
         top?: number,
         temperature?: number,
         maxLength?: number,
-        subModel?: string
+        subModel?: ChatSubModelEnum
     ) {
         if (model === ChatModelEnum.GPT)
-            return await gpt.chat(prompts as GPTChatMessage[], stream, top, temperature, maxLength, subModel)
+            return await gpt.chat(
+                prompts as GPTChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength,
+                subModel as GPTSubModel
+            )
         else if (model === ChatModelEnum.GLM)
-            return await glm.chat(prompts as GLMChatMessage[], stream, top, temperature, maxLength, subModel)
+            return await glm.chat(
+                prompts as GLMChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength,
+                subModel as GLMSubModel
+            )
         else if (model === ChatModelEnum.SPARK)
-            return await fly.chat(prompts as SPKChatMessage[], stream, top, temperature, maxLength, subModel)
+            return await fly.chat(
+                prompts as SPKChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength,
+                subModel as SPKSubModel
+            )
         else throw new Error('Chat model not found')
     }
 
     // handle chat stream
-    parseSSE(message: Stream, model: ChatModelEnum = ChatModelEnum.GLM, chunk: boolean = false) {
+    parseSSE(message: Readable, model: ChatModelEnum = ChatModelEnum.GLM, chunk: boolean = false) {
         this.ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
         // define return data
         const res: StandardResponse<ChatResponse> = {
@@ -129,7 +159,7 @@ export default class UniAI extends Service {
         const stream = new PassThrough()
         const parser = createParser(e => {
             if (e.type === 'event') {
-                if (model === 'GPT') {
+                if (model === ChatModelEnum.GPT) {
                     const obj = $.json<GPTChatStreamResponse>(e.data)
                     if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
@@ -139,7 +169,7 @@ export default class UniAI extends Service {
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
-                if (model === 'GLM') {
+                if (model === ChatModelEnum.GLM) {
                     const obj = $.json<GLMChatStreamResponse>(e.data)
                     if (obj?.choices[0].delta?.content) {
                         if (chunk) res.data.content = obj.choices[0].delta.content
@@ -149,7 +179,7 @@ export default class UniAI extends Service {
                         stream.write(`data: ${JSON.stringify(res)}\n\n`)
                     }
                 }
-                if (model === 'SPARK') {
+                if (model === ChatModelEnum.SPARK) {
                     const obj = $.json<SPKChatResponse>(e.data)
                     if (obj?.payload.choices.text[0].content) {
                         const { payload } = obj
@@ -174,7 +204,7 @@ export default class UniAI extends Service {
         })
         message.on('end', () => stream.end())
         message.on('close', () => parser.reset())
-        return stream
+        return stream as Readable
     }
 
     // upload file

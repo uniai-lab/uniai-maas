@@ -1,6 +1,6 @@
 /** @format */
 
-import { AIModelEnum, ChatModelEnum, ImgModelEnum } from '@interface/Enum'
+import { AIModelEnum, ChatModelEnum, ImgModelEnum, ChatSubModelEnum } from '@interface/Enum'
 import { GLMChatMessage } from '@interface/GLM'
 import { GPTChatMessage } from '@interface/OpenAI'
 import { SPKChatMessage } from '@interface/Spark'
@@ -13,7 +13,7 @@ export interface ChatRequest {
     top?: number
     temperature?: number
     model?: ChatModelEnum
-    subModel?: string
+    subModel?: ChatSubModelEnum
     chunk?: boolean
     stream?: boolean
 }

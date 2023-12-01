@@ -12,7 +12,7 @@ import {
     Inject
 } from '@eggjs/tegg'
 import { authAdmin } from '@middleware/auth'
-import { Stream } from 'stream'
+import { Readable } from 'stream'
 import { AIModelEnum, ChatModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
@@ -49,7 +49,7 @@ export default class UniAI {
             if (!prompts.length) throw new Error('Empty prompts')
 
             const res = await ctx.service.uniAI.chat(prompts, stream, model, top, temperature, maxLength, subModel)
-            if (res instanceof Stream) ctx.body = ctx.service.uniAI.parseSSE(res, model, chunk)
+            if (res instanceof Readable) ctx.body = ctx.service.uniAI.parseSSE(res, model, chunk)
             else if (model === ChatModelEnum.GPT) {
                 // chat to GPT
                 const { choices, model, object, usage } = res as GPTChatResponse
@@ -105,7 +105,7 @@ export default class UniAI {
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
 
-            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Readable, model, chunk)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error, true)

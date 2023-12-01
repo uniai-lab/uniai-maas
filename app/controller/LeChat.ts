@@ -1,7 +1,7 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
-import { Stream } from 'stream'
+import { Readable } from 'stream'
 import { UserContext } from '@interface/Context'
 import auth from '@middleware/auth'
 import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/controller/LeChat'
@@ -46,7 +46,7 @@ export default class LeChat {
 
             const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength)
 
-            ctx.body = ctx.service.uniAI.parseSSE(res as Stream, model, chunk)
+            ctx.body = ctx.service.uniAI.parseSSE(res as Readable, model, chunk)
         } catch (e) {
             ctx.logger.error(e)
             ctx.service.res.error(e as Error, true)

@@ -5,7 +5,7 @@ import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { IncludeOptions, Op } from 'sequelize'
 import md5 from 'md5'
-import { PassThrough } from 'stream'
+import { Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { ChatModelEnum, ChatRoleEnum, OSSEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
@@ -309,7 +309,7 @@ export default class WeChat extends Service {
         await $.setCache(`chat_${userId}`, cache)
 
         // start chat stream
-        const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as PassThrough
+        const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as Readable
         const parser = createParser(e => {
             try {
                 if (e.type === 'event') {

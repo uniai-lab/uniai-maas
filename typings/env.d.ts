@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum, OSSEnum } from '@interface/Enum'
+import { ChatModelEnum, GLMSubModel, GPTSubModel, OSSEnum, SPKSubModel } from '@interface/Enum'
 
 declare global {
     namespace NodeJS {
@@ -17,7 +17,7 @@ declare global {
             OPENAI_API: string
             OPENAI_API_VERSION: string
             OPENAI_API_KEY: string
-            OPENAI_DEFAULT_CHAT_MODEL: string
+            OPENAI_DEFAULT_CHAT_MODEL: GPTSubModel
             OPENAI_DEFAULT_EMBED_MODEL: string
             OPENAI_EMBED_DIM: number
 
@@ -25,7 +25,7 @@ declare global {
             GLM_API: string
             GLM_API_REMOTE: string
             GLM_API_KEY: string
-            GLM_DEFAULT_CHAT_MODEL: string
+            GLM_DEFAULT_CHAT_MODEL: GLMSubModel
             TEXT2VEC_EMBED_DIM: number
 
             // Spark
@@ -33,7 +33,7 @@ declare global {
             SPARK_API_KEY: string
             SPARK_API_SECRET: string
             SPARK_APP_ID: string
-            SPARK_DEFAULT_MODEL_VERSION: string
+            SPARK_DEFAULT_MODEL_VERSION: SPKSubModel
 
             // stable diffusion
             STABLE_DIFFUSION_API: string

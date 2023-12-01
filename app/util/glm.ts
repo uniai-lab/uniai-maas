@@ -1,11 +1,11 @@
 /**
- * util for GLM model API connect
+ * Utility for connecting to the GLM model API.
  *
- * @format
- * @devilyouwei
+ * @format prettier
+ * @author devilyouwei
  */
 
-import { PassThrough, Stream } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import jwt from 'jsonwebtoken'
 
@@ -20,35 +20,53 @@ import {
     GLMTurboChatResponse
 } from '@interface/GLM'
 import $ from '@util/util'
-import { GLMChatRoleEnum } from '@interface/Enum'
+import { GLMChatRoleEnum, GLMSubModel } from '@interface/Enum'
 
 const { GLM_API, GLM_API_KEY, GLM_API_REMOTE, GLM_DEFAULT_CHAT_MODEL } = process.env
 const EXPIRE_IN = 10 * 1000
 
 export default {
+    /**
+     * Fetches embeddings for a prompt.
+     *
+     * @param prompt - An array of input prompts.
+     * @returns A promise resolving to the embedding response.
+     */
     async embedding(prompt: string[]) {
         return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${GLM_API}/embedding`, { prompt })
     },
+
+    /**
+     * Sends messages to the GLM chat model.
+     *
+     * @param messages - An array of chat messages.
+     * @param stream - Whether to use stream response (default: false).
+     * @param top - Top probability to sample (optional).
+     * @param temperature - Temperature for sampling (optional).
+     * @param maxLength - Maximum token length for response (optional).
+     * @param subModel - The submodel to use for chat (default: GLM_DEFAULT_CHAT_MODEL).
+     * @returns A promise resolving to the chat response or a stream.
+     */
     async chat(
         messages: GLMChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number,
-        subModel: string = GLM_DEFAULT_CHAT_MODEL
+        subModel: GLMSubModel = GLM_DEFAULT_CHAT_MODEL
     ) {
-        if (subModel === 'chatglm3-6b-32k') {
-            return await $.post<GLMChatRequest, Stream | GLMChatResponse>(
+        if (subModel === GLMSubModel.LOCAL) {
+            return await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_API}/chat`,
                 { messages, stream, temperature, top_p: top, max_tokens: maxLength },
                 { responseType: stream ? 'stream' : 'json' }
             )
-        } else if (subModel === 'chatglm-turbo') {
-            // recreate prompt for chatglm-turbo
+        } else if (subModel === GLMSubModel.TURBO) {
+            // Recreate prompt for chatglm-turbo
             const prompt: GLMChatMessage[] = []
             let input = ''
             const { SYSTEM, USER, ASSISTANT } = GLMChatRoleEnum
-            for (const { role, content } of messages)
+            for (const { role, content } of messages) {
                 if (role === SYSTEM) {
                     prompt.push({ role: USER, content })
                     prompt.push({ role: ASSISTANT, content: 'Yes' })
@@ -58,12 +76,13 @@ export default {
                     prompt.push({ role: ASSISTANT, content })
                     input = ''
                 }
+            }
             prompt.push({ role: USER, content: input.trim() })
 
             const invoke = stream ? 'sse-invoke' : 'invoke'
             const url = `${GLM_API_REMOTE}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
             const token = generateToken(GLM_API_KEY, EXPIRE_IN)
-            const res = await $.post<GLMTurboChatRequest, Stream | GLMTurboChatResponse>(
+            const res = await $.post<GLMTurboChatRequest, Readable | GLMTurboChatResponse>(
                 url,
                 { prompt, temperature, top_p: top },
                 {
@@ -72,7 +91,7 @@ export default {
                 }
             )
 
-            if (res instanceof Stream) {
+            if (res instanceof Readable) {
                 const output = new PassThrough()
                 const parser = createParser(e => {
                     if (e.type === 'event') {
@@ -92,9 +111,9 @@ export default {
                 res.on('error', e => output.destroy(e))
                 res.on('end', () => output.end())
                 res.on('close', () => parser.reset())
-                return output
+                return output as Readable
             } else {
-                // check res
+                // Check response
                 if (res.code && res.code !== 200) throw new Error(res.msg)
                 if (!res.data) throw new Error('Empty chat data response')
 
@@ -109,11 +128,19 @@ export default {
                     usage: res.data.usage
                 } as GLMChatResponse
             }
-        } else throw new Error('GLM model not found')
+        } else {
+            throw new Error('GLM model not found')
+        }
     }
 }
 
-// expiresIn: milliseconds
+/**
+ * Generates a JWT token for authorization.
+ *
+ * @param key - The API key.
+ * @param expire - Token expiration time in milliseconds.
+ * @returns The generated JWT token.
+ */
 function generateToken(key: string, expire: number) {
     const [id, secret] = key.split('.')
     const timestamp = Date.now()
@@ -122,18 +149,4 @@ function generateToken(key: string, expire: number) {
         header: { alg: 'HS256', sign_type: 'SIGN' }
     })
     return token
-    /*
-    const cache = await $.getCache<GLMTurboTokenCache>('glm_token')
-    const timestamp = Date.now()
-    if (cache && timestamp - cache.timestamp < expire) return cache.token
-    else {
-        // @ts-ignore
-        const token = jwt.sign({ api_key: id, timestamp, exp: timestamp + expire }, secret, {
-            header: { alg: 'HS256', sign_type: 'SIGN' }
-        })
-        console.log('expire', token)
-        $.setCache<GLMTurboTokenCache>('glm_token', { token, timestamp })
-        return token
-    }
-    */
 }

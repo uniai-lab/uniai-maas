@@ -1,34 +1,45 @@
 /**
+ * IFLYTEK API utility for chat.
+ *
  * @format
- * IFLYTEK API
- * 2023-9-8
- * devilyouwei
+ * @date 2023-9-8
+ * @author devilyouwei
  */
 
 import os from 'os'
 import { createHmac } from 'crypto'
 import WebSocket from 'ws'
-import { PassThrough, Stream } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import { SPKChatMessage, SPKChatRequest, SPKChatResponse } from '@interface/Spark'
+import { SPKSubModel, SPKSubModelDomain } from '@interface/Enum'
 import $ from '@util/util'
 
 const { SPARK_API, SPARK_API_KEY, SPARK_API_SECRET, SPARK_APP_ID, SPARK_DEFAULT_MODEL_VERSION } = process.env
 
 export default {
+    /**
+     * Initiates a chat conversation with IFLYTEK Spark API.
+     *
+     * @param messages - An array of chat messages.
+     * @param stream - Whether to use stream response (default: false).
+     * @param top - Top probability to sample (optional).
+     * @param temperature - Temperature for sampling (optional).
+     * @param maxLength - Maximum token length for response (optional).
+     * @param version - The Spark model version to use (default: SPARK_DEFAULT_MODEL_VERSION).
+     * @returns A promise resolving to the chat response or a stream.
+     */
     chat(
         messages: SPKChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number,
-        version: string = SPARK_DEFAULT_MODEL_VERSION
+        version: SPKSubModel = SPARK_DEFAULT_MODEL_VERSION
     ) {
         const url = getURL(version)
         const ws = new WebSocket(url)
-        let domain = 'general'
-        if (version === 'v2.1') domain = 'generalv2'
-        else if (version === 'v3.1') domain = 'generalv3'
-        else domain = 'general'
+
+        const domain = SPKSubModelDomain[version]
 
         const input: SPKChatRequest = {
             header: { app_id: SPARK_APP_ID },
@@ -38,21 +49,22 @@ export default {
 
         ws.on('open', () => ws.send(JSON.stringify(input)))
 
-        return new Promise<SPKChatResponse | Stream>((resolve, reject) => {
+        return new Promise<SPKChatResponse | Readable>((resolve, reject) => {
             if (stream) {
                 const stream = new PassThrough()
                 ws.on('message', (e: Buffer) => {
                     const res = $.json<SPKChatResponse>(e.toString('utf8'))
                     if (!res) return stream.destroy(new Error('Response data is not JSON'))
                     if (res.header.code !== 0) return stream.destroy(new Error(res.header.message))
-                    // simulate SSE data stream
+
+                    // Simulate SSE data stream
                     res.payload.model = `spark-${version}`
                     res.payload.object = `chat.completion.chunk`
                     stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 })
                 ws.on('error', e => stream.destroy(e))
                 ws.on('close', () => stream.end())
-                resolve(stream as Stream)
+                resolve(stream as Readable)
             } else {
                 let res: SPKChatResponse | null = null
                 ws.on('error', e => reject(e))
@@ -66,7 +78,7 @@ export default {
                     } else res = data
                 })
                 ws.on('close', () => {
-                    if (!res) return reject(new Error('response data is null'))
+                    if (!res) return reject(new Error('Response data is null'))
                     res.payload.model = `spark-${version}`
                     res.payload.object = `chat.completion`
                     resolve(res)
@@ -76,6 +88,12 @@ export default {
     }
 }
 
+/**
+ * Generates the WebSocket URL for the Spark API request.
+ *
+ * @param version - The Spark model version.
+ * @returns The WebSocket URL.
+ */
 function getURL(version: string) {
     const host = os.hostname()
     const date = new Date().toUTCString()

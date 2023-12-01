@@ -80,7 +80,7 @@ SPARK_API=ws://spark-api.xf-yun.com
 SPARK_API_KEY=      # IFLYTEK Spark API KEY
 SPARK_API_SECRET=   # IFLYTEK Spark API Secret
 SPARK_APP_ID=       # IFLYTEK Spark APP ID
-SPARK_DEFAULT_MODEL_VERSION=v3.1 # IFLYTEK Spark model version
+SPARK_DEFAULT_MODEL_VERSION=v3.1 # v1.1, v2.1, v3.1
 
 # PostgreSQL database
 POSTGRES_HOST=10.144.1.7    # postgresql host url
