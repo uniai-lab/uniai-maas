@@ -17,8 +17,3 @@ export interface UserTokenCache {
     token: string
     time: number
 }
-
-export interface GLMTurboTokenCache {
-    token: string
-    timestamp: number
-}

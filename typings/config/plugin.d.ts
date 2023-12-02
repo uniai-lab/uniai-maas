@@ -21,6 +21,7 @@ import '@eggjs/tegg-controller-plugin';
 import '@openai-link/egg-sequelize-ts';
 import 'egg-view-nunjucks';
 import 'egg-cors';
+import 'egg-redis';
 import { EggPluginItem } from 'egg';
 declare module 'egg' {
   interface EggPlugin {
@@ -46,5 +47,6 @@ declare module 'egg' {
     sequelize?: EggPluginItem;
     nunjucks?: EggPluginItem;
     cors?: EggPluginItem;
+    redis?: EggPluginItem;
   }
 }

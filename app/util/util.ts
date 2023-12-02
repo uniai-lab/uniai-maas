@@ -26,6 +26,7 @@ import Redis from 'ioredis'
 import { OSSEnum } from '@interface/Enum'
 import { Readable } from 'stream'
 import * as uuid from 'uuid'
+import isJSON from '@stdlib/assert-is-json'
 
 // Minimum split size for text
 const MIN_SPLIT_SIZE = 400
@@ -56,7 +57,7 @@ const {
 } = process.env
 
 // Redis cache
-const redis = new Redis(parseInt(REDIS_PORT), REDIS_HOST)
+const redis = new Redis(REDIS_PORT, REDIS_HOST)
 // Tencent COS service
 // const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
 // MinIO client
@@ -127,7 +128,7 @@ export default {
      * @returns A Promise that resolves with the extracted text.
      */
     async url2text(url: string) {
-        const html = (await this.get(url, undefined, { timeout: 5000 })) as string
+        const html = await this.get<undefined, string>(url, undefined, { timeout: 5000 })
         return this.html2text(html)
     },
 
@@ -156,40 +157,6 @@ export default {
      */
     filterSensitive(content: string, replace: string = '') {
         return this.jsonFilterSensitive(content, replace)
-    },
-
-    /**
-     * Retrieves the WeChat access token for a mini-app.
-     *
-     * @returns A Promise that resolves with the access token.
-     */
-    async getWxAccessToken() {
-        const s = await this.getCache<WXAccessToken>('wx_access_token')
-        if (s && Date.now() - new Date(s.time).getTime() <= ACCESS_TOKEN_EXPIRE) {
-            return s.token
-        } else {
-            const url = `${WX_APP_ACCESS_TOKEN_URL}?grant_type=client_credential&appid=${WX_APP_ID}&secret=${WX_APP_SECRET}`
-            const res: WXAccessTokenAPI = await this.get(url)
-            if (res && res.access_token) {
-                await this.setCache<WXAccessToken>('wx_access_token', { time: new Date(), token: res.access_token })
-                return res.access_token
-            } else throw new Error(`${res.errcode}:${res.errmsg}`)
-        }
-    },
-
-    /**
-     * Uses the WeChat API to filter sensitive content.
-     *
-     * @param content - The content to filter.
-     * @param replace - Optional replacement for sensitive content.
-     * @returns A Promise that resolves with the filtered content.
-     */
-    async wxFilterSensitive(content: string, replace: string = '') {
-        const accessToken = await this.getWxAccessToken()
-        const url = `${WX_APP_MSG_CHECK}?access_token=${accessToken}`
-        const res: WXSecCheckAPI = await this.post(url, { content })
-        if (res.errcode === ERR_CODE) return replace
-        return content
     },
 
     /**
@@ -430,7 +397,7 @@ export default {
      * Retrieves a file from a readable stream and saves it to a local path.
      *
      * @param stream - The readable stream of the file.
-     * @param name - The file name to be saved, generate a new uuid filename if undefined.
+     * @param name - The file name to be saved, generate a new uuid filename.
      * @returns A Promise that resolves to the local path of the saved file.
      */
     async getStreamFile(stream: Readable, name: string) {
@@ -444,54 +411,14 @@ export default {
     },
 
     /**
-     * Retrieves data from Redis cache.
-     *
-     * @param key - The key to use for cache retrieval.
-     * @returns The cached data as a generic type T.
-     */
-    async getCache<T>(key: string | number) {
-        try {
-            const value = await redis.get(key.toString())
-            if (!value) return undefined
-            return this.json<T>(value)
-        } catch (e) {
-            return undefined
-        }
-    },
-
-    /**
-     * Sets data in Redis cache with an optional expiration time.
-     *
-     * @param key - The key to use for cache storage.
-     * @param value - The data to store in the cache.
-     * @param expire - Optional expiration time in seconds.
-     */
-    async setCache<T>(key: string | number, value: T) {
-        await redis.set(key.toString(), JSON.stringify(value))
-    },
-
-    /**
-     * Removes data from Redis cache.
-     *
-     * @param key - The key to use for cache removal.
-     * @returns Always returns undefined.
-     */
-    async removeCache(key: string | number) {
-        await redis.del(key.toString())
-    },
-
-    /**
      * Parses JSON from a string and returns it as a generic type T.
      *
      * @param str - The JSON string to parse.
      * @returns The parsed JSON as a generic type T.
      */
-    json<T>(str: string) {
-        try {
-            return JSON.parse(str.trim()) as T
-        } catch (e) {
-            return undefined
-        }
+    json<T>(str: string | null) {
+        if (isJSON(str)) return JSON.parse(str) as T
+        else return null
     },
 
     /**

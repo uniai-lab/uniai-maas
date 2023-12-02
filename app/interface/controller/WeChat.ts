@@ -16,7 +16,7 @@ export interface ChatResponse {
     model: AIModelEnum | null
     type: boolean
     role: ChatRoleEnum
-    avatar: string
+    avatar: string | null
 }
 
 export interface ChatListRequest {
@@ -54,9 +54,11 @@ export interface UploadResponse {
     updatedAt: Date
     dialogId: number
 }
+
 export interface ResourceRequest {
     id: number
 }
+
 export interface ResourceResponse {
     id: number
     name: string
@@ -78,7 +80,7 @@ export interface DialogResponse {
     updatedAt: Date
     typeId: number
     type: string
-    description: string
+    description: string | null
 }
 
 export type UserinfoResponse = {
@@ -106,51 +108,34 @@ export type UserinfoResponse = {
         totalChatChance: number
         totalUploadChance: number
     }
-    task?: UserTask[]
+    task: ConfigTask[]
     fid?: number
 }
 
 export interface ConfigResponse {
-    appName?: string
-    appVersion?: string
-    weekChatChance?: string
-    weekResourceAmount?: string
-    resourceSize?: string
-    shareReward?: string
-    footer?: string
-    footerCopy?: string
-    officialAccount?: string
-    shareTitle?: string
-    shareDesc?: string
-    shareImg?: string
-    DEFAULT_AVATAR_AI?: string
-    DEFAULT_AVATAR_USER?: string
-    DEFAULT_USERNAME?: string
-    DEFAULT_FREE_CHAT_CHANCE?: string
-    DEFAULT_FREE_UPLOAD_CHANCE?: string
-    SHARE_REWARD_CHAT_CHANCE?: string
-    SHARE_REWARD_UPLOAD_CHANCE?: string
-    FOLLOW_REWARD_CHAT_CHANCE?: string
-    INIT_RESOURCE_ID?: string
-    menu?: ConfigMenu[]
-    task?: ConfigTask[]
-}
-
-export interface ConfigMenu {
-    image?: string
-    title?: string
-    tip?: string
+    appName: string | null
+    appVersion: string | null
+    footer: string | null
+    footerCopy: string | null
+    officialAccount: string | null
+    shareTitle: string | null
+    shareDesc: string | null
+    shareImg: string | null
+    menu: ConfigMenu[]
+    task: ConfigTask[]
 }
 
 export interface ConfigTask {
-    title?: string
-    tip?: string
-    button?: string
-    type?: number
+    title: string
+    tip: string
+    button: string
+    type: number
 }
 
-export interface UserTask extends ConfigTask {
-    flag?: boolean
+export interface ConfigMenu {
+    image: string
+    title: string
+    tip: string
 }
 
 export interface AnnounceResponse {

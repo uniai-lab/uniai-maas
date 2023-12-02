@@ -31,7 +31,8 @@
             "@public/*": ["app/public/*"],
             "@controller/*": ["app/controller/*"],
             "@interface/*": ["app/interface/*"],
-            "@middleware/*": ["app/middleware/*"]
+            "@middleware/*": ["app/middleware/*"],
+            "@data/*": ["app/data/*"]
         },
         "baseUrl": "."
     },

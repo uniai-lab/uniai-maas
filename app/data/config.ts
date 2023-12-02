@@ -1,5 +1,6 @@
 /** @format */
-const menu = [
+
+const menus = [
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
         title: '5MB',
@@ -17,16 +18,16 @@ const menu = [
     }
 ]
 
-const task = [
+const tasks = [
     {
         title: '分享给好友',
-        tip: '加对话上传次数',
+        tip: '对话+33 上传+5',
         button: '立即分享',
         type: 1 // 分享
     },
     {
         title: '关注公众号',
-        tip: '对话次数+50',
+        tip: '加对话上传次数',
         button: '立即关注',
         type: 2 // 关注
     }
@@ -34,40 +35,45 @@ const task = [
 
 export default [
     {
-        key: 'appName',
+        key: 'APP_NAME',
         value: '乐聊-微信小程序',
         description: '小程序名称'
     },
     {
-        key: 'appVersion',
+        key: 'APP_URL',
+        value: 'https://iict.ac.cn',
+        description: ''
+    },
+    {
+        key: 'APP_VERSION',
         value: 'v2.2.0',
         description: '小程序版本号'
     },
     {
-        key: 'footer',
+        key: 'FOOT_TIP',
         value: '更多信息关注公众号',
         description: '底部标语'
     },
     {
-        key: 'footerCopy',
+        key: 'FOOT_COPY',
         value: 'IICT（点击复制）',
-        description: '点击复制按钮'
+        description: '底部点击复制按钮'
     },
     {
-        key: 'officialAccount',
+        key: 'OFFICIAL',
         value: 'IICT_SUZ',
         description: '公众号ID'
     },
     {
-        key: 'shareTitle',
-        value: '大模型文档分析与对话小程序！'
+        key: 'SHARE_TITLE',
+        value: '大模型文档分析对话小程序！'
     },
     {
-        key: 'shareDesc',
-        value: '大模型文档分析与对话小程序！'
+        key: 'SHARE_DESC',
+        value: '大模型文档分析对话小程序！'
     },
     {
-        key: 'shareImg',
+        key: 'SHARE_IMG',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/share-background.png'
     },
     {
@@ -80,7 +86,7 @@ export default [
     },
     {
         key: 'DEFAULT_USERNAME',
-        value: 'Reader'
+        value: '人类用户'
     },
     {
         key: 'DEFAULT_FREE_CHAT_CHANCE',
@@ -100,20 +106,18 @@ export default [
     },
     {
         key: 'FOLLOW_REWARD_CHAT_CHANCE',
-        value: 50
+        value: 33
     },
     {
         key: 'INIT_RESOURCE_ID',
         value: 449
     },
     {
-        key: 'menu',
-        value: JSON.stringify(menu),
-        isJson: true
+        key: 'USER_MENU',
+        value: JSON.stringify(menus)
     },
     {
-        key: 'task',
-        value: JSON.stringify(task),
-        isJson: true
+        key: 'USER_TASK',
+        value: JSON.stringify(tasks)
     }
 ]

@@ -27,19 +27,8 @@ export class ResourceType extends Model {
     type: string
 
     @AllowNull(false)
-    @Default('')
-    @Column(DataType.STRING)
-    description: string
-
-    @AllowNull(false)
-    @Default(false)
-    @Column(DataType.BOOLEAN)
-    isDel: boolean
-
-    @AllowNull(false)
-    @Default(true)
-    @Column(DataType.BOOLEAN)
-    isEffect: boolean
+    @Column(DataType.TEXT)
+    description: string | null
 
     @HasMany(() => Resource)
     resources: Resource[]

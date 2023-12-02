@@ -6,11 +6,6 @@ declare global {
     namespace NodeJS {
         interface ProcessEnv {
             // APP info
-            APP_NAME: string
-            APP_URL: string
-            DEFAULT_AVATAR_AI: string
-            DEFAULT_AVATAR_USER: string
-            DEFAULT_USERNAME: string
             ADMIN_TOKEN: string
 
             // OpenAI GPT
@@ -50,8 +45,9 @@ declare global {
             POSTGRES_DB: string
 
             // cache redis
-            REDIS_PORT: string
+            REDIS_PORT: number
             REDIS_HOST: string
+            REDIS_PASSWORD: string
 
             // wechat API
             WX_APP_ID: string

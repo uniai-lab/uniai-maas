@@ -19,7 +19,6 @@ import {
     UploadResponse,
     UserinfoResponse,
     SignUpRequest,
-    UserTask,
     ChatListRequest,
     UploadRequest,
     DialogResponse,
@@ -27,11 +26,11 @@ import {
     ChatResponse,
     ResourceRequest,
     ResourceResponse,
-    AnnounceResponse
+    AnnounceResponse,
+    ConfigResponse,
+    ConfigTask
 } from '@interface/controller/WeChat'
 import { extname } from 'path'
-
-const { DEFAULT_AVATAR_AI, DEFAULT_AVATAR_USER } = process.env
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -42,7 +41,8 @@ export default class WeChat {
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
     async config(@Context() ctx: UserContext) {
         try {
-            ctx.service.res.success('Success to list config', await ctx.service.weChat.getConfig())
+            const data: ConfigResponse = await ctx.service.weChat.getUserConfig()
+            ctx.service.res.success('Success to list config', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -93,7 +93,9 @@ export default class WeChat {
                     ...user.chance.dataValues,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
-                }
+                },
+                task: (await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')) || [],
+                fid
             }
             ctx.service.res.success('Success to WeChat login', data)
         } catch (e) {
@@ -130,7 +132,8 @@ export default class WeChat {
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
-                fid: params.fid
+                task: (await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')) || [],
+                fid
             }
             ctx.service.res.success('Success to WeChat register', data)
         } catch (e) {
@@ -145,15 +148,7 @@ export default class WeChat {
     async userInfo(@Context() ctx: UserContext) {
         try {
             const userId = ctx.userId as number
-            const { user, config } = await ctx.service.weChat.getUserResetChance(userId)
-
-            const task: Array<UserTask> = []
-            if (config.task)
-                for (const item of config.task) {
-                    let flag = true
-                    if (user.wxPublicOpenId && item.type === 2) flag = false
-                    task.push({ ...item, flag })
-                }
+            const user = await ctx.service.weChat.getUserResetChance(userId)
 
             const data: UserinfoResponse = {
                 id: user.id,
@@ -166,12 +161,12 @@ export default class WeChat {
                 tokenTime: user.tokenTime || new Date(),
                 wxOpenId: user.wxOpenId || '',
                 wxUnionId: user.wxUnionId || '',
-                task,
                 chance: {
                     ...user.chance.dataValues,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
-                }
+                },
+                task: (await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')) || []
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
@@ -199,7 +194,7 @@ export default class WeChat {
                 content: res.content,
                 userId,
                 dialogId: res.dialogId,
-                avatar: DEFAULT_AVATAR_USER
+                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')
             }
 
             ctx.service.res.success('Success start chat stream', data)
@@ -229,7 +224,7 @@ export default class WeChat {
                 dialogId: res.dialogId,
                 resourceId: res.resourceId,
                 model: res.model,
-                avatar: DEFAULT_AVATAR_AI
+                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')
             }
             ctx.service.res.success('Get chat stream', data)
         } catch (e) {
@@ -254,7 +249,10 @@ export default class WeChat {
                     content: item.content,
                     resourceId: item.resourceId,
                     model: item.model,
-                    avatar: item.role === ChatRoleEnum.USER ? DEFAULT_AVATAR_USER : DEFAULT_AVATAR_AI,
+                    avatar:
+                        item.role === ChatRoleEnum.USER
+                            ? await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')
+                            : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
                     dialogId: res.id,
                     userId: res.userId
                 })
@@ -360,7 +358,7 @@ export default class WeChat {
                     fileExt: resource.fileExt,
                     filePath: ctx.service.weChat.url(resource.filePath, resource.fileName),
                     updatedAt: resource.updatedAt,
-                    typeId: resource.typeId,
+                    typeId: resource.type.id,
                     type: resource.type.type,
                     description: resource.type.description
                 })

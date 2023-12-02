@@ -6,8 +6,6 @@ import { UserContext } from '@interface/Context'
 import auth from '@middleware/auth'
 import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/controller/LeChat'
 
-const { DEFAULT_AVATAR_USER } = process.env
-
 @HTTPController({ path: '/lechat' })
 export default class LeChat {
     @Middleware(auth())
@@ -26,7 +24,7 @@ export default class LeChat {
                 name: res.name || '',
                 phone: res.phone || '',
                 countryCode: res.countryCode || 0,
-                avatar: res.avatar || DEFAULT_AVATAR_USER,
+                avatar: res.avatar || '',
                 token: res.token || '',
                 tokenTime: res.tokenTime || new Date()
             }
@@ -68,7 +66,7 @@ export default class LeChat {
                 name: res.name || '',
                 phone: res.phone || '',
                 countryCode: res.countryCode || 0,
-                avatar: res.avatar || DEFAULT_AVATAR_USER,
+                avatar: res.avatar || '',
                 token: res.token || '',
                 tokenTime: res.tokenTime || new Date()
             }

@@ -5,21 +5,20 @@
 import { UserTokenCache } from '@interface/Cache'
 import { UserContext } from '@interface/Context'
 import $ from '@util/util'
-const EXPIRE = 1000 * 60 * 60 * 24 * 7
+
+const EXPIRE = 1000 * 60 * 60 * 24
 
 // check user auth
 export default function auth() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
-        // find user by token
-        const id = parseInt(ctx.get('id'))
+        const id = ctx.get('id')
         const token = ctx.get('token')
-        if (!id || !token) return ctx.service.res.noAuth()
 
-        const user = await $.getCache<UserTokenCache>(`token_${id}`)
+        const user = $.json<UserTokenCache>(await ctx.app.redis.get(`token_${id}`))
         const now = Date.now()
 
         // check user auth in redis
-        if (user && user.id === id && user.token === token && now - user.time < EXPIRE) ctx.userId = user.id
+        if (user && user.token === token && now - user.time < EXPIRE) ctx.userId = user.id
         else {
             // check user auth in SQL
             const user = await ctx.model.User.findOne({
@@ -30,7 +29,12 @@ export default function auth() {
             const time = user.tokenTime?.getTime() || 0
             if (now - time > EXPIRE) return ctx.service.res.noAuth()
 
-            await $.setCache<UserTokenCache>(`token_${id}`, { id, token, time })
+            const cache: UserTokenCache = {
+                id: user.id,
+                token,
+                time
+            }
+            await ctx.app.redis.set(`token_${id}`, JSON.stringify(cache))
             ctx.userId = user.id
         }
         await next()
