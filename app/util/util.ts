@@ -30,23 +30,19 @@ import isJSON from '@stdlib/assert-is-json'
 
 // Minimum split size for text
 const MIN_SPLIT_SIZE = 400
-// Access token expiration time (milliseconds)
-const ACCESS_TOKEN_EXPIRE = 3600 * 1000
-// Error code for WX sensitive API
-const ERR_CODE = 87014
 
 // Environment variables
 const {
-    REDIS_PORT,
-    REDIS_HOST,
+    // REDIS_PORT,
+    // REDIS_HOST,
     // COS_SECRET_ID,
     // COS_SECRET_KEY,
     GOOGLE_SEARCH_API_TOKEN,
     GOOGLE_SEARCH_ENGINE_ID,
-    WX_APP_ACCESS_TOKEN_URL,
-    WX_APP_ID,
-    WX_APP_SECRET,
-    WX_APP_MSG_CHECK,
+    // WX_APP_ACCESS_TOKEN_URL,
+    // WX_APP_ID,
+    // WX_APP_SECRET,
+    // WX_APP_MSG_CHECK,
     // COS_BUCKET,
     // COS_REGION,
     MINIO_ACCESS_KEY,
@@ -57,7 +53,7 @@ const {
 } = process.env
 
 // Redis cache
-const redis = new Redis(REDIS_PORT, REDIS_HOST)
+// const redis = new Redis(REDIS_PORT, REDIS_HOST)
 // Tencent COS service
 // const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
 // MinIO client

@@ -47,7 +47,7 @@ declare global {
             // cache redis
             REDIS_PORT: number
             REDIS_HOST: string
-            REDIS_PASSWORD: string
+            // REDIS_PASSWORD: string
 
             // wechat API
             WX_APP_ID: string

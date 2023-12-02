@@ -3,16 +3,8 @@
 import 'dotenv/config'
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'egg'
 
-const {
-    POSTGRES_DB,
-    POSTGRES_HOST,
-    POSTGRES_PASSWORD,
-    POSTGRES_PORT,
-    POSTGRES_USER,
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_PASSWORD
-} = process.env
+const { POSTGRES_DB, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_USER, REDIS_HOST, REDIS_PORT } =
+    process.env
 const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
 
 export default (appInfo: EggAppInfo) => {
@@ -53,7 +45,8 @@ export default (appInfo: EggAppInfo) => {
         client: {
             port: REDIS_PORT,
             host: REDIS_HOST,
-            password: REDIS_PASSWORD,
+            // @ts-ignore
+            password: null,
             db: 0
         }
     }

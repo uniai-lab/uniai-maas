@@ -6,7 +6,5 @@ services:
     privileged: true
     image: redis:latest
     restart: always
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
     ports:
       - ${REDIS_PORT}:6379
