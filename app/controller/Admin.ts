@@ -60,13 +60,14 @@ export default class Admin {
             await ctx.model.query('CREATE EXTENSION if not exists vector')
             await ctx.model.sync({ force: false, alter: true })
 
-            await ctx.model.Config.bulkCreate(config, { updateOnDuplicate: ['value', 'description'] })
-            await ctx.model.ResourceType.bulkCreate(resourceType, { updateOnDuplicate: ['description'] })
+            const configs = await ctx.model.Config.bulkCreate(config, { updateOnDuplicate: ['value', 'description'] })
+            const resourceTypes = await ctx.model.ResourceType.bulkCreate(resourceType, {
+                updateOnDuplicate: ['description']
+            })
 
             // update redis cache, set config
-            const configs = await ctx.model.Config.findAll({ attributes: ['key', 'value'] })
             for (const item of configs) await ctx.app.redis.set(item.key, item.value)
-            ctx.service.res.success('Success to init', configs)
+            ctx.service.res.success('Success to init', { configs, resourceTypes })
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)

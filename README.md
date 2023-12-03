@@ -52,16 +52,11 @@ touch ./.env
 ```bash
 
 # APP
-APP_NAME=UniAI
-APP_URL=https://www.uniai.us
-DEFAULT_AVATAR_AI=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png
-DEFAULT_AVATAR_USER=https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png
-DEFAULT_USERNAME=AI
-ADMIN_TOKEN=    # admin token
+ADMIN_TOKEN=666    # admin token
 
 # OPENAI GPT
-OPENAI_API=http://8.214.93.3
-OPENAI_API_VERSION=v1
+OPENAI_API=http://8.214.93.3                        # OpenAI API URL or proxy
+OPENAI_API_VERSION=v1                               # OpenAI API version (no need to modify)
 OPENAI_API_KEY=                                     # OpenAI API key
 OPENAI_EMBED_DIM=1536
 OPENAI_DEFAULT_CHAT_MODEL=gpt-4                     # gpt-4 | gpt-3.5-turbo
@@ -74,7 +69,6 @@ GLM_API_KEY=                                # ZHIPU AI api key
 GLM_DEFAULT_CHAT_MODEL=chatglm3-6b-32k      # chatglm3-6b-32k | chatglm-turbo
 TEXT2VEC_EMBED_DIM=1024                     # https://huggingface.co/GanymedeNil/text2vec-large-chinese
 
-
 # SPARK
 SPARK_API=ws://spark-api.xf-yun.com
 SPARK_API_KEY=      # IFLYTEK Spark API KEY
@@ -83,15 +77,17 @@ SPARK_APP_ID=       # IFLYTEK Spark APP ID
 SPARK_DEFAULT_MODEL_VERSION=v3.1 # v1.1, v2.1, v3.1
 
 # PostgreSQL database
-POSTGRES_HOST=10.144.1.7    # postgresql host url
+POSTGRES_HOST=localhost     # postgresql host url
 POSTGRES_PORT=5432          # postgresql port
 POSTGRES_USER=postgres      # postgresql user
 POSTGRES_PASSWORD=postgres  # postgresql password
 POSTGRES_DB=uniai           # postgresql db
 
 # Redis cache
-REDIS_HOST=10.144.1.7       # Redis cache host url
+REDIS_HOST=localhost        # Redis cache host url
 REDIS_PORT=6379             # Redis cache host port
+REDIS_PASSWORD=redis
+REDIS_DB=0
 
 # WeChat
 WX_APP_ID=                      # wechat app id
@@ -100,17 +96,8 @@ WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
 WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
 WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
-WX_DEFAULT_CHAT_MODEL=SPARK     # wechat default chat model
-WX_DEFAULT_RESOURCE_MODEL=GLM   # wechat default resource chat model
-WX_DEFAULT_EMBED_MODEL=GLM      # wechat default embed model
 
 OSS_TYPE=minio
-
-# COS, OSS storage
-COS_SECRET_ID=      # tencent cos/oss secret id
-COS_SECRET_KEY=     # tencent cos/oss secret key
-COS_BUCKET=         # tencent cos/oss bucket
-COS_REGION=         # tencent cos/oss region
 
 # MINIO storage
 MINIO_ACCESS_KEY=
@@ -140,7 +127,7 @@ npm -g install yarn
 yarn
 ```
 
-Install LibreOfficeL
+Install LibreOffice
 
 ```bash
 sudo apt install libreoffice
@@ -156,12 +143,14 @@ sudo apt install docker.io docker-compose
 
 ```bash
 yarn docker up pgvector
+yarn docker up redis
+yarn docker up minio
 ```
 
 ### Initialize Database
 
 ```bash
-yarn pg init --force
+yarn dev # auto init db
 ```
 
 ## Running UniAI

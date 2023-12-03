@@ -10,7 +10,7 @@ import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import isJSON from '@stdlib/assert-is-json'
 import md5 from 'md5'
-import { ChatModelEnum, ChatRoleEnum, OSSEnum } from '@interface/Enum'
+import { AIModelEnum, ChatModelEnum, ChatRoleEnum, OSSEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
@@ -24,15 +24,7 @@ const PAGE_LIMIT = 6
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const ERROR_CHAT_ID = 0.1
-const {
-    WX_DEFAULT_CHAT_MODEL,
-    WX_DEFAULT_RESOURCE_MODEL,
-    WX_DEFAULT_EMBED_MODEL,
-    WX_APP_ID,
-    WX_APP_AUTH_URL,
-    WX_APP_SECRET,
-    OSS_TYPE
-} = process.env
+const { WX_APP_ID, WX_APP_AUTH_URL, WX_APP_SECRET, OSS_TYPE } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -87,7 +79,7 @@ export default class WeChat extends Service {
         // create user chance default params and values
         const chance = {
             level: 0,
-            uploadSize: 5e6,
+            uploadSize: 5 * 1024 * 1024,
             chatChance: 0,
             chatChanceUpdateAt: new Date(),
             chatChanceFree: Number(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE')),
@@ -110,19 +102,15 @@ export default class WeChat extends Service {
         // lose user chance? create again
         if (!user.chance) user.chance = await ctx.model.UserChance.create({ ...chance, userId: user.id })
 
-        // first create, set default user info
-        if (created) {
-            user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
-            // add free chat dialog
-            await this.dialog(user.id)
-            // add default resource dialog
-            const id = Number(await this.getConfig('INIT_RESOURCE_ID'))
-            if (id) {
-                const count = await ctx.model.Resource.count({ where: { id } })
-                if (count) await this.dialog(user.id, id)
-            }
-            // give share reward
-            if (fid) await this.shareReward(fid)
+        // set some default user info
+        if (!user.name) user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
+        // add free chat dialog
+        await this.dialog(user.id)
+        // add default resource dialog
+        const id = Number(await this.getConfig('INIT_RESOURCE_ID'))
+        if (id) {
+            const count = await ctx.model.Resource.count({ where: { id } })
+            if (count) await this.dialog(user.id, id)
         }
 
         // user is existed, update session key
@@ -130,12 +118,17 @@ export default class WeChat extends Service {
         user.tokenTime = new Date()
         user.wxSessionKey = res.session_key
 
+        // save login auth to cache
         const cache: UserTokenCache = {
             id: user.id,
             token: user.token,
             time: user.tokenTime.getTime()
         }
         await app.redis.set(`token_${user.id}`, JSON.stringify(cache))
+
+        // finally give share reward
+        if (created && fid) await this.shareReward(fid)
+
         return await user.save()
     }
 
@@ -287,7 +280,8 @@ export default class WeChat extends Service {
             let content = ctx.__('document content start')
             // query resource
             const query = [{ role: USER, content: input }]
-            const pages = await ctx.service.uniAI.queryResource(query, resourceId, WX_DEFAULT_EMBED_MODEL, PAGE_LIMIT)
+            const embedModel = (await app.redis.get('WX_DEFAULT_EMBED_MODEL')) as AIModelEnum
+            const pages = await ctx.service.uniAI.queryResource(query, resourceId, embedModel, PAGE_LIMIT)
             // add resource to prompt
             for (const item of pages) content += `\n${item.content}`
             content += `\n${ctx.__('document content end')}\n${ctx.__('answer according to')}`
@@ -301,7 +295,9 @@ export default class WeChat extends Service {
 
         console.log(prompts)
 
-        const model: ChatModelEnum = resourceId ? WX_DEFAULT_RESOURCE_MODEL : WX_DEFAULT_CHAT_MODEL
+        const chatModel = (await app.redis.get('WX_DEFAULT_CHAT_MODEL')) as ChatModelEnum
+        const resourceModel = (await app.redis.get('WX_DEFAULT_RESOURCE_MODEL')) as ChatModelEnum
+        const model: ChatModelEnum = resourceId ? resourceModel : chatModel
 
         // set chat stream cache
         const cache: ChatStreamCache = {
@@ -320,17 +316,17 @@ export default class WeChat extends Service {
         const parser = createParser(e => {
             try {
                 if (e.type === 'event') {
-                    if (model === 'GPT') {
+                    if (model === ChatModelEnum.GPT) {
                         const obj = $.json<GPTChatStreamResponse>(e.data)
                         cache.content += obj?.choices[0].delta.content || ''
                         cache.subModel = obj?.model || null
                     }
-                    if (model === 'GLM') {
+                    if (model === ChatModelEnum.GLM) {
                         const obj = $.json<GLMChatStreamResponse>(e.data)
                         cache.content += obj?.choices[0].delta.content || ''
                         cache.subModel = obj?.model || null
                     }
-                    if (model === 'SPARK') {
+                    if (model === ChatModelEnum.SPARK) {
                         const obj = $.json<SPKChatResponse>(e.data)
                         cache.content += obj?.payload.choices.text[0].content || ''
                         cache.subModel = obj?.payload.model || null
@@ -387,9 +383,10 @@ export default class WeChat extends Service {
         }
         return res
     }
+
     // add a new resource
     async upload(file: EggFile, userId: number, typeId: number) {
-        const { ctx } = this
+        const { ctx, app } = this
         const chance = await ctx.model.UserChance.findOne({
             where: { userId },
             attributes: ['id', 'uploadChanceFree', 'uploadChance']
@@ -398,7 +395,8 @@ export default class WeChat extends Service {
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
 
         const upload = await ctx.service.uniAI.upload(file, userId, typeId)
-        const res = await ctx.service.uniAI.embedding(WX_DEFAULT_EMBED_MODEL, upload.id)
+        const embedModel = (await app.redis.get('WX_DEFAULT_EMBED_MODEL')) as AIModelEnum
+        const res = await ctx.service.uniAI.embedding(embedModel, upload.id)
         // process resource, split pages
         await this.resource(res.id)
 
@@ -408,6 +406,7 @@ export default class WeChat extends Service {
         else throw new Error('Fail to reduce upload chance')
         return res
     }
+
     // find resource, pages by ID
     async resource(id: number) {
         const { ctx } = this
@@ -446,17 +445,20 @@ export default class WeChat extends Service {
         }
         return res
     }
+
     // generate file url
     url(path: string, name?: string) {
         const { host } = this.ctx.request
         return `https://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
     }
+
     // get file
     async file(path: string) {
         const file = await $.getFileStream(path)
         const name = basename(path)
         return { file, name }
     }
+
     // get user and reset free chat/upload chance
     async getUserResetChance(id: number) {
         const { ctx } = this

@@ -50,6 +50,10 @@ export default [
         description: '小程序版本号'
     },
     {
+        key: 'ADMIN_TOKEN',
+        value: process.env.ADMIN_TOKEN
+    },
+    {
         key: 'FOOT_TIP',
         value: '更多信息关注公众号',
         description: '底部标语'
@@ -111,6 +115,18 @@ export default [
     {
         key: 'INIT_RESOURCE_ID',
         value: 449
+    },
+    {
+        key: 'WX_DEFAULT_EMBED_MODEL',
+        value: 'GLM'
+    },
+    {
+        key: 'WX_DEFAULT_CHAT_MODEL',
+        value: 'GLM'
+    },
+    {
+        key: 'WX_DEFAULT_RESOURCE_MODEL',
+        value: 'GLM'
     },
     {
         key: 'USER_MENU',

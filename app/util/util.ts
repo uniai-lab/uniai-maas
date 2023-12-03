@@ -20,9 +20,7 @@ import { convert } from 'html-to-text'
 import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
 import Filter from 'mint-filter'
-// import COS from 'cos-nodejs-sdk-v5'
 import * as MINIO from 'minio'
-import Redis from 'ioredis'
 import { OSSEnum } from '@interface/Enum'
 import { Readable } from 'stream'
 import * as uuid from 'uuid'
@@ -33,18 +31,8 @@ const MIN_SPLIT_SIZE = 400
 
 // Environment variables
 const {
-    // REDIS_PORT,
-    // REDIS_HOST,
-    // COS_SECRET_ID,
-    // COS_SECRET_KEY,
     GOOGLE_SEARCH_API_TOKEN,
     GOOGLE_SEARCH_ENGINE_ID,
-    // WX_APP_ACCESS_TOKEN_URL,
-    // WX_APP_ID,
-    // WX_APP_SECRET,
-    // WX_APP_MSG_CHECK,
-    // COS_BUCKET,
-    // COS_REGION,
     MINIO_ACCESS_KEY,
     MINIO_END_POINT,
     MINIO_PORT,
@@ -52,10 +40,6 @@ const {
     MINIO_BUCKET
 } = process.env
 
-// Redis cache
-// const redis = new Redis(REDIS_PORT, REDIS_HOST)
-// Tencent COS service
-// const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
 // MinIO client
 const minio = new MINIO.Client({
     endPoint: MINIO_END_POINT,
@@ -64,9 +48,11 @@ const minio = new MINIO.Client({
     port: parseInt(MINIO_PORT),
     useSSL: false
 })
+
 // Sensitive words filter
 const json = JSON.parse(readFileSync(`${ROOT_PATH}/config/sensitive.json`, 'utf-8'))
 const filter = new Filter(json)
+
 // Google Custom Search API
 const customsearch = google.customsearch('v1')
 

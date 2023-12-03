@@ -4,6 +4,7 @@ import 'dotenv/config'
 import { EggAppConfig, EggAppInfo, PowerPartial } from 'egg'
 
 const {
+    DB_DIALECT,
     POSTGRES_DB,
     POSTGRES_HOST,
     POSTGRES_PASSWORD,
@@ -11,9 +12,13 @@ const {
     POSTGRES_USER,
     REDIS_HOST,
     REDIS_PORT,
-    REDIS_PASSWORD
+    REDIS_PASSWORD,
+    REDIS_DB
 } = process.env
 const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
+const ALLOW_ORIGIN = '*'
+const ALLOW_METHOD = ['GET', 'POST']
+const FILE_SIZE = '5mb'
 
 export default (appInfo: EggAppInfo) => {
     // override config from framework / plugin
@@ -27,12 +32,12 @@ export default (appInfo: EggAppInfo) => {
         }
     }
     config.cors = {
-        origin: '*',
-        allowMethods: 'GET,POST'
+        origin: ALLOW_ORIGIN,
+        allowMethods: ALLOW_METHOD
     }
     config.multipart = {
         mode: 'file',
-        fileSize: '5mb',
+        fileSize: FILE_SIZE,
         whitelist: WHITELIST
     }
     config.static = {
@@ -41,7 +46,7 @@ export default (appInfo: EggAppInfo) => {
     }
 
     config.sequelize = {
-        dialect: 'postgres',
+        dialect: DB_DIALECT,
         host: POSTGRES_HOST,
         password: POSTGRES_PASSWORD,
         port: POSTGRES_PORT,
@@ -54,7 +59,7 @@ export default (appInfo: EggAppInfo) => {
             port: REDIS_PORT,
             host: REDIS_HOST,
             password: REDIS_PASSWORD,
-            db: 0
+            db: REDIS_DB
         }
     }
 

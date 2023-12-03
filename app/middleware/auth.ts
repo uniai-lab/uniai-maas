@@ -11,8 +11,8 @@ const EXPIRE = 1000 * 60 * 60 * 24
 // check user auth
 export default function auth() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
-        const id = ctx.get('id')
-        const token = ctx.get('token')
+        const id = parseInt(ctx.get('id'))
+        const token = ctx.get('token').trim()
 
         const user = $.json<UserTokenCache>(await ctx.app.redis.get(`token_${id}`))
         const now = Date.now()
@@ -40,12 +40,14 @@ export default function auth() {
         await next()
     }
 }
+
 // check admin auth
 export function authAdmin() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
         // check admin token from header
-        const token: string = ctx.get('token')
-        if (token === process.env.ADMIN_TOKEN) await next()
+        const token = ctx.get('token')
+        const adminToken = await ctx.app.redis.get('ADMIN_TOKEN')
+        if (token === adminToken) await next()
         else ctx.service.res.noAuth()
     }
 }

@@ -5,7 +5,7 @@ import { ChatModelEnum, GLMSubModel, GPTSubModel, OSSEnum, SPKSubModel } from '@
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
-            // APP info
+            // initial admin token
             ADMIN_TOKEN: string
 
             // OpenAI GPT
@@ -37,6 +37,9 @@ declare global {
             MID_JOURNEY_API: string
             MID_JOURNEY_TOKEN: string
 
+            // select a database
+            DB_DIALECT: string
+
             // DB postgresSQL
             POSTGRES_HOST: string
             POSTGRES_PORT: string
@@ -47,25 +50,23 @@ declare global {
             // cache redis
             REDIS_PORT: number
             REDIS_HOST: string
-            // REDIS_PASSWORD: string
+            REDIS_PASSWORD: string
+            REDIS_DB: number
 
-            // wechat API
+            // WeChat API
             WX_APP_ID: string
             WX_APP_SECRET: string
             WX_APP_AUTH_URL: string
             WX_APP_ACCESS_TOKEN_URL: string
             WX_APP_PHONE_URL: string
             WX_APP_MSG_CHECK: string
-            WX_DEFAULT_CHAT_MODEL: ChatModelEnum
-            WX_DEFAULT_RESOURCE_MODEL: ChatModelEnum
-            WX_DEFAULT_EMBED_MODEL: ChatModelEnum
 
             OSS_TYPE: OSSEnum
             // tencent oss
-            COS_SECRET_ID: string
-            COS_SECRET_KEY: string
-            COS_BUCKET: string
-            COS_REGION: string
+            // COS_SECRET_ID: string
+            // COS_SECRET_KEY: string
+            // COS_BUCKET: string
+            // COS_REGION: string
 
             // minio
             MINIO_ACCESS_KEY: string
