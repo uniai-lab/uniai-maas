@@ -54,6 +54,7 @@ export default class WeChat extends Service {
             shareTitle: await this.getConfig('SHARE_TITLE'),
             shareDesc: await this.getConfig('SHARE_DESC'),
             shareImg: await this.getConfig('SHARE_IMG'),
+            userBackground: await this.getConfig('USER_BACKGROUND_IMG'),
             menu: (await this.getConfig<ConfigMenu[]>('USER_MENU')) || [],
             task: (await this.getConfig<ConfigTask[]>('USER_TASK')) || []
         }

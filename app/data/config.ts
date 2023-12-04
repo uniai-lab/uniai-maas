@@ -129,6 +129,10 @@ export default [
         value: 'GLM'
     },
     {
+        key: 'USER_BACKGROUND_IMG',
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/user-home-bg.jpg'
+    },
+    {
         key: 'USER_MENU',
         value: JSON.stringify(menus)
     },
