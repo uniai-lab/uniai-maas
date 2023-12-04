@@ -52,7 +52,7 @@ touch ./.env
 ```bash
 
 # APP
-ADMIN_TOKEN=666    # admin token
+ADMIN_TOKEN=    # default admin token, can be modified in config table
 
 # OPENAI GPT
 OPENAI_API=http://8.214.93.3                        # OpenAI API URL or proxy
@@ -77,6 +77,7 @@ SPARK_APP_ID=       # IFLYTEK Spark APP ID
 SPARK_DEFAULT_MODEL_VERSION=v3.1 # v1.1, v2.1, v3.1
 
 # PostgreSQL database
+DB_DIALECT=postgres
 POSTGRES_HOST=localhost     # postgresql host url
 POSTGRES_PORT=5432          # postgresql port
 POSTGRES_USER=postgres      # postgresql user
@@ -127,13 +128,29 @@ npm -g install yarn
 yarn
 ```
 
-Install LibreOffice
+**Install LibreOffice**
 
 ```bash
+# ubuntu
 sudo apt install libreoffice
+
+# Mac
+brew install libreoffice
 ```
 
-### Start Database
+**Install node-canvas support**
+
+<https://www.npmjs.com/package/canvas>
+
+```bash
+# For Ubuntu
+sudo apt install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+
+#For Mac OS X,
+brew install pkg-config cairo pango libpng jpeg giflib librsvg pixman
+```
+
+### Start DB
 
 If you don't have a vector database such as PostgresSQL (pgvector), you can start one using Docker and Docker-compose:
 
@@ -141,21 +158,27 @@ If you don't have a vector database such as PostgresSQL (pgvector), you can star
 sudo apt install docker.io docker-compose
 ```
 
+Docker start up pgvector, redis, minio
+
 ```bash
 yarn docker up pgvector
 yarn docker up redis
 yarn docker up minio
 ```
 
-### Initialize Database
+TIP: Minio is a local deployed OSS server, you should login to config your bucket and access keys after start up minio docker.
 
-```bash
-yarn dev # auto init db
-```
+Location: <http://localhost:9000>
+Default Username: root
+Default Password: 12345678
+
+Copy the keys, secrets, bucket to `.env`
 
 ## Running UniAI
 
 ### Development Mode
+
+The following command also init database! First do it!
 
 ```bash
 yarn dev
