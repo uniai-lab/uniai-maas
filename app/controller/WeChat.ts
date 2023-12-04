@@ -224,7 +224,7 @@ export default class WeChat {
                 dialogId: res.dialogId,
                 resourceId: res.resourceId,
                 model: res.model,
-                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')
+                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI')
             }
             ctx.service.res.success('Get chat stream', data)
         } catch (e) {

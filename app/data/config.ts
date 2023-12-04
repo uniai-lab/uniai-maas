@@ -122,11 +122,19 @@ export default [
     },
     {
         key: 'WX_DEFAULT_CHAT_MODEL',
-        value: 'GLM'
+        value: 'SPARK'
+    },
+    {
+        key: 'WX_DEFAULT_CHAT_SUB_MODEL',
+        value: 'v1.1'
     },
     {
         key: 'WX_DEFAULT_RESOURCE_MODEL',
         value: 'GLM'
+    },
+    {
+        key: 'WX_DEFAULT_RESOURCE_SUB_MODEL',
+        value: 'chatglm3-6b-32k'
     },
     {
         key: 'USER_BACKGROUND_IMG',

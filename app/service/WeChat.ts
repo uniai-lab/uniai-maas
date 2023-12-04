@@ -10,7 +10,7 @@ import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import isJSON from '@stdlib/assert-is-json'
 import md5 from 'md5'
-import { AIModelEnum, ChatModelEnum, ChatRoleEnum, OSSEnum } from '@interface/Enum'
+import { AIModelEnum, ChatModelEnum, ChatRoleEnum, ChatSubModelEnum, OSSEnum } from '@interface/Enum'
 import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
@@ -296,24 +296,37 @@ export default class WeChat extends Service {
 
         console.log(prompts)
 
-        const chatModel = (await app.redis.get('WX_DEFAULT_CHAT_MODEL')) as ChatModelEnum
-        const resourceModel = (await app.redis.get('WX_DEFAULT_RESOURCE_MODEL')) as ChatModelEnum
-        const model: ChatModelEnum = resourceId ? resourceModel : chatModel
+        // choose model according to config
+        const model = resourceId
+            ? await this.getConfig<ChatModelEnum>('WX_DEFAULT_RESOURCE_MODEL')
+            : await this.getConfig<ChatModelEnum>('WX_DEFAULT_CHAT_MODEL')
+        const subModel = resourceId
+            ? await this.getConfig<ChatSubModelEnum>('WX_DEFAULT_RESOURCE_SUB_MODEL')
+            : await this.getConfig<ChatSubModelEnum>('WX_DEFAULT_CHAT_SUB_MODEL')
 
-        // set chat stream cache
+        // start chat stream
+        const stream = (await ctx.service.uniAI.chat(
+            prompts,
+            true,
+            model || undefined,
+            undefined,
+            undefined,
+            undefined,
+            subModel || undefined
+        )) as Readable
+
+        // set chat stream cache, should after chat stream started
         const cache: ChatStreamCache = {
             chatId: 0,
             dialogId: dialog.id,
             content: '',
             resourceId,
             model,
-            subModel: '',
+            subModel,
             time: Date.now()
         }
         await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
 
-        // start chat stream
-        const stream = (await ctx.service.uniAI.chat(prompts, true, model)) as Readable
         const parser = createParser(e => {
             try {
                 if (e.type === 'event') {
@@ -387,7 +400,7 @@ export default class WeChat extends Service {
 
     // add a new resource
     async upload(file: EggFile, userId: number, typeId: number) {
-        const { ctx, app } = this
+        const { ctx } = this
         const chance = await ctx.model.UserChance.findOne({
             where: { userId },
             attributes: ['id', 'uploadChanceFree', 'uploadChance']
@@ -396,8 +409,8 @@ export default class WeChat extends Service {
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
 
         const upload = await ctx.service.uniAI.upload(file, userId, typeId)
-        const embedModel = (await app.redis.get('WX_DEFAULT_EMBED_MODEL')) as AIModelEnum
-        const res = await ctx.service.uniAI.embedding(embedModel, upload.id)
+        const embedModel = await this.getConfig<AIModelEnum>('WX_DEFAULT_EMBED_MODEL')
+        const res = await ctx.service.uniAI.embedding(embedModel || undefined, upload.id)
         // process resource, split pages
         await this.resource(res.id)
 
