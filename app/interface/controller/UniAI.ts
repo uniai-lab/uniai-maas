@@ -1,6 +1,6 @@
 /** @format */
 
-import { AIModelEnum, ChatModelEnum, ImgModelEnum, ChatSubModelEnum } from '@interface/Enum'
+import { ChatModelEnum, ImgModelEnum, ChatSubModelEnum, EmbedModelEnum } from '@interface/Enum'
 import { GLMChatMessage } from '@interface/GLM'
 import { GPTChatMessage } from '@interface/OpenAI'
 import { SPKChatMessage } from '@interface/Spark'
@@ -20,7 +20,7 @@ export interface ChatRequest {
 
 export interface QueryResourceRequest {
     prompts: ChatMessage[]
-    model?: AIModelEnum
+    model?: EmbedModelEnum
     resourceId?: number
     maxPage?: number
     maxToken?: number
@@ -34,7 +34,7 @@ export interface EmbeddingRequest {
     fileSize?: number
     fileExt?: string
     typeId?: number
-    model?: AIModelEnum
+    model?: EmbedModelEnum
 }
 
 export interface UploadRequest {
@@ -95,7 +95,7 @@ export interface EmbeddingResponse {
     id: number
     page: number
     tokens: number
-    model: AIModelEnum
+    model: EmbedModelEnum
 }
 
 export interface ImagineResponse {

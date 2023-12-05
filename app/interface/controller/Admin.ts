@@ -1,13 +1,13 @@
 /** @format */
 
-import { AIModelEnum } from '@interface/Enum'
+import { EmbedModelEnum } from '@interface/Enum'
 
 export interface UploadRequest {
     userId?: number
     typeId?: number
     filename?: string
     init?: boolean
-    model?: AIModelEnum
+    model?: EmbedModelEnum
     resourceId?: number
 }
 

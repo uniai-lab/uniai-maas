@@ -13,7 +13,7 @@ import {
 } from '@eggjs/tegg'
 import { authAdmin } from '@middleware/auth'
 import { Readable } from 'stream'
-import { AIModelEnum, ChatModelEnum, ImgModelEnum } from '@interface/Enum'
+import { ChatModelEnum, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -48,7 +48,7 @@ export default class UniAI {
             const { top, temperature, maxLength, model, subModel, prompts, chunk, stream } = params
             if (!prompts.length) throw new Error('Empty prompts')
 
-            const res = await ctx.service.uniAI.chat(prompts, stream, model, top, temperature, maxLength, subModel)
+            const res = await ctx.service.uniAI.chat(prompts, stream, model, subModel, top, temperature, maxLength)
             if (res instanceof Readable) ctx.body = ctx.service.uniAI.parseSSE(res, model, chunk)
             else if (model === ChatModelEnum.GPT) {
                 // chat to GPT
@@ -103,7 +103,7 @@ export default class UniAI {
             const { prompts, top, temperature, maxLength, model, subModel, chunk } = params
             if (!prompts.length) throw new Error('Empty prompts')
 
-            const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength, subModel)
+            const res = await ctx.service.uniAI.chat(prompts, true, model, subModel, top, temperature, maxLength)
 
             ctx.body = ctx.service.uniAI.parseSSE(res as Readable, model, chunk)
         } catch (e) {
@@ -151,7 +151,7 @@ export default class UniAI {
             const { resourceId, content, fileName, filePath, fileExt, fileSize } = params
             const userId = 0
             const typeId = 1
-            const model = params.model || AIModelEnum.GLM
+            const model = params.model || EmbedModelEnum.GLM
 
             const { id, tokens, page } = await ctx.service.uniAI.embedding(
                 model,

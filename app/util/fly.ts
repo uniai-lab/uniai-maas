@@ -14,32 +14,32 @@ import { SPKChatMessage, SPKChatRequest, SPKChatResponse } from '@interface/Spar
 import { SPKSubModel, SPKSubModelDomain } from '@interface/Enum'
 import $ from '@util/util'
 
-const { SPARK_API, SPARK_API_KEY, SPARK_API_SECRET, SPARK_APP_ID, SPARK_DEFAULT_MODEL_VERSION } = process.env
+const { SPARK_API, SPARK_API_KEY, SPARK_API_SECRET, SPARK_APP_ID } = process.env
 
 export default {
     /**
      * Initiates a chat conversation with IFLYTEK Spark API.
      *
+     * @param model - The Spark model version to use (default: SPARK_DEFAULT_MODEL_VERSION).
      * @param messages - An array of chat messages.
      * @param stream - Whether to use stream response (default: false).
      * @param top - Top probability to sample (optional).
      * @param temperature - Temperature for sampling (optional).
      * @param maxLength - Maximum token length for response (optional).
-     * @param version - The Spark model version to use (default: SPARK_DEFAULT_MODEL_VERSION).
      * @returns A promise resolving to the chat response or a stream.
      */
     chat(
+        model: SPKSubModel,
         messages: SPKChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
-        maxLength?: number,
-        version: SPKSubModel = SPARK_DEFAULT_MODEL_VERSION
+        maxLength?: number
     ) {
-        const url = getURL(version)
+        const url = getURL(model)
         const ws = new WebSocket(url)
 
-        const domain = SPKSubModelDomain[version]
+        const domain = SPKSubModelDomain[model]
 
         const input: SPKChatRequest = {
             header: { app_id: SPARK_APP_ID },
@@ -58,7 +58,7 @@ export default {
                     if (res.header.code !== 0) return stream.destroy(new Error(res.header.message))
 
                     // Simulate SSE data stream
-                    res.payload.model = `spark-${version}`
+                    res.payload.model = `spark-${model}`
                     res.payload.object = `chat.completion.chunk`
                     stream.write(`data: ${JSON.stringify(res)}\n\n`)
                 })
@@ -79,7 +79,7 @@ export default {
                 })
                 ws.on('close', () => {
                     if (!res) return reject(new Error('Response data is null'))
-                    res.payload.model = `spark-${version}`
+                    res.payload.model = `spark-${model}`
                     res.payload.object = `chat.completion`
                     resolve(res)
                 })

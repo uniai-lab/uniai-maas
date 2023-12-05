@@ -21,13 +21,9 @@ import {
 import { GPTSubModel } from '@interface/Enum'
 
 // Destructure environment variables
-const { OPENAI_API, OPENAI_API_KEY, OPENAI_API_VERSION, OPENAI_DEFAULT_CHAT_MODEL, OPENAI_DEFAULT_EMBED_MODEL } =
-    process.env
+const { OPENAI_API, OPENAI_API_KEY, OPENAI_API_VERSION } = process.env
 
 export default {
-    key: OPENAI_API_KEY,
-    api: OPENAI_API,
-
     /**
      * Fetches embeddings for input text.
      *
@@ -35,37 +31,37 @@ export default {
      * @param model - The model to use for embeddings (default: text-embedding-ada-002).
      * @returns A promise resolving to the embedding response.
      */
-    async embedding(input: string[], model: string = OPENAI_DEFAULT_EMBED_MODEL) {
+    async embedding(input: string[]) {
         return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
-            `${this.api}/${OPENAI_API_VERSION}/embeddings`,
-            { model, input },
-            { headers: { Authorization: `Bearer ${this.key}` }, responseType: 'json' }
+            `${OPENAI_API}/${OPENAI_API_VERSION}/embeddings`,
+            { model: 'text-embedding-ada-002', input },
+            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: 'json' }
         )
     },
 
     /**
      * Sends messages to the GPT chat model.
      *
+     * @param model - The model to use for chat (default: gpt-3.5-turbo).
      * @param messages - An array of chat messages.
      * @param stream - Whether to use stream response (default: false).
      * @param top - Top probability to sample (optional).
      * @param temperature - Temperature for sampling (optional).
      * @param maxLength - Maximum token length for response (optional).
-     * @param model - The model to use for chat (default: gpt-3.5-turbo).
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
+        model: GPTSubModel,
         messages: GPTChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
-        maxLength?: number,
-        model: GPTSubModel = OPENAI_DEFAULT_CHAT_MODEL
+        maxLength?: number
     ) {
         return await $.post<GPTChatRequest | GPTChatStreamRequest, Readable | GPTChatResponse>(
-            `${this.api}/${OPENAI_API_VERSION}/chat/completions`,
+            `${OPENAI_API}/${OPENAI_API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
-            { headers: { Authorization: `Bearer ${this.key}` }, responseType: stream ? 'stream' : 'json' }
+            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: stream ? 'stream' : 'json' }
         )
     },
 
@@ -81,13 +77,13 @@ export default {
      */
     async imagine(prompt: string, nPrompt: string = '', width: number = 1024, height: number = 1024, n: number = 1) {
         return await $.post<GPTImagineRequest, GPTImagineResponse>(
-            `${this.api}/${OPENAI_API_VERSION}/images/generations`,
+            `${OPENAI_API}/${OPENAI_API_VERSION}/images/generations`,
             {
                 prompt: `Positive prompt: ${prompt}\nNegative prompt: ${nPrompt}`,
                 n,
                 size: `${width}x${height}` as GPTImagineSize
             },
-            { headers: { Authorization: `Bearer ${this.key}` }, responseType: 'json' }
+            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: 'json' }
         )
     }
 }

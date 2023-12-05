@@ -8,12 +8,12 @@
 
 ## Integrated Models
 
--   [OpenAI GPT](https://platform.openai.com)
--   [IFLYTEK Spark](https://xinghuo.xfyun.cn)
--   [THUDM ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
--   [ZHIPU ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
+-   [OpenAI/GPT](https://platform.openai.com)
+-   [IFLYTEK/Spark](https://xinghuo.xfyun.cn)
+-   [THUDM/ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
+-   [ZHIPU/ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
 -   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
--   [OpenAI DALL-E](https://platform.openai.com)
+-   [OpenAI/DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
 
 ## Samples
@@ -58,23 +58,17 @@ ADMIN_TOKEN=    # default admin token, can be modified in config table
 OPENAI_API=http://8.214.93.3                        # OpenAI API URL or proxy
 OPENAI_API_VERSION=v1                               # OpenAI API version (no need to modify)
 OPENAI_API_KEY=                                     # OpenAI API key
-OPENAI_EMBED_DIM=1536
-OPENAI_DEFAULT_CHAT_MODEL=gpt-4                     # gpt-4 | gpt-3.5-turbo
-OPENAI_DEFAULT_EMBED_MODEL=text-embedding-ada-002   # 001 | 002
 
 # GLM
 GLM_API=http://10.144.1.7:8100              # https://github.com/uni-openai/GLM-API
 GLM_API_REMOTE=https://open.bigmodel.cn     # remote ZHIPU chatglm API
 GLM_API_KEY=                                # ZHIPU AI api key
-GLM_DEFAULT_CHAT_MODEL=chatglm3-6b-32k      # chatglm3-6b-32k | chatglm-turbo
-TEXT2VEC_EMBED_DIM=1024                     # https://huggingface.co/GanymedeNil/text2vec-large-chinese
 
 # SPARK
 SPARK_API=ws://spark-api.xf-yun.com
 SPARK_API_KEY=      # IFLYTEK Spark API KEY
 SPARK_API_SECRET=   # IFLYTEK Spark API Secret
 SPARK_APP_ID=       # IFLYTEK Spark APP ID
-SPARK_DEFAULT_MODEL_VERSION=v3.1 # v1.1, v2.1, v3.1
 
 # PostgreSQL database
 DB_DIALECT=postgres

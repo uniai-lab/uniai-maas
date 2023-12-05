@@ -42,7 +42,7 @@ export default class LeChat {
             const { prompts, model, chunk, top, temperature, maxLength } = params
             if (!prompts.length) throw new Error('Empty prompts')
 
-            const res = await ctx.service.uniAI.chat(prompts, true, model, top, temperature, maxLength)
+            const res = await ctx.service.uniAI.chat(prompts, true, model, undefined, top, temperature, maxLength)
 
             ctx.body = ctx.service.uniAI.parseSSE(res as Readable, model, chunk)
         } catch (e) {

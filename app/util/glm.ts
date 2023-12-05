@@ -22,7 +22,7 @@ import {
 import $ from '@util/util'
 import { GLMChatRoleEnum, GLMSubModel } from '@interface/Enum'
 
-const { GLM_API, GLM_API_KEY, GLM_API_REMOTE, GLM_DEFAULT_CHAT_MODEL } = process.env
+const { GLM_API, GLM_API_KEY, GLM_API_REMOTE } = process.env
 const EXPIRE_IN = 10 * 1000
 
 export default {
@@ -39,29 +39,29 @@ export default {
     /**
      * Sends messages to the GLM chat model.
      *
+     * @param model - The submodel to use for chat (default: GLM_DEFAULT_CHAT_MODEL).
      * @param messages - An array of chat messages.
      * @param stream - Whether to use stream response (default: false).
      * @param top - Top probability to sample (optional).
      * @param temperature - Temperature for sampling (optional).
      * @param maxLength - Maximum token length for response (optional).
-     * @param subModel - The submodel to use for chat (default: GLM_DEFAULT_CHAT_MODEL).
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
+        model: GLMSubModel,
         messages: GLMChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
-        maxLength?: number,
-        subModel: GLMSubModel = GLM_DEFAULT_CHAT_MODEL
+        maxLength?: number
     ) {
-        if (subModel === GLMSubModel.LOCAL) {
+        if (model === GLMSubModel.LOCAL) {
             return await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_API}/chat`,
                 { messages, stream, temperature, top_p: top, max_tokens: maxLength },
                 { responseType: stream ? 'stream' : 'json' }
             )
-        } else if (subModel === GLMSubModel.TURBO) {
+        } else if (model === GLMSubModel.TURBO) {
             // Recreate prompt for chatglm-turbo
             const prompt: GLMChatMessage[] = []
             let input = ''

@@ -14,6 +14,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
+const TEXT2VEC_EMBED_DIM = 1024
 
 @Table({ modelName: 'text2vec_embedding' })
 export class Embedding2 extends Model {
@@ -34,7 +35,7 @@ export class Embedding2 extends Model {
 
     @AllowNull(false)
     @Column({
-        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
+        type: `VECTOR(${TEXT2VEC_EMBED_DIM})`,
         get() {
             const raw: string = this.getDataValue('embedding')
             return raw ? JSON.parse(raw) : null

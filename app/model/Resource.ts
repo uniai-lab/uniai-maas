@@ -21,6 +21,9 @@ import { Embedding1 } from './Embedding1'
 import { Embedding2 } from './Embedding2'
 import { Includeable } from 'sequelize'
 
+const OPENAI_EMBED_DIM = 1536
+const TEXT2VEC_EMBED_DIM = 1024
+
 @Table({ modelName: 'resource' })
 export class Resource extends Model {
     @PrimaryKey
@@ -39,7 +42,7 @@ export class Resource extends Model {
     page: number
 
     @Column({
-        type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
+        type: `VECTOR(${OPENAI_EMBED_DIM})`,
         get() {
             const raw = this.getDataValue('embedding')
             return raw ? JSON.parse(raw) : null
@@ -67,7 +70,7 @@ export class Resource extends Model {
     }
 
     @Column({
-        type: `VECTOR(${process.env.TEXT2VEC_EMBED_DIM})`,
+        type: `VECTOR(${TEXT2VEC_EMBED_DIM})`,
         get() {
             const raw = this.getDataValue('embedding2')
             return raw ? JSON.parse(raw) : null

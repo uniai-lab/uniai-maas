@@ -21,7 +21,7 @@ const menus = [
 const tasks = [
     {
         title: '分享给好友',
-        tip: '对话+33 上传+5',
+        tip: '对话+20 上传+5',
         button: '立即分享',
         type: 1 // 分享
     },
@@ -42,16 +42,17 @@ export default [
     {
         key: 'APP_URL',
         value: 'https://iict.ac.cn',
-        description: ''
+        description: '应用官网'
     },
     {
         key: 'APP_VERSION',
         value: 'v2.2.0',
-        description: '小程序版本号'
+        description: '小程序版本'
     },
     {
         key: 'ADMIN_TOKEN',
-        value: process.env.ADMIN_TOKEN
+        value: process.env.ADMIN_TOKEN,
+        description: '超级管理员密码'
     },
     {
         key: 'FOOT_TIP',
@@ -61,7 +62,7 @@ export default [
     {
         key: 'FOOT_COPY',
         value: 'IICT（点击复制）',
-        description: '底部点击复制按钮'
+        description: '底部点击复制'
     },
     {
         key: 'OFFICIAL',
@@ -70,82 +71,122 @@ export default [
     },
     {
         key: 'SHARE_TITLE',
-        value: '大模型文档分析对话小程序！'
+        value: '大模型文档分析对话小程序！',
+        description: '小程序分享标题'
     },
     {
         key: 'SHARE_DESC',
-        value: '大模型文档分析对话小程序！'
+        value: '大模型文档分析对话小程序！',
+        description: '小程序分享详情'
     },
     {
         key: 'SHARE_IMG',
-        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/share-background.png'
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/share-background.png',
+        description: '小程序分享背景图'
     },
     {
         key: 'DEFAULT_AVATAR_AI',
-        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png'
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png',
+        description: '默认AI头像'
     },
     {
         key: 'DEFAULT_AVATAR_USER',
-        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png'
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png',
+        description: '默认用户头像'
     },
     {
         key: 'DEFAULT_USERNAME',
-        value: '人类用户'
+        value: '人类用户',
+        description: '默认用户名'
     },
     {
         key: 'DEFAULT_FREE_CHAT_CHANCE',
-        value: 99
+        value: 99,
+        description: '默认免费次数'
     },
     {
         key: 'DEFAULT_FREE_UPLOAD_CHANCE',
-        value: 10
+        value: 10,
+        description: '默认免费上传次数'
     },
     {
         key: 'SHARE_REWARD_CHAT_CHANCE',
-        value: 50
+        value: 20,
+        description: '默认分享奖励聊天次数'
     },
     {
         key: 'SHARE_REWARD_UPLOAD_CHANCE',
-        value: 5
+        value: 5,
+        description: '默认分享奖励上传次数'
     },
     {
         key: 'FOLLOW_REWARD_CHAT_CHANCE',
-        value: 33
+        value: 33,
+        description: '默认关注奖励次数'
     },
     {
         key: 'INIT_RESOURCE_ID',
-        value: 449
+        value: 449,
+        description: '初始化文档'
     },
     {
-        key: 'WX_DEFAULT_EMBED_MODEL',
-        value: 'GLM'
+        key: 'LIMIT_UPLOAD_SIZE',
+        value: 5 * 1024 * 1024,
+        description: '默认上传限制 Byte'
     },
     {
-        key: 'WX_DEFAULT_CHAT_MODEL',
-        value: 'SPARK'
+        key: 'GPT_DEFAULT_SUB_MODEL',
+        value: 'gpt-3.5-turbo',
+        description: 'GPT默认模型'
     },
     {
-        key: 'WX_DEFAULT_CHAT_SUB_MODEL',
-        value: 'v1.1'
+        key: 'GLM_DEFAULT_SUB_MODEL',
+        value: 'chatglm3-6b-32k',
+        description: 'GLM默认模型'
     },
     {
-        key: 'WX_DEFAULT_RESOURCE_MODEL',
-        value: 'GLM'
+        key: 'SPK_DEFAULT_SUB_MODEL',
+        value: 'v1.1',
+        description: '星火默认模型'
     },
     {
-        key: 'WX_DEFAULT_RESOURCE_SUB_MODEL',
-        value: 'chatglm3-6b-32k'
+        key: 'WX_EMBED_MODEL',
+        value: 'GLM',
+        description: '小程序默认embed模型'
+    },
+    {
+        key: 'WX_CHAT_MODEL',
+        value: 'SPARK',
+        description: '小程序默认chat模型'
+    },
+    {
+        key: 'WX_CHAT_SUB_MODEL',
+        value: 'v1.1',
+        description: '小程序默认chat子模型'
+    },
+    {
+        key: 'WX_RESOURCE_MODEL',
+        value: 'GLM',
+        description: '小程序默认resource模型'
+    },
+    {
+        key: 'WX_RESOURCE_SUB_MODEL',
+        value: 'chatglm3-6b-32k',
+        description: '小程序默认resource子模型'
     },
     {
         key: 'USER_BACKGROUND_IMG',
-        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/user-home-bg.jpg'
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/user-home-bg.jpg',
+        description: '小程序用户界面背景图'
     },
     {
         key: 'USER_MENU',
-        value: JSON.stringify(menus)
+        value: JSON.stringify(menus),
+        description: '小程序用户菜单栏'
     },
     {
         key: 'USER_TASK',
-        value: JSON.stringify(tasks)
+        value: JSON.stringify(tasks),
+        description: '小程序用户菜单栏2'
     }
 ]

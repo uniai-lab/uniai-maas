@@ -5,6 +5,10 @@ export enum ChatModelEnum {
     GLM = 'GLM',
     SPARK = 'SPARK'
 }
+export enum EmbedModelEnum {
+    GPT = 'GPT', // text-embedding-ada-002
+    GLM = 'GLM' // text2vec-large-chinese
+}
 export enum ImgModelEnum {
     SD = 'SD',
     DALLE = 'DALLE',
@@ -28,8 +32,10 @@ export const SPKSubModelDomain = {
     [SPKSubModel.V2]: 'generalv2',
     [SPKSubModel.V3]: 'generalv3'
 }
-export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum }
-export type AIModelEnum = ChatModelEnum | ImgModelEnum
+
+export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum, ...EmbedModelEnum }
+export type AIModelEnum = ChatModelEnum | ImgModelEnum | EmbedModelEnum
+
 export const ChatSubModelEnum = { ...GPTSubModel, ...GLMSubModel, ...SPKSubModel }
 export type ChatSubModelEnum = GPTSubModel | GLMSubModel | SPKSubModel
 

@@ -14,6 +14,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
+const OPENAI_EMBED_DIM = 1536
 
 @Table({ modelName: 'openai_embedding' })
 export class Embedding1 extends Model {
@@ -34,7 +35,7 @@ export class Embedding1 extends Model {
 
     @AllowNull(false)
     @Column({
-        type: `VECTOR(${process.env.OPENAI_EMBED_DIM})`,
+        type: `VECTOR(${OPENAI_EMBED_DIM})`,
         get() {
             const raw: string = this.getDataValue('embedding')
             return raw ? JSON.parse(raw) : null

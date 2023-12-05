@@ -4,30 +4,31 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { PassThrough, Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
-import { Resource } from '@model/Resource'
+import { statSync } from 'fs'
+import { EggFile } from 'egg-multipart'
+import { extname } from 'path'
+import { ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
+import { GPTChatMessage, GPTChatStreamResponse } from '@interface/OpenAI'
+import { GLMChatMessage, GLMChatStreamResponse } from '@interface/GLM'
+import { SPKChatMessage, SPKChatResponse } from '@interface/Spark'
 import {
-    AIModelEnum,
     ChatModelEnum,
     ChatSubModelEnum,
+    EmbedModelEnum,
     GLMSubModel,
     GPTSubModel,
     ImgModelEnum,
     MJTaskEnum,
     SPKSubModel
 } from '@interface/Enum'
-import { ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
-import { GPTChatMessage, GPTChatStreamResponse } from '@interface/OpenAI'
-import { GLMChatMessage, GLMChatStreamResponse } from '@interface/GLM'
-import { SPKChatMessage, SPKChatResponse } from '@interface/Spark'
+
+import { Resource } from '@model/Resource'
 import glm from '@util/glm'
 import gpt from '@util/openai'
 import fly from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
 import $ from '@util/util'
-import { statSync } from 'fs'
-import { EggFile } from 'egg-multipart'
-import { extname } from 'path'
 
 const MAX_PAGE = 6
 const MAX_TOKEN = 8192
@@ -38,15 +39,28 @@ const TOKEN_PAGE_SPLIT_L2 = 1024
 const TOKEN_PAGE_SPLIT_L3 = 512
 const TOKEN_PAGE_TOTAL_L1 = TOKEN_PAGE_SPLIT_L1 * 1
 const TOKEN_PAGE_TOTAL_L2 = TOKEN_PAGE_SPLIT_L2 * 8
-const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
+    // get config value by key
+    async getConfig<T = string>(key: string) {
+        const { app, ctx } = this
+        let value = await app.redis.get(key)
+        if (!value) {
+            // config not in cache
+            const res = await ctx.model.Config.findOne({ attributes: ['value'], where: { key } })
+            if (res && res.value) {
+                await app.redis.set(key, res.value)
+                value = res.value
+            } else throw new Error(`Config: ${key} not found`)
+        }
+        return $.json<T>(value) || (value as T)
+    }
     // query resource
     async queryResource(
         prompts: ChatMessage[],
         resourceId?: number,
-        model: AIModelEnum = AIModelEnum.GLM,
+        model: EmbedModelEnum = EmbedModelEnum.GLM,
         maxPage: number = MAX_PAGE,
         maxToken: number = MAX_TOKEN
     ) {
@@ -62,8 +76,8 @@ export default class UniAI extends Service {
 
             // check embeddings exist
             let count = 0
-            if (model === AIModelEnum.GPT) count = await ctx.model.Embedding1.count({ where })
-            else if (model === AIModelEnum.GLM) count = await ctx.model.Embedding2.count({ where })
+            if (model === EmbedModelEnum.GPT) count = await ctx.model.Embedding1.count({ where })
+            else if (model === EmbedModelEnum.GLM) count = await ctx.model.Embedding2.count({ where })
 
             // embedding not exist, create embeddings
             if (!count) await this.embedding(model, resourceId)
@@ -74,7 +88,7 @@ export default class UniAI extends Service {
         for (const { content } of prompts) {
             if (!content || typeof content !== 'string') continue
             const query = content.trim()
-            if (model === AIModelEnum.GPT) {
+            if (model === EmbedModelEnum.GPT) {
                 const embed = await gpt.embedding([query])
                 const embedding = embed.data[0].embedding
                 const res = await ctx.model.Embedding1.similarFindAll(embedding, maxPage, where)
@@ -87,7 +101,7 @@ export default class UniAI extends Service {
                         content: item.content,
                         similar: $.cosine(embedding, item.embedding)
                     })
-            } else if (model === AIModelEnum.GLM) {
+            } else if (model === EmbedModelEnum.GLM) {
                 const embed = await glm.embedding([query])
                 const embedding = embed.data[0]
                 const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
@@ -111,39 +125,21 @@ export default class UniAI extends Service {
         prompts: ChatMessage[],
         stream: boolean = false,
         model: ChatModelEnum = ChatModelEnum.GLM,
+        subModel?: ChatSubModelEnum,
         top?: number,
         temperature?: number,
-        maxLength?: number,
-        subModel?: ChatSubModelEnum
+        maxLength?: number
     ) {
-        if (model === ChatModelEnum.GPT)
-            return await gpt.chat(
-                prompts as GPTChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength,
-                subModel as GPTSubModel
-            )
-        else if (model === ChatModelEnum.GLM)
-            return await glm.chat(
-                prompts as GLMChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength,
-                subModel as GLMSubModel
-            )
-        else if (model === ChatModelEnum.SPARK)
-            return await fly.chat(
-                prompts as SPKChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength,
-                subModel as SPKSubModel
-            )
-        else throw new Error('Chat model not found')
+        if (model === ChatModelEnum.GPT) {
+            subModel = (subModel as GPTSubModel) || (await this.getConfig<GPTSubModel>('GPT_DEFAULT_SUB_MODEL'))
+            return await gpt.chat(subModel, prompts as GPTChatMessage[], stream, top, temperature, maxLength)
+        } else if (model === ChatModelEnum.GLM) {
+            subModel = (subModel as GLMSubModel) || (await this.getConfig<GPTSubModel>('GLM_DEFAULT_SUB_MODEL'))
+            return await glm.chat(subModel, prompts as GLMChatMessage[], stream, top, temperature, maxLength)
+        } else if (model === ChatModelEnum.SPARK) {
+            subModel = (subModel as SPKSubModel) || (await this.getConfig<SPKSubModel>('SPK_DEFAULT_SUB_MODEL'))
+            return await fly.chat(subModel, prompts as SPKChatMessage[], stream, top, temperature, maxLength)
+        } else throw new Error('Chat model not found')
     }
 
     // handle chat stream
@@ -210,10 +206,11 @@ export default class UniAI extends Service {
     // upload file
     async upload(file: EggFile, userId: number = 0, typeId: number = 1) {
         const { ctx } = this
+        const limit = await this.getConfig('LIMIT_UPLOAD_SIZE')
 
         // limit upload file size
         const fileSize = statSync(file.filepath).size
-        if (fileSize > LIMIT_UPLOAD_SIZE) throw new Error('File size exceeds limit')
+        if (fileSize > parseInt(limit)) throw new Error('File size exceeds limit')
         const fileName = file.filename
         let filePath = file.filepath // local tmp file path
         const fileExt = extname(filePath).replace('.', '')
@@ -254,7 +251,7 @@ export default class UniAI extends Service {
 
     // create embedding
     async embedding(
-        model: AIModelEnum = AIModelEnum.GLM,
+        model: EmbedModelEnum = EmbedModelEnum.GLM,
         resourceId?: number,
         content?: string,
         fileName?: string,
@@ -338,7 +335,7 @@ export default class UniAI extends Service {
         resourceId = resource.id
 
         // embedding resource
-        if (model === AIModelEnum.GPT) {
+        if (model === EmbedModelEnum.GPT) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             const res = await gpt.embedding(splitPage)
             const embeddings = res.data.map((v, i) => {
@@ -351,7 +348,7 @@ export default class UniAI extends Service {
                 }
             })
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(embeddings)
-        } else if (model === AIModelEnum.GLM) {
+        } else if (model === EmbedModelEnum.GLM) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
             const res = await glm.embedding(splitPage)
             const embeddings = res.data.map((v, i) => {
