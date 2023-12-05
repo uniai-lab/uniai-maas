@@ -143,3 +143,11 @@ export interface AnnounceResponse {
     content: string
     closeable: boolean
 }
+
+export interface TabResponse {
+    id: number
+    name: string
+    desc: string
+    pid: number
+    child?: TabResponse[]
+}

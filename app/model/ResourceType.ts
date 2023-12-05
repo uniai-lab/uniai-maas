@@ -7,7 +7,6 @@ import {
     PrimaryKey,
     Model,
     DataType,
-    Unique,
     HasMany,
     AllowNull,
     Default
@@ -21,17 +20,26 @@ export class ResourceType extends Model {
     @Column(DataType.INTEGER)
     id: number
 
-    @Unique
     @AllowNull(false)
     @Column(DataType.STRING)
     type: string
 
     @AllowNull(false)
-    @Column(DataType.TEXT)
-    description: string | null
+    @Column(DataType.STRING)
+    description: string
 
     @HasMany(() => Resource)
     resources: Resource[]
+
+    @AllowNull(false)
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    isDel: boolean
+
+    @AllowNull(false)
+    @Default(true)
+    @Column(DataType.BOOLEAN)
+    isEffect: boolean
 }
 
 export default () => ResourceType

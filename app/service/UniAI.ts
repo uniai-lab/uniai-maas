@@ -21,6 +21,8 @@ import {
     MJTaskEnum,
     SPKSubModel
 } from '@interface/Enum'
+import resourceType from '@data/resourceType'
+import userResourceTab from '@data/userResourceTab'
 
 import { Resource } from '@model/Resource'
 import glm from '@util/glm'
@@ -39,6 +41,11 @@ const TOKEN_PAGE_SPLIT_L2 = 1024
 const TOKEN_PAGE_SPLIT_L3 = 512
 const TOKEN_PAGE_TOTAL_L1 = TOKEN_PAGE_SPLIT_L1 * 1
 const TOKEN_PAGE_TOTAL_L2 = TOKEN_PAGE_SPLIT_L2 * 8
+const DEFAULT_IMAGINE_NUM = 1
+const DEFAULT_IMAGINE_WIDTH = 1024
+const DEFAULT_IMAGINE_HEIGHT = 1024
+const DEFAULT_RESOURCE_TYPE = resourceType[0].id
+const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
@@ -56,6 +63,7 @@ export default class UniAI extends Service {
         }
         return $.json<T>(value) || (value as T)
     }
+
     // query resource
     async queryResource(
         prompts: ChatMessage[],
@@ -204,7 +212,12 @@ export default class UniAI extends Service {
     }
 
     // upload file
-    async upload(file: EggFile, userId: number = 0, typeId: number = 1) {
+    async upload(
+        file: EggFile,
+        userId?: number,
+        typeId: number = DEFAULT_RESOURCE_TYPE,
+        tabId: number = DEFAULT_RESOURCE_TAB
+    ) {
         const { ctx } = this
         const limit = await this.getConfig('LIMIT_UPLOAD_SIZE')
 
@@ -235,8 +248,9 @@ export default class UniAI extends Service {
             resource = await ctx.model.Resource.create({
                 page,
                 content,
-                typeId,
                 userId,
+                typeId,
+                tabId,
                 fileName,
                 filePath,
                 fileSize,
@@ -369,9 +383,9 @@ export default class UniAI extends Service {
     imagine(
         prompt: string,
         nPrompt: string = '',
-        num: number = 1,
-        width: number = 1024,
-        height: number = 1024,
+        num: number = DEFAULT_IMAGINE_NUM,
+        width: number = DEFAULT_IMAGINE_WIDTH,
+        height: number = DEFAULT_IMAGINE_HEIGHT,
         model: ImgModelEnum = ImgModelEnum.DALLE
     ) {
         const { SD, DALLE, MJ } = ImgModelEnum

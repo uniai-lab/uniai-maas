@@ -19,6 +19,7 @@ import { ResourceType } from './ResourceType'
 import { Chat } from './Chat'
 import { Embedding1 } from './Embedding1'
 import { Embedding2 } from './Embedding2'
+import { UserResourceTab } from './UserResourceTab'
 import { Includeable } from 'sequelize'
 
 const OPENAI_EMBED_DIM = 1536
@@ -35,6 +36,12 @@ export class Resource extends Model {
     @ForeignKey(() => ResourceType)
     @Column(DataType.INTEGER)
     typeId: number
+
+    @AllowNull(false)
+    // @Default(1)
+    @ForeignKey(() => UserResourceTab)
+    @Column(DataType.INTEGER)
+    tabId: number
 
     @AllowNull(false)
     @Default(0)
@@ -144,6 +151,9 @@ export class Resource extends Model {
 
     @BelongsTo(() => ResourceType)
     type: ResourceType
+
+    @BelongsTo(() => UserResourceTab)
+    tab: UserResourceTab
 
     @HasMany(() => Page)
     pages: Page[]

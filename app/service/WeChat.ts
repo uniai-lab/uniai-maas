@@ -3,7 +3,7 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
-import { IncludeOptions, Op } from 'sequelize'
+import { IncludeOptions, Op, WhereOptions } from 'sequelize'
 import { Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
@@ -47,6 +47,13 @@ export default class WeChat extends Service {
             menu: (await this.getConfig<ConfigMenu[]>('USER_MENU')) || [],
             task: (await this.getConfig<ConfigTask[]>('USER_TASK')) || []
         }
+    }
+
+    // get all tabs of index page
+    async getTab(pid?: number) {
+        const where: WhereOptions = { isEffect: true, isDel: false }
+        if (pid !== undefined) where.pid = pid
+        return await this.ctx.model.UserResourceTab.findAll({ where })
     }
 
     // get announcements

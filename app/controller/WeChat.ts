@@ -28,7 +28,8 @@ import {
     ResourceResponse,
     AnnounceResponse,
     ConfigResponse,
-    ConfigTask
+    ConfigTask,
+    TabResponse
 } from '@interface/controller/WeChat'
 import { extname } from 'path'
 
@@ -43,6 +44,33 @@ export default class WeChat {
         try {
             const data: ConfigResponse = await ctx.service.weChat.getUserConfig()
             ctx.service.res.success('Success to list config', data)
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    // app tabs
+    @HTTPMethod({ path: '/tab', method: HTTPMethodEnum.GET })
+    async tab(@Context() ctx: UserContext, @HTTPQuery() pid?: number) {
+        try {
+            const res = await ctx.service.weChat.getTab(pid)
+
+            const data: TabResponse[] = []
+            for (const { id, name, desc, pid } of res)
+                data.push({
+                    id,
+                    name,
+                    desc,
+                    pid,
+                    child: res
+                        .filter(({ pid }) => pid === id)
+                        .map<TabResponse>(({ id, name, desc, pid }) => {
+                            return { id, name, desc, pid }
+                        })
+                })
+
+            ctx.service.res.success('Success to list tab', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -321,7 +349,7 @@ export default class WeChat {
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
+    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name?: string) {
         try {
             if (!path) throw new Error('Path is null')
 

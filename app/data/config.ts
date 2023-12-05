@@ -33,6 +33,75 @@ const tasks = [
     }
 ]
 
+const vips = [
+    {
+        bgimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip0bg.png',
+        bglineurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip0line.png',
+        bgstarurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip0star.png',
+        titleimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v0text.png',
+        backgroundColor: 'rgb(201,199,222,0.4)',
+        color: '#3B3761',
+        lefttoptitle: '未到达',
+        needchart: 0,
+        menus: []
+    },
+    {
+        bgimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip1bg.png',
+        bglineurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip1line.png',
+        bgstarurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip1star.png',
+        titleimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v1text.png',
+        backgroundColor: 'rgb(212,152,91,0.2)',
+        color: '#E6A058',
+        lefttoptitle: '未到达',
+        needchart: 10,
+        menu: []
+    },
+    {
+        bgimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip2bg.png',
+        bglineurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip2line.png',
+        bgstarurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip2star.png',
+        titleimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v2text.png',
+        backgroundColor: 'rgb(48,89,122,0.12)',
+        color: '#3B3761',
+        lefttoptitle: '未到达',
+        needchart: 20,
+        menu: []
+    },
+    {
+        bgimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip3bg.png',
+        bglineurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip3line.png',
+        bgstarurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip3star.png',
+        titleimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v3text.png',
+        backgroundColor: 'rgb(119,153,209,0.24)',
+        color: '#214B62',
+        lefttoptitle: '未到达',
+        needchart: 30,
+        menu: []
+    },
+    {
+        bgimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip4bg.png',
+        bglineurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip4line.png',
+        bgstarurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip4star.png',
+        titleimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v4text.png',
+        backgroundColor: 'rgb(126,97,235,0.24)',
+        color: '#705AC6',
+        lefttoptitle: '未到达',
+        needchart: 40,
+        menu: []
+    },
+    {
+        bgimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip5bg.png',
+        bglineurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip5line.png',
+        bgstarurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip5star.png',
+        titleimgurl: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v5text.png',
+        backgroundColor: 'rgb(0,0,0,0.17)',
+        color: '#CCCCCC',
+        lefttoptitle: '未到达',
+        needchart: 50,
+        menu: []
+    }
+]
+
 export default [
     {
         key: 'APP_NAME',
@@ -188,5 +257,10 @@ export default [
         key: 'USER_TASK',
         value: JSON.stringify(tasks),
         description: '小程序用户菜单栏2'
+    },
+    {
+        key: 'USER_VIP',
+        value: JSON.stringify(vips),
+        description: '小程序用户等级'
     }
 ]
