@@ -233,11 +233,13 @@ export default class UniAI extends Service {
         if (!content) throw new Error('Fail to extract content text')
 
         // split and embedding first page
-        const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
-        if (!firstPage[0]) throw new Error('Fail to split first page')
-        const res = await glm.embedding([firstPage[0]])
-        const embedding = res.data[0]
-        const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_DISTANCE)
+        const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
+        if (!firstPage) throw new Error('Fail to split first page')
+        const embedding = (await $.embedding([firstPage]))[0]
+        if (!embedding) throw new Error('Fail to embed first page')
+
+        // count similar
+        const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
         let resource = resources[0]
 
         if (!resource) {
@@ -255,7 +257,7 @@ export default class UniAI extends Service {
                 filePath,
                 fileSize,
                 fileExt,
-                embedding2: embedding,
+                embedding,
                 tokens: $.countTokens(content)
             })
         }
@@ -283,44 +285,50 @@ export default class UniAI extends Service {
         if (resourceId) {
             resource = await ctx.model.Resource.findByPk(resourceId)
             if (!resource) throw new Error('Can not find resource by id')
-            content = resource.content
+
+            content = $.tinyText(resource.content)
             fileName = resource.fileName
             filePath = resource.filePath
             fileSize = resource.fileSize
             fileExt = resource.fileExt
-            embedding = resource.embedding2
+
+            // split and embedding first page
+            const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
+            if (!firstPage) throw new Error('Fail to split first page')
+            embedding = (await $.embedding([firstPage]))[0]
+
+            resource.embedding = embedding
         }
-        // try to find by content
+        // find by resource content
         else {
-            if (!content) throw new Error('File content is empty')
+            // check all resource info
             content = $.tinyText(content)
-            // split first page
-            const firstPage: string[] = $.splitPage(content, TOKEN_PAGE_FIRST)
-            if (!firstPage[0]) throw new Error('First page can not be split')
+            if (!content) throw new Error('File content is empty')
+            if (!fileName) throw new Error('File name is empty')
+            if (!filePath) throw new Error('File path is empty')
+            if (!fileSize) throw new Error('File size is empty')
+            fileExt = fileExt || extname(filePath).replace('.', '')
+            if (!fileExt) throw new Error('Can not detect file extension')
 
             // embedding first page
-            const res = await glm.embedding([firstPage[0]])
-            embedding = res.data[0]
+            const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
+            if (!firstPage) throw new Error('First page can not be split')
+            embedding = (await $.embedding([firstPage]))[0]
 
             // find resource by embedding
-            const resources = await ctx.model.Resource.similarFindAll2(embedding, 1, SAME_DISTANCE)
+            const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
             resource = resources[0]
             if (resource) {
                 fileName = resource.fileName
                 filePath = resource.filePath
                 fileSize = resource.fileSize
                 fileExt = resource.fileExt
+                resource.embedding = embedding
             }
         }
 
-        // check again
-        if (!fileName) throw new Error('File name is empty')
-        if (!filePath) throw new Error('File path is empty')
-        if (!fileSize) throw new Error('File size is empty')
-        if (!content) throw new Error('File content is empty')
-        // filePath can be oss, http, local
-        fileExt = fileExt || extname(filePath).replace('.', '')
-        if (!fileExt) throw new Error('Can not detect file extension')
+        // check embedding
+        if (!embedding) throw new Error('Fail to embed first page')
 
         // split pages
         const tokens = $.countTokens(content)
@@ -328,12 +336,12 @@ export default class UniAI extends Service {
         if (tokens <= TOKEN_PAGE_TOTAL_L1) split = TOKEN_PAGE_SPLIT_L1
         else if (tokens <= TOKEN_PAGE_TOTAL_L2) split = TOKEN_PAGE_SPLIT_L2
         else split = TOKEN_PAGE_SPLIT_L3
-        const splitPage: string[] = $.splitPage(content, split)
-        if (!splitPage.length) throw new Error('Content can not be split')
+        const pages: string[] = $.splitPage(content, split)
+        if (!pages.length) throw new Error('Content can not be split')
 
         if (!resource)
             resource = await ctx.model.Resource.create({
-                page: splitPage.length,
+                page: pages.length,
                 content,
                 typeId,
                 userId,
@@ -341,7 +349,7 @@ export default class UniAI extends Service {
                 filePath,
                 fileSize,
                 fileExt,
-                embedding2: embedding,
+                embedding,
                 tokens: $.countTokens(content)
             })
 
@@ -351,33 +359,33 @@ export default class UniAI extends Service {
         // embedding resource
         if (model === EmbedModelEnum.GPT) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
-            const res = await gpt.embedding(splitPage)
+            const res = await gpt.embedding(pages)
             const embeddings = res.data.map((v, i) => {
                 return {
                     resourceId,
                     page: i + 1,
                     embedding: v.embedding,
-                    content: splitPage[i],
-                    tokens: $.countTokens(splitPage[i])
+                    content: pages[i],
+                    tokens: $.countTokens(pages[i])
                 }
             })
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(embeddings)
         } else if (model === EmbedModelEnum.GLM) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
-            const res = await glm.embedding(splitPage)
+            const res = await glm.embedding(pages)
             const embeddings = res.data.map((v, i) => {
                 return {
                     resourceId,
                     page: i + 1,
                     embedding: v,
-                    content: splitPage[i],
-                    tokens: $.countTokens(splitPage[i])
+                    content: pages[i],
+                    tokens: $.countTokens(pages[i])
                 }
             })
             resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(embeddings)
         } else throw new Error('Embedding model not found')
 
-        return resource
+        return await resource.save()
     }
 
     imagine(

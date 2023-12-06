@@ -7,6 +7,7 @@ export interface GLMChatResponse extends ChatCompletion {}
 export interface GLMChatStreamResponse extends ChatCompletionChunk {}
 
 export interface GLMEmbeddingRequest {
+    model: string
     prompt: string[]
 }
 export interface GLMEmbeddingResponse {

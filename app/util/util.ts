@@ -5,14 +5,15 @@
  * @author devilyouwei
  */
 
-import crypto from 'crypto'
-import pdf from '@cyber2024/pdf-parse-fixed'
 import { tmpdir } from 'os'
-import libreoffice from 'libreoffice-convert'
-import * as pdf2img from 'pdf-to-img'
+import { Readable } from 'stream'
 import { basename, extname, join } from 'path'
 import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
+import crypto from 'crypto'
+import isJSON from '@stdlib/assert-is-json'
+import pdf from '@cyber2024/pdf-parse-fixed'
+import libreoffice from 'libreoffice-convert'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
 import { google } from 'googleapis'
@@ -20,14 +21,11 @@ import { convert } from 'html-to-text'
 import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
 import Filter from 'mint-filter'
+import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
-import { OSSEnum } from '@interface/Enum'
-import { Readable } from 'stream'
 import * as uuid from 'uuid'
-import isJSON from '@stdlib/assert-is-json'
-
-// Minimum split size for text
-const MIN_SPLIT_SIZE = 400
+import * as tf from '@tensorflow/tfjs-node'
+import { OSSEnum } from '@interface/Enum'
 
 // Environment variables
 const {
@@ -39,6 +37,12 @@ const {
     MINIO_SECRET_KEY,
     MINIO_BUCKET
 } = process.env
+
+// universal sentence encoder model path
+const USE_PATH = `${ROOT_PATH}/app/public/models/universal-sentence-encoder`
+
+// Minimum split size for text
+const MIN_SPLIT_SIZE = 400
 
 // MinIO client
 const minio = new MINIO.Client({
@@ -264,8 +268,9 @@ export default {
      * @param text - The text to process.
      * @returns The processed text.
      */
-    tinyText(text: string): string {
-        return text.replace(/[\n\r]{2,}/g, '\n').trim()
+    tinyText(text?: string | null) {
+        if (!text) return ''
+        else return text.replace(/[\n\r]{2,}/g, '\n').trim()
     },
 
     /**
@@ -441,5 +446,16 @@ export default {
         const aspectRatioHeight = height / gcd
 
         return `${aspectRatioWidth}:${aspectRatioHeight}`
+    },
+    /**
+     * Performs embedding on the given text array using a machine learning model.
+     *
+     * @param text - An array of strings to be processed.
+     * @returns A promise that resolves to a two-dimensional array of numbers representing the embedding results.
+     */
+    async embedding(text: string[]) {
+        const model = await tf.node.loadSavedModel(USE_PATH)
+        const res = model.predict(tf.tensor(text)) as tf.Tensor<tf.Rank>
+        return res.arraySync() as number[][]
     }
 }

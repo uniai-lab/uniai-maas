@@ -20,10 +20,8 @@ import { Chat } from './Chat'
 import { Embedding1 } from './Embedding1'
 import { Embedding2 } from './Embedding2'
 import { UserResourceTab } from './UserResourceTab'
-import { Includeable } from 'sequelize'
 
-const OPENAI_EMBED_DIM = 1536
-const TEXT2VEC_EMBED_DIM = 1024
+const EMBED_DIM = 512
 
 @Table({ modelName: 'resource' })
 export class Resource extends Model {
@@ -38,7 +36,6 @@ export class Resource extends Model {
     typeId: number
 
     @AllowNull(false)
-    // @Default(1)
     @ForeignKey(() => UserResourceTab)
     @Column(DataType.INTEGER)
     tabId: number
@@ -49,58 +46,30 @@ export class Resource extends Model {
     page: number
 
     @Column({
-        type: `VECTOR(${OPENAI_EMBED_DIM})`,
+        type: `VECTOR(${EMBED_DIM})`,
         get() {
             const raw = this.getDataValue('embedding')
             return raw ? JSON.parse(raw) : null
         },
-        set(v: number[] | null) {
-            if (Array.isArray(v)) this.setDataValue('embedding', JSON.stringify([...v]))
+        set(v: number[]) {
+            if (Array.isArray(v) && v.every(e => typeof e === 'number'))
+                this.setDataValue('embedding', JSON.stringify(v))
             else this.setDataValue('embedding', null)
         }
     })
     embedding: number[] | null
 
-    static async similarFindAll(
-        vector: number[],
-        limit: number = 1,
-        distance?: number,
-        include?: Includeable | Includeable[]
-    ) {
+    static async similarFindAll(vector: number[], distance?: number, limit: number = 1) {
         const db = this.sequelize
         return await this.findAll({
             order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
             where: distance ? db?.literal(`embedding <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
-            limit,
-            include
+            limit
         })
     }
-
-    @Column({
-        type: `VECTOR(${TEXT2VEC_EMBED_DIM})`,
-        get() {
-            const raw = this.getDataValue('embedding2')
-            return raw ? JSON.parse(raw) : null
-        },
-        set(v: number[] | null) {
-            if (Array.isArray(v)) this.setDataValue('embedding2', JSON.stringify([...v]))
-            else this.setDataValue('embedding2', null)
-        }
-    })
-    embedding2: number[] | null
-
-    static async similarFindAll2(
-        vector: number[],
-        limit: number = 1,
-        distance?: number,
-        include?: Includeable | Includeable[]
-    ) {
-        const db = this.sequelize
-        return await this.findAll({
-            order: db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' ASC`),
-            where: distance ? db?.literal(`embedding2 <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
-            limit,
-            include
+    static async similarCount(vector: number[], distance: number) {
+        return await this.count({
+            where: this.sequelize?.literal(`embedding <=> '${JSON.stringify(vector)}' < ${distance}`)
         })
     }
 

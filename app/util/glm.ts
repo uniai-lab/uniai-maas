@@ -24,6 +24,7 @@ import { GLMChatRoleEnum, GLMSubModel } from '@interface/Enum'
 
 const { GLM_API, GLM_API_KEY, GLM_API_REMOTE } = process.env
 const EXPIRE_IN = 10 * 1000
+const EMBED_MODEL = 'text2vec-large-chinese' // 'text2vec-base-chinese-paraphrase'
 
 export default {
     /**
@@ -33,7 +34,10 @@ export default {
      * @returns A promise resolving to the embedding response.
      */
     async embedding(prompt: string[]) {
-        return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${GLM_API}/embedding`, { prompt })
+        return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${GLM_API}/embedding`, {
+            prompt,
+            model: EMBED_MODEL
+        })
     },
 
     /**

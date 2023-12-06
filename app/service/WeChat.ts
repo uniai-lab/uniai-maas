@@ -258,7 +258,7 @@ export default class WeChat extends Service {
         // check user chat chance
         const user = await ctx.model.UserChance.findOne({ where: { userId } })
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree <= 0 && user.chatChance <= 0) throw new Error('Chance of chat not enough')
+        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chance of chat not enough')
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
@@ -393,13 +393,15 @@ export default class WeChat extends Service {
             where: { userId },
             attributes: ['id', 'uploadChanceFree', 'uploadChance']
         })
-        if (!chance) throw new Error('Fail to find user')
-        if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Chance of upload not enough')
+        if (!chance) throw new Error('Fail to find user chance')
+        if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
 
-        const upload = await ctx.service.uniAI.upload(file, userId, typeId)
+        // upload resource to oss
+        const resource = await ctx.service.uniAI.upload(file, userId, typeId)
+        // embed resource content
         const embedModel = await this.getConfig<EmbedModelEnum>('WX_EMBED_MODEL')
-        const res = await ctx.service.uniAI.embedding(embedModel || undefined, upload.id)
-        // process resource, split pages
+        const res = await ctx.service.uniAI.embedding(embedModel, resource.id)
+        // process resource, split pages as images
         await this.resource(res.id)
 
         // reduce chance

@@ -22,6 +22,7 @@ import { GPTSubModel } from '@interface/Enum'
 
 // Destructure environment variables
 const { OPENAI_API, OPENAI_API_KEY, OPENAI_API_VERSION } = process.env
+const EMBED_MODEL = 'text-embedding-ada-002'
 
 export default {
     /**
@@ -34,7 +35,7 @@ export default {
     async embedding(input: string[]) {
         return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
             `${OPENAI_API}/${OPENAI_API_VERSION}/embeddings`,
-            { model: 'text-embedding-ada-002', input },
+            { model: EMBED_MODEL, input },
             { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: 'json' }
         )
     },
