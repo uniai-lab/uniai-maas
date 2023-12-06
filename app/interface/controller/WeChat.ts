@@ -113,16 +113,22 @@ export type UserinfoResponse = {
 }
 
 export interface ConfigResponse {
-    appName: string | null
-    appVersion: string | null
-    footer: string | null
-    footerCopy: string | null
-    officialAccount: string | null
-    shareTitle: string | null
-    shareDesc: string | null
-    shareImg: string | null
+    appName: string
+    appVersion: string
+    footer: string
+    footerCopy: string
+    officialAccount: string
+    shareTitle: string
+    shareDesc: string
+    shareImg: string
     menu: ConfigMenu[]
     task: ConfigTask[]
+    vip: ConfigVIP[]
+    menuMember: ConfigMenuV2
+    menuInfo: ConfigMenuV2
+    menuShare: ConfigMenuV2
+    menuFocus: ConfigMenuV2
+    menuAdv: ConfigMenuV2
 }
 
 export interface ConfigTask {
@@ -136,6 +142,28 @@ export interface ConfigMenu {
     image: string
     title: string
     tip: string
+}
+export interface ConfigMenuV2 {
+    icon: string
+    title: string
+    tip: string
+    show: boolean
+}
+export interface Benefit {
+    image: string
+    title: string
+    tip: string
+}
+
+export interface ConfigVIP {
+    bgImg: string
+    bgLine: string
+    bgStar: string
+    titleImg: string
+    backgroundColor: string
+    color: string
+    desc: string
+    benefits: Benefit[]
 }
 
 export interface AnnounceResponse {

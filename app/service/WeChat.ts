@@ -15,7 +15,7 @@ import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
-import { ConfigMenu, ConfigTask } from '@interface/controller/WeChat'
+import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
 import $ from '@util/util'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
@@ -45,7 +45,13 @@ export default class WeChat extends Service {
             shareImg: await this.getConfig('SHARE_IMG'),
             userBackground: await this.getConfig('USER_BACKGROUND_IMG'),
             menu: (await this.getConfig<ConfigMenu[]>('USER_MENU')) || [],
-            task: (await this.getConfig<ConfigTask[]>('USER_TASK')) || []
+            task: (await this.getConfig<ConfigTask[]>('USER_TASK')) || [],
+            vip: (await this.getConfig<ConfigVIP[]>('USER_VIP')) || [],
+            menuMember: await this.getConfig<ConfigMenuV2>('USER_MENU_MEMBER'),
+            menuInfo: await this.getConfig<ConfigMenuV2>('USER_MENU_INFO'),
+            menuShare: await this.getConfig<ConfigMenuV2>('USER_MENU_SHARE'),
+            menuFocus: await this.getConfig<ConfigMenuV2>('USER_MENU_FOCUS'),
+            menuAdv: await this.getConfig<ConfigMenuV2>('USER_MENU_ADV')
         }
     }
 
