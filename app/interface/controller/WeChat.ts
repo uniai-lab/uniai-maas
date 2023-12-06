@@ -54,6 +54,9 @@ export interface UploadResponse {
     updatedAt: Date
     dialogId: number
 }
+export interface UploadAvatarResponse {
+    img: string
+}
 
 export interface ResourceRequest {
     id: number

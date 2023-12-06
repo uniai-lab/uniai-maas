@@ -29,7 +29,8 @@ import {
     AnnounceResponse,
     ConfigResponse,
     ConfigTask,
-    TabResponse
+    TabResponse,
+    UploadAvatarResponse
 } from '@interface/controller/WeChat'
 import { extname } from 'path'
 
@@ -318,6 +319,23 @@ export default class WeChat {
             }
 
             ctx.service.res.success('Success to upload', data)
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    @Middleware(auth())
+    @HTTPMethod({ path: '/upload-avatar', method: HTTPMethodEnum.POST })
+    async uploadAvatar(@Context() ctx: UserContext) {
+        try {
+            const userId = ctx.userId as number
+            const file = ctx.request.files[0]
+            if (!file) throw new Error('No file')
+
+            const img = await ctx.service.weChat.uploadAvatar(file.filepath, userId)
+            const data: UploadAvatarResponse = { img }
+            ctx.service.res.success('Success to upload avatar', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)

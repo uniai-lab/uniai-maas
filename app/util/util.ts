@@ -333,7 +333,7 @@ export default {
      * @returns A readable stream of the downloaded file.
      * @throws An error if the OSS type is not found.
      */
-    async getOSS(name: string, oss: OSSEnum = OSSEnum.COS) {
+    async getOSSFile(name: string, oss: OSSEnum = OSSEnum.COS) {
         if (oss === OSSEnum.MIN) return await minio.getObject(MINIO_BUCKET, name)
         // if (oss === OSSEnum.COS) {
         // const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
@@ -375,7 +375,7 @@ export default {
         const oss = path.split('/')[0] as OSSEnum
         const name = basename(path)
 
-        if (Object.values(OSSEnum).includes(oss)) return await this.getOSS(name, oss)
+        if (Object.values(OSSEnum).includes(oss)) return await this.getOSSFile(name, oss)
         else if (path.startsWith('http://') || path.startsWith('https://')) return await this.getHttpFile(path)
         else return this.getLocalFile(path)
     },
@@ -457,5 +457,8 @@ export default {
         const model = await tf.node.loadSavedModel(USE_PATH)
         const res = model.predict(tf.tensor(text)) as tf.Tensor<tf.Rank>
         return res.arraySync() as number[][]
+    },
+    file2base64(file: string) {
+        return readFileSync(file).toString('base64')
     }
 }

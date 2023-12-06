@@ -392,6 +392,15 @@ export default class WeChat extends Service {
         return res
     }
 
+    // upload user avatar
+    async uploadAvatar(filepath: string, userId: number) {
+        const limit = await this.getConfig('LIMIT_UPLOAD_SIZE')
+        if (statSync(filepath).size > parseInt(limit)) throw new Error('File size exceeds limit')
+        const avatar = $.file2base64(filepath)
+        await this.ctx.model.User.update({ avatar }, { where: { id: userId } })
+        return avatar
+    }
+
     // add a new resource
     async upload(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this

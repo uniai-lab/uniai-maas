@@ -8,13 +8,15 @@ import {
     Context,
     EggContext,
     Middleware,
-    Inject
+    Inject,
+    HTTPQuery
 } from '@eggjs/tegg'
 import { AddFollowRewardRequest, UpdateUserRequest } from '@interface/controller/Admin'
 import { authAdmin } from '@middleware/auth'
 import { EggLogger } from 'egg'
 import config from '@data/config'
 import resourceType from '@data/resourceType'
+import { EmbedModelEnum } from '@interface/Enum'
 
 @HTTPController({ path: '/admin' })
 export default class Admin {
@@ -68,6 +70,25 @@ export default class Admin {
             // update redis cache, set config
             for (const item of configs) await ctx.app.redis.set(item.key, item.value)
             ctx.service.res.success('Success to init', { configs, resourceTypes })
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    @Middleware(authAdmin())
+    @HTTPMethod({ path: '/embed', method: HTTPMethodEnum.GET })
+    async embedding(@Context() ctx: EggContext, @HTTPQuery() start: number = 1) {
+        try {
+            const max: number = await ctx.model.Resource.max('id')
+            let all = 0
+            for (let id = start; id <= max; id++) {
+                const count = await ctx.model.Resource.count({ where: { id } })
+                if (!count) continue
+                await ctx.service.uniAI.embedding(EmbedModelEnum.GLM, id)
+                all++
+            }
+            ctx.service.res.success('Success to embed all', all)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
