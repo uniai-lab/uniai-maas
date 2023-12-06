@@ -21,7 +21,7 @@ import { Embedding1 } from './Embedding1'
 import { Embedding2 } from './Embedding2'
 import { UserResourceTab } from './UserResourceTab'
 
-const EMBED_DIM = 512
+const EMBED_DIM = 1024
 
 @Table({ modelName: 'resource' })
 export class Resource extends Model {

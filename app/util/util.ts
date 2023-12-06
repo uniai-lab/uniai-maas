@@ -24,7 +24,6 @@ import Filter from 'mint-filter'
 import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
 import * as uuid from 'uuid'
-import * as tf from '@tensorflow/tfjs-node'
 import { OSSEnum } from '@interface/Enum'
 
 // Environment variables
@@ -447,17 +446,7 @@ export default {
 
         return `${aspectRatioWidth}:${aspectRatioHeight}`
     },
-    /**
-     * Performs embedding on the given text array using a machine learning model.
-     *
-     * @param text - An array of strings to be processed.
-     * @returns A promise that resolves to a two-dimensional array of numbers representing the embedding results.
-     */
-    async embedding(text: string[]) {
-        const model = await tf.node.loadSavedModel(USE_PATH)
-        const res = model.predict(tf.tensor(text)) as tf.Tensor<tf.Rank>
-        return res.arraySync() as number[][]
-    },
+
     file2base64(file: string) {
         return readFileSync(file).toString('base64')
     }

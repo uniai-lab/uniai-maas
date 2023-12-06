@@ -235,7 +235,7 @@ export default class UniAI extends Service {
         // split and embedding first page
         const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
         if (!firstPage) throw new Error('Fail to split first page')
-        const embedding = (await $.embedding([firstPage]))[0]
+        const embedding = (await glm.embedding([firstPage])).data[0]
         if (!embedding) throw new Error('Fail to embed first page')
 
         // count similar
@@ -295,7 +295,7 @@ export default class UniAI extends Service {
             // split and embedding first page
             const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
             if (!firstPage) throw new Error('Fail to split first page')
-            embedding = (await $.embedding([firstPage]))[0]
+            embedding = (await glm.embedding([firstPage])).data[0]
 
             resource.embedding = embedding
         }
@@ -313,7 +313,7 @@ export default class UniAI extends Service {
             // embedding first page
             const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
             if (!firstPage) throw new Error('First page can not be split')
-            embedding = (await $.embedding([firstPage]))[0]
+            embedding = (await glm.embedding([firstPage])).data[0]
 
             // find resource by embedding
             const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
