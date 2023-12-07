@@ -107,7 +107,7 @@ export default class UniAI extends Service {
                         resourceId: item.resourceId,
                         page: item.page,
                         content: item.content,
-                        similar: $.cosine(embedding, item.embedding)
+                        similar: $.cosine(embedding, item.embedding || [])
                     })
             } else if (model === EmbedModelEnum.GLM) {
                 const embed = await glm.embedding([query])
@@ -120,7 +120,7 @@ export default class UniAI extends Service {
                         resourceId: item.resourceId,
                         page: item.page,
                         content: item.content,
-                        similar: $.cosine(embedding, item.embedding)
+                        similar: $.cosine(embedding, item.embedding || [])
                     })
             } else throw new Error('Embedding model not found')
         }

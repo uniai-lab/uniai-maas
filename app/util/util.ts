@@ -415,7 +415,8 @@ export default {
      * @returns The cosine similarity value between the two arrays.
      */
     cosine(v1: number[], v2: number[]) {
-        return similarity.cosine(v1, v2)
+        if (v1.length !== v2.length) return 0
+        else return similarity.cosine(v1, v2)
     },
 
     /**

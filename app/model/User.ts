@@ -44,7 +44,7 @@ export class User extends Model {
     @Column(DataType.STRING)
     password: string | null
 
-    @Column(DataType.STRING)
+    @Column(DataType.TEXT)
     avatar: string | null
 
     @Unique

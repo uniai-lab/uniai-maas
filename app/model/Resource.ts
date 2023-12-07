@@ -45,14 +45,15 @@ export class Resource extends Model {
     @Column(DataType.INTEGER)
     page: number
 
+    /** Array containing the embedding data. */
     @Column({
         type: `VECTOR(${EMBED_DIM})`,
         get() {
-            const raw = this.getDataValue('embedding')
-            return raw ? JSON.parse(raw) : null
+            const raw: string | null = this.getDataValue('embedding')
+            return raw ? (JSON.parse(raw) as number[]) : null
         },
         set(v: number[]) {
-            if (Array.isArray(v) && v.every(e => typeof e === 'number'))
+            if (Array.isArray(v) && v.every(e => typeof e === 'number') && v.length === EMBED_DIM)
                 this.setDataValue('embedding', JSON.stringify(v))
             else this.setDataValue('embedding', null)
         }
