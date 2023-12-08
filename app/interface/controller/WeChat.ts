@@ -55,7 +55,10 @@ export interface UploadResponse {
     dialogId: number
 }
 export interface UploadAvatarResponse {
-    img: string
+    avatar: string
+}
+export interface UpdateUserRequest {
+    name?: string
 }
 
 export interface ResourceRequest {
@@ -88,31 +91,19 @@ export interface DialogResponse {
 
 export type UserinfoResponse = {
     id: number
+    tokenTime: number
+    token: string
     name: string
     username: string
-    phone: string
-    countryCode: number
     avatar: string
-    token: string
-    tokenTime: Date
     wxOpenId: string
-    wxUnionId: string
     chance: {
         level: number
         uploadSize: number
-        chatChance: number
-        chatChanceUpdateAt: Date
-        chatChanceFree: number
-        chatChanceFreeUpdateAt: Date
-        uploadChance: number
-        uploadChanceUpdateAt: Date
-        uploadChanceFree: number
-        uploadChanceFreeUpdateAt: Date
         totalChatChance: number
         totalUploadChance: number
     }
     task: ConfigTask[]
-    fid?: number
 }
 
 export interface ConfigResponse {

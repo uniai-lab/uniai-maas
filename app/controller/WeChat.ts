@@ -18,7 +18,6 @@ import {
     SignInRequest,
     UploadResponse,
     UserinfoResponse,
-    SignUpRequest,
     ChatListRequest,
     UploadRequest,
     DialogResponse,
@@ -30,9 +29,11 @@ import {
     ConfigResponse,
     ConfigTask,
     TabResponse,
-    UploadAvatarResponse
+    UploadAvatarResponse,
+    UpdateUserRequest
 } from '@interface/controller/WeChat'
 import { extname } from 'path'
+import { UserCache } from '@interface/Cache'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -83,16 +84,16 @@ export default class WeChat {
     async announce(@Context() ctx: UserContext) {
         try {
             const res = await ctx.service.weChat.announce()
-            ctx.service.res.success(
-                'Success to list announcements',
-                res.map(({ title, content, closeable }) => {
-                    return {
-                        title,
-                        content,
-                        closeable
-                    }
-                }) as AnnounceResponse[]
-            )
+
+            // 从响应中提取所需的数据，并映射到 AnnounceResponse 数组
+            const data = res.map(({ title, content, closeable }) => ({
+                title,
+                content,
+                closeable
+            })) as AnnounceResponse[]
+
+            // 成功响应
+            ctx.service.res.success('Successfully listed announcements', data)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
@@ -109,22 +110,19 @@ export default class WeChat {
             const user = await ctx.service.weChat.signIn(code, fid)
             const data: UserinfoResponse = {
                 id: user.id,
-                username: user.username || '',
                 name: user.name || '',
-                phone: user.phone || '',
-                countryCode: user.countryCode || 0,
-                avatar: user.avatar || '',
+                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+                username: user.username || '',
                 token: user.token || '',
-                tokenTime: user.tokenTime || new Date(),
+                tokenTime: user.tokenTime,
                 wxOpenId: user.wxOpenId || '',
-                wxUnionId: user.wxUnionId || '',
                 chance: {
-                    ...user.chance.dataValues,
+                    level: user.chance.level,
+                    uploadSize: user.chance.uploadSize,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
-                task: (await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')) || [],
-                fid
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
             }
             ctx.service.res.success('Success to WeChat login', data)
         } catch (e) {
@@ -133,7 +131,7 @@ export default class WeChat {
         }
     }
 
-    // wechat register, get phone number
+    /* wechat register, get phone number
     @HTTPMethod({ path: '/register', method: HTTPMethodEnum.POST })
     async register(@Context() ctx: UserContext, @HTTPBody() params: SignUpRequest) {
         try {
@@ -143,26 +141,35 @@ export default class WeChat {
             if (!iv) throw new Error('IV can not be null')
             if (!encryptedData) throw new Error('EncryptedData can not be null')
 
-            const user = await ctx.service.weChat.signUp(code, openid, iv, encryptedData, fid)
+            const { id, username, name, phone, countryCode, avatar, token, tokenTime, wxOpenId, wxUnionId, chance } =
+                await ctx.service.weChat.signUp(code, openid, iv, encryptedData, fid)
 
             const data: UserinfoResponse = {
-                id: user.id,
-                username: user.username || '',
-                name: user.name || '',
-                phone: user.phone || '',
-                countryCode: user.countryCode || 0,
-                avatar: user.avatar || '',
-                token: user.token || '',
-                tokenTime: user.tokenTime || new Date(),
-                wxOpenId: user.wxOpenId || '',
-                wxUnionId: user.wxUnionId || '',
+                id,
+                username,
+                name,
+                phone,
+                countryCode,
+                avatar,
+                token,
+                tokenTime,
+                wxOpenId,
+                wxUnionId,
                 chance: {
-                    ...user.chance.dataValues,
-                    totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                    totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                    level: chance.level,
+                    uploadSize: chance.uploadSize,
+                    uploadChance: chance.uploadChance,
+                    uploadChanceFree: chance.uploadChanceFree,
+                    uploadChanceFreeUpdateAt: chance.uploadChanceFreeUpdateAt,
+                    uploadChanceUpdateAt: chance.uploadChanceUpdateAt,
+                    chatChance: chance.chatChance,
+                    chatChanceFree: chance.chatChanceFree,
+                    chatChanceFreeUpdateAt: chance.chatChanceFreeUpdateAt,
+                    chatChanceUpdateAt: chance.chatChanceUpdateAt,
+                    totalChatChance: chance.chatChance + chance.chatChanceFree,
+                    totalUploadChance: chance.uploadChance + chance.uploadChanceFree
                 },
-                task: (await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')) || [],
-                fid
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
             }
             ctx.service.res.success('Success to WeChat register', data)
         } catch (e) {
@@ -170,32 +177,30 @@ export default class WeChat {
             ctx.service.res.error(e as Error)
         }
     }
+    */
 
     // get user info
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
-            const user = await ctx.service.weChat.getUserResetChance(userId)
+            const user = ctx.user as UserCache
 
             const data: UserinfoResponse = {
                 id: user.id,
-                username: user.username || '',
                 name: user.name || '',
-                phone: user.phone || '',
-                countryCode: user.countryCode || 0,
-                avatar: user.avatar || '',
+                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+                username: user.username || '',
                 token: user.token || '',
-                tokenTime: user.tokenTime || new Date(),
+                tokenTime: user.tokenTime,
                 wxOpenId: user.wxOpenId || '',
-                wxUnionId: user.wxUnionId || '',
                 chance: {
-                    ...user.chance.dataValues,
+                    level: user.chance.level,
+                    uploadSize: user.chance.uploadSize,
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
-                task: (await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')) || []
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
@@ -209,11 +214,11 @@ export default class WeChat {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         try {
-            const userId = ctx.userId as number
+            const user = ctx.user as UserCache
             const { input, dialogId } = params
             if (!input) throw new Error('Input nothing')
 
-            const res = await ctx.service.weChat.chat(input, userId, dialogId)
+            const res = await ctx.service.weChat.chat(input, user.id, dialogId)
             const data: ChatResponse = {
                 chatId: res.id,
                 type: true,
@@ -221,9 +226,9 @@ export default class WeChat {
                 model: res.model,
                 resourceId: res.resourceId,
                 content: res.content,
-                userId,
+                userId: user.id,
                 dialogId: res.dialogId,
-                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')
+                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
             }
 
             ctx.service.res.success('Success start chat stream', data)
@@ -238,9 +243,9 @@ export default class WeChat {
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
     async getChat(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
+            const user = ctx.user as UserCache
 
-            const res = await ctx.service.weChat.getChat(userId)
+            const res = await ctx.service.weChat.getChat(user.id)
             if (!res) return ctx.service.res.success('No chat stream', null)
 
             // filter sensitive
@@ -249,7 +254,7 @@ export default class WeChat {
                 type: false,
                 role: ChatRoleEnum.ASSISTANT,
                 content: res.content,
-                userId,
+                userId: user.id,
                 dialogId: res.dialogId,
                 resourceId: res.resourceId,
                 model: res.model,
@@ -266,9 +271,9 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
         try {
-            const userId = ctx.userId as number
+            const user = ctx.user as UserCache
 
-            const res = await ctx.service.weChat.listChat(userId, params.dialogId)
+            const res = await ctx.service.weChat.listChat(user.id, params.dialogId)
             const data: ChatResponse[] = []
             for (const item of res.chats)
                 data.push({
@@ -280,7 +285,7 @@ export default class WeChat {
                     model: item.model,
                     avatar:
                         item.role === ChatRoleEnum.USER
-                            ? await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')
+                            ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
                             : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
                     dialogId: res.id,
                     userId: res.userId
@@ -296,13 +301,13 @@ export default class WeChat {
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
     async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
         try {
-            const userId = ctx.userId as number
+            const user = ctx.user as UserCache
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
             file.filename = params.fileName || file.filename
 
-            const res = await ctx.service.weChat.upload(file, userId, 1)
-            const dialog = await ctx.service.weChat.dialog(userId, res.id)
+            const res = await ctx.service.weChat.upload(file, user.id, 1)
+            const dialog = await ctx.service.weChat.dialog(user.id, res.id)
 
             const data: UploadResponse = {
                 id: res.id,
@@ -329,12 +334,12 @@ export default class WeChat {
     @HTTPMethod({ path: '/upload-avatar', method: HTTPMethodEnum.POST })
     async uploadAvatar(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
+            const user = ctx.user as UserCache
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
 
-            const img = await ctx.service.weChat.uploadAvatar(file.filepath, userId)
-            const data: UploadAvatarResponse = { img }
+            const avatar = await ctx.service.weChat.uploadAvatar(file.filepath, user.id)
+            const data: UploadAvatarResponse = { avatar }
             ctx.service.res.success('Success to upload avatar', data)
         } catch (e) {
             this.logger.error(e)
@@ -342,7 +347,36 @@ export default class WeChat {
         }
     }
 
-    // @Middleware(auth())
+    @Middleware(auth())
+    @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
+    async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
+        try {
+            const { id } = ctx.user as UserCache
+            const user = await ctx.service.weChat.updateUser(id, params.name)
+            const data: UserinfoResponse = {
+                id: user.id,
+                name: user.name || '',
+                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+                username: user.username || '',
+                token: user.token || '',
+                tokenTime: user.tokenTime,
+                wxOpenId: user.wxOpenId || '',
+                chance: {
+                    level: user.chance.level,
+                    uploadSize: user.chance.uploadSize,
+                    totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
+                    totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                },
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
+            }
+            ctx.service.res.success('Success to update user information', data)
+        } catch (e) {
+            this.logger.error(e)
+            ctx.service.res.error(e as Error)
+        }
+    }
+
+    @Middleware(auth())
     @HTTPMethod({ path: '/resource', method: HTTPMethodEnum.POST })
     async resource(@Context() ctx: UserContext, @HTTPBody() params: ResourceRequest) {
         try {
@@ -388,9 +422,9 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
     async listDialogResource(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId as number
+            const user = ctx.user as UserCache
 
-            const res = await ctx.service.weChat.listDialog(userId)
+            const res = await ctx.service.weChat.listDialog(user.id)
 
             const data: DialogResponse[] = []
             for (const { id, resource } of res)

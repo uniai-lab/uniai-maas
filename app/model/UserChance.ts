@@ -10,9 +10,9 @@ import {
     PrimaryKey,
     AutoIncrement,
     Default,
-    AllowNull
+    AllowNull,
+    Unique
 } from 'sequelize-typescript'
-import { NOW } from 'sequelize'
 import { User } from './User'
 
 @Table({ modelName: 'user_chance' })
@@ -22,6 +22,7 @@ export class UserChance extends Model {
     @Column(DataType.INTEGER)
     id: number
 
+    @Unique
     @AllowNull(false)
     @ForeignKey(() => User)
     @Column(DataType.INTEGER)
@@ -30,52 +31,52 @@ export class UserChance extends Model {
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    level: number
+    level!: number
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    uploadSize: number
+    uploadSize!: number
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    chatChance: number
+    chatChance!: number
 
     @AllowNull(false)
-    @Default(NOW)
+    @Default(DataType.NOW)
     @Column(DataType.DATE)
-    chatChanceUpdateAt: Date
+    chatChanceUpdateAt!: Date
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    chatChanceFree: number
+    chatChanceFree!: number
 
     @AllowNull(false)
-    @Default(NOW)
+    @Default(DataType.NOW)
     @Column(DataType.DATE)
-    chatChanceFreeUpdateAt: Date
+    chatChanceFreeUpdateAt!: Date
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    uploadChance: number
+    uploadChance!: number
 
     @AllowNull(false)
-    @Default(NOW)
+    @Default(DataType.NOW)
     @Column(DataType.DATE)
-    uploadChanceUpdateAt: Date
+    uploadChanceUpdateAt!: Date
 
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    uploadChanceFree: number
+    uploadChanceFree!: number
 
     @AllowNull(false)
-    @Default(NOW)
+    @Default(DataType.NOW)
     @Column(DataType.DATE)
-    uploadChanceFreeUpdateAt: Date
+    uploadChanceFreeUpdateAt!: Date
 
     @BelongsTo(() => User)
     user: User

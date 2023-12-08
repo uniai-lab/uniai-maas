@@ -21,10 +21,11 @@ export class User extends Model {
     @PrimaryKey
     @AutoIncrement
     @Column(DataType.INTEGER)
-    id: number
+    id!: number
 
+    @Unique
     @Column(DataType.STRING)
-    name: string | null
+    username: string | null
 
     @Unique
     @Column(DataType.STRING)
@@ -34,25 +35,21 @@ export class User extends Model {
     @Column(DataType.STRING)
     email: string | null
 
-    @Column(DataType.INTEGER)
-    countryCode: number | null
-
-    @Unique
-    @Column(DataType.STRING)
-    username: string | null
-
     @Column(DataType.STRING)
     password: string | null
-
-    @Column(DataType.TEXT)
-    avatar: string | null
 
     @Unique
     @Column(DataType.STRING)
     token: string | null
 
-    @Column(DataType.DATE)
-    tokenTime: Date | null
+    @Column(DataType.STRING)
+    name: string | null
+
+    @Column(DataType.INTEGER)
+    countryCode: number | null
+
+    @Column(DataType.TEXT)
+    avatar: string | null
 
     @Unique
     @Column(DataType.STRING)
@@ -68,6 +65,11 @@ export class User extends Model {
 
     @Column(DataType.STRING)
     wxSessionKey: string | null
+
+    @AllowNull(false)
+    @Default(DataType.NOW)
+    @Column(DataType.DATE)
+    tokenTime!: Date
 
     @AllowNull(false)
     @Default(false)

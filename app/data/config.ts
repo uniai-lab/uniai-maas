@@ -375,7 +375,7 @@ export default [
     },
     {
         key: 'WX_RESOURCE_SUB_MODEL',
-        value: 'chatglm3-6b-32k',
+        value: 'chatglm-turbo',
         description: '小程序默认resource子模型'
     },
     {

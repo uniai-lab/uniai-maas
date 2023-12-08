@@ -10,7 +10,7 @@ import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import md5 from 'md5'
 import { ChatModelEnum, ChatRoleEnum, ChatSubModelEnum, EmbedModelEnum, OSSEnum } from '@interface/Enum'
-import { ChatStreamCache, UserTokenCache } from '@interface/Cache'
+import { ChatStreamCache, UserCache } from '@interface/Cache'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
@@ -23,6 +23,11 @@ const PAGE_LIMIT = 6
 const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const ERROR_CHAT_ID = 0.1
+const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
+const DEFAULT_CHAT_CHANCE = 0
+const DEFAULT_UPLOAD_CHANCE = 0
+const DEFAULT_UPLOAD_SIZE = 5 * 1024 * 1024
+const DEFAULT_LEVEL = 0
 const { WX_APP_ID, WX_APP_AUTH_URL, WX_APP_SECRET, OSS_TYPE } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -44,9 +49,9 @@ export default class WeChat extends Service {
             shareDesc: await this.getConfig('SHARE_DESC'),
             shareImg: await this.getConfig('SHARE_IMG'),
             userBackground: await this.getConfig('USER_BACKGROUND_IMG'),
-            menu: (await this.getConfig<ConfigMenu[]>('USER_MENU')) || [],
-            task: (await this.getConfig<ConfigTask[]>('USER_TASK')) || [],
-            vip: (await this.getConfig<ConfigVIP[]>('USER_VIP')) || [],
+            menu: await this.getConfig<ConfigMenu[]>('USER_MENU'),
+            task: await this.getConfig<ConfigTask[]>('USER_TASK'),
+            vip: await this.getConfig<ConfigVIP[]>('USER_VIP'),
             menuMember: await this.getConfig<ConfigMenuV2>('USER_MENU_MEMBER'),
             menuInfo: await this.getConfig<ConfigMenuV2>('USER_MENU_INFO'),
             menuShare: await this.getConfig<ConfigMenuV2>('USER_MENU_SHARE'),
@@ -70,72 +75,94 @@ export default class WeChat extends Service {
     // use WeChat to login, get code, return new user
     async signIn(code: string, fid?: number) {
         const { ctx, app } = this
-        // get access_token, openid, unionid
-        const res = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_APP_AUTH_URL, {
+
+        // get access_token, openid, unionid from WeChat API
+        const { openid, session_key } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_APP_AUTH_URL, {
             grant_type: 'authorization_code',
             appid: WX_APP_ID,
             secret: WX_APP_SECRET,
             js_code: code
         })
-        if (!res.openid || !res.session_key) throw new Error('Fail to get openid or session key')
+        if (!openid || !session_key) throw new Error('Fail to get openid or session key')
 
-        // create user chance default params and values
-        const chance = {
-            level: 0,
-            uploadSize: 5 * 1024 * 1024,
-            chatChance: 0,
-            chatChanceUpdateAt: new Date(),
-            chatChanceFree: Number(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE')),
-            chatChanceFreeUpdateAt: new Date(),
-            uploadChance: 0,
-            uploadChanceUpdateAt: new Date(),
-            uploadChanceFree: Number(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE')),
-            uploadChanceFreeUpdateAt: new Date()
-        }
-
-        // try to create user
+        // try to create new user or find user
         const [user, created] = await ctx.model.User.findOrCreate({
-            where: { wxOpenId: res.openid },
-            defaults: { avatar: await this.getConfig('DEFAULT_AVATAR_USER'), chance },
-            include: ctx.model.UserChance
+            where: { wxOpenId: openid },
+            include: { model: ctx.model.UserChance }
         })
+        // check banned or invalid user
+        if (user.isDel || !user.isEffect) throw new Error('User is invalid')
 
-        // banned or invalid user
-        if (user.isDel || !user.isEffect) throw new Error('User is banned or invalid')
-        // lose user chance? create again
-        if (!user.chance) user.chance = await ctx.model.UserChance.create({ ...chance, userId: user.id })
+        const now = new Date()
 
-        // set some default user info
+        // create default if not exists
+        if (!user.chance)
+            user.chance = await ctx.model.UserChance.create({
+                userId: user.id,
+                level: DEFAULT_LEVEL,
+                uploadSize: DEFAULT_UPLOAD_SIZE,
+                chatChance: DEFAULT_CHAT_CHANCE,
+                chatChanceUpdateAt: now,
+                chatChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE')),
+                chatChanceFreeUpdateAt: now,
+                uploadChance: DEFAULT_UPLOAD_CHANCE,
+                uploadChanceUpdateAt: now,
+                uploadChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE')),
+                uploadChanceFreeUpdateAt: now
+            })
         if (!user.name) user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
+        if (!user.avatar) user.avatar = await this.getConfig('DEFAULT_AVATAR_USER')
+
         // add free chat dialog
         await this.dialog(user.id)
         // add default resource dialog
-        const id = Number(await this.getConfig('INIT_RESOURCE_ID'))
+        const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
         if (id) {
             const count = await ctx.model.Resource.count({ where: { id } })
             if (count) await this.dialog(user.id, id)
         }
 
         // user is existed, update session key
-        user.token = md5(`${res.openid}${Date.now()}${code}`)
+        user.token = md5(`${openid}${Date.now()}${code}`)
         user.tokenTime = new Date()
-        user.wxSessionKey = res.session_key
+        user.wxSessionKey = session_key
+        await user.save()
 
-        // save login auth to cache
-        const cache: UserTokenCache = {
-            id: user.id,
-            token: user.token,
-            time: user.tokenTime.getTime()
+        // reset week free chat and upload
+        if (now.getTime() - user.chance.chatChanceFreeUpdateAt.getTime() > WEEK) {
+            user.chance.chatChanceFree = parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE'))
+            user.chance.chatChanceFreeUpdateAt = now
+            await user.chance.save()
         }
-        await app.redis.set(`token_${user.id}`, JSON.stringify(cache))
+        if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() > WEEK) {
+            user.chance.uploadChanceFree = parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE'))
+            user.chance.uploadChanceFreeUpdateAt = now
+            await user.chance.save()
+        }
 
         // finally give share reward
         if (created && fid) await this.shareReward(fid)
 
-        return await user.save()
+        // refresh cache
+        const cache: UserCache = {
+            ...user.dataValues,
+            tokenTime: user.tokenTime.getTime(),
+            chance: {
+                ...user.chance.dataValues,
+                chatChanceUpdateAt: user.chance.chatChanceUpdateAt.getTime(),
+                uploadChanceUpdateAt: user.chance.uploadChanceUpdateAt.getTime(),
+                chatChanceFreeUpdateAt: user.chance.chatChanceFreeUpdateAt.getTime(),
+                uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
+            }
+        }
+        console.log(cache)
+        await app.redis.set(`user_${id}`, JSON.stringify(cache))
+
+        // save to user table and return
+        return cache
     }
 
-    // user sign phone number
+    /* user sign phone number
     async signUp(code: string, openid: string, iv: string, encryptedData: string, fid?: number) {
         const { ctx, app } = this
 
@@ -158,15 +185,14 @@ export default class WeChat extends Service {
             } else throw new Error('Error to decode wechat userinfo')
         }
 
-        const cache: UserTokenCache = {
-            id: user.id,
-            token: user.token,
-            time: user.tokenTime.getTime()
-        }
+        // save cache
+        const { id, token, tokenTime, avatar } = user
+        const cache: UserTokenCache = { id, token, time: tokenTime.getTime(), avatar }
         await app.redis.set(`token_${user.id}`, JSON.stringify(cache))
-        await user.save()
-        return user
+        // save user
+        return await user.save()
     }
+    */
 
     // user share and another one sign up, add reward
     async shareReward(userId: number) {
@@ -174,8 +200,8 @@ export default class WeChat extends Service {
         const chance = await ctx.model.UserChance.findOne({ where: { userId } })
         if (!chance) throw Error('Fail to reward')
 
-        chance.uploadChance += Number(await this.getConfig('SHARE_REWARD_UPLOAD_CHANCE'))
-        chance.chatChance += Number(await this.getConfig('SHARE_REWARD_CHAT_CHANCE'))
+        chance.uploadChance += parseInt(await this.getConfig('SHARE_REWARD_UPLOAD_CHANCE'))
+        chance.chatChance += parseInt(await this.getConfig('SHARE_REWARD_CHAT_CHANCE'))
         chance.uploadChanceUpdateAt = new Date()
         chance.chatChanceUpdateAt = new Date()
         return await chance.save()
@@ -190,7 +216,7 @@ export default class WeChat extends Service {
         })
         if (!user || !user.chance) throw Error('Fail to reward')
 
-        user.chance.chatChance += Number(await this.getConfig('FOLLOW_REWARD_CHAT_CHANCE'))
+        user.chance.chatChance += parseInt(await this.getConfig('FOLLOW_REWARD_CHAT_CHANCE'))
         user.chance.chatChanceUpdateAt = new Date()
         user.wxPublicOpenId = openId // public open id
         await user.chance.save()
@@ -394,11 +420,46 @@ export default class WeChat extends Service {
 
     // upload user avatar
     async uploadAvatar(filepath: string, userId: number) {
-        const limit = await this.getConfig('LIMIT_UPLOAD_SIZE')
-        if (statSync(filepath).size > parseInt(limit)) throw new Error('File size exceeds limit')
-        const avatar = $.file2base64(filepath)
+        if (statSync(filepath).size > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE')))
+            throw new Error('File size exceeds limit')
+
+        const avatar = BASE64_IMG_TYPE + $.file2base64(filepath)
+        // update user database
         await this.ctx.model.User.update({ avatar }, { where: { id: userId } })
+        // update cache
+        await this.updateUserCache(userId)
+
         return avatar
+    }
+
+    async updateUser(id: number, name?: string) {
+        if (name) await this.ctx.model.User.update({ name }, { where: { id } })
+        // update cache
+        const cache = await this.updateUserCache(id)
+        return cache
+    }
+
+    // update user cache in redis
+    async updateUserCache(id: number) {
+        const { ctx } = this
+        const user = await ctx.model.User.findOne({
+            where: { id, isDel: false, isEffect: true },
+            include: { model: ctx.model.UserChance }
+        })
+        if (!user) throw new Error('User is not found')
+        const cache: UserCache = {
+            ...user.dataValues,
+            tokenTime: user.tokenTime.getTime(),
+            chance: {
+                ...user.chance.dataValues,
+                chatChanceUpdateAt: user.chance.chatChanceUpdateAt.getTime(),
+                uploadChanceUpdateAt: user.chance.uploadChanceUpdateAt.getTime(),
+                chatChanceFreeUpdateAt: user.chance.chatChanceFreeUpdateAt.getTime(),
+                uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
+            }
+        }
+        await ctx.app.redis.set(`user_${id}`, JSON.stringify(cache))
+        return cache
     }
 
     // add a new resource
@@ -476,30 +537,5 @@ export default class WeChat extends Service {
         const file = await $.getFileStream(path)
         const name = basename(path)
         return { file, name }
-    }
-
-    // get user and reset free chat/upload chance
-    async getUserResetChance(id: number) {
-        const { ctx } = this
-        const user = await ctx.model.User.findOne({
-            where: { id, isDel: false, isEffect: true },
-            include: [{ model: ctx.model.UserChance }]
-        })
-        if (!user || !user.chance) throw new Error('Fail to find user')
-
-        const now = new Date()
-        // reset free upload
-        if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() > WEEK) {
-            user.chance.uploadChanceFree = Number(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE'))
-            user.chance.uploadChanceFreeUpdateAt = now
-            await user.chance.save()
-        }
-        // reset free chat
-        if (now.getTime() - user.chance.chatChanceFreeUpdateAt.getTime() > WEEK) {
-            user.chance.chatChanceFree = Number(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE'))
-            user.chance.chatChanceFreeUpdateAt = now
-            await user.chance.save()
-        }
-        return user
     }
 }
