@@ -85,14 +85,8 @@ export default class WeChat {
         try {
             const res = await ctx.service.weChat.announce()
 
-            // 从响应中提取所需的数据，并映射到 AnnounceResponse 数组
-            const data = res.map(({ title, content, closeable }) => ({
-                title,
-                content,
-                closeable
-            })) as AnnounceResponse[]
+            const data: AnnounceResponse[] = res.map(({ title, content, closeable }) => ({ title, content, closeable }))
 
-            // 成功响应
             ctx.service.res.success('Successfully listed announcements', data)
         } catch (e) {
             this.logger.error(e)

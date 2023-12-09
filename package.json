@@ -97,7 +97,9 @@
         "node-gyp": "^10.0.1",
         "prettier": "^3.0.3",
         "ts-node": "^10.9.1",
-        "typescript": "5.2.2"
+        "typescript": "5.2.2",
+        "leoric": "^2.6.1",
+        "reflect-metadata": "^0.1.14"
     },
     "engines": {
         "node": ">=16.0.0"

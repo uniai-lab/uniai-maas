@@ -149,8 +149,6 @@ export default class UniAI {
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         try {
             const { resourceId, content, fileName, filePath, fileExt, fileSize } = params
-            const userId = 0
-            const typeId = 1
             const model = params.model || EmbedModelEnum.GLM
 
             const { id, tokens, page } = await ctx.service.uniAI.embedding(
@@ -160,9 +158,7 @@ export default class UniAI {
                 fileName,
                 filePath,
                 fileExt,
-                fileSize,
-                userId,
-                typeId
+                fileSize
             )
             const data: EmbeddingResponse = { id, tokens, page, model }
             ctx.service.res.success('Success to embed text', data)
@@ -177,7 +173,7 @@ export default class UniAI {
     async imagine(@Context() ctx: EggContext, @HTTPBody() params: ImagineRequest) {
         try {
             const { prompt, negativePrompt, num, width, height } = params
-            const model = params.model || ImgModelEnum.DALLE
+            const model = params.model || ImgModelEnum.MJ
             if (!prompt) throw new Error('Prompt is empty')
 
             const res = await ctx.service.uniAI.imagine(prompt, negativePrompt, num, width, height, model)

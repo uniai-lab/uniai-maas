@@ -86,30 +86,30 @@ export default class WeChat extends Service {
         if (!openid || !session_key) throw new Error('Fail to get openid or session key')
 
         // try to create new user or find user
+        const now = new Date()
         const [user, created] = await ctx.model.User.findOrCreate({
             where: { wxOpenId: openid },
+            defaults: {
+                avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
+                chance: {
+                    level: DEFAULT_LEVEL,
+                    uploadSize: DEFAULT_UPLOAD_SIZE,
+                    chatChance: DEFAULT_CHAT_CHANCE,
+                    chatChanceUpdateAt: now,
+                    chatChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE')),
+                    chatChanceFreeUpdateAt: now,
+                    uploadChance: DEFAULT_UPLOAD_CHANCE,
+                    uploadChanceUpdateAt: now,
+                    uploadChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE')),
+                    uploadChanceFreeUpdateAt: now
+                }
+            },
             include: { model: ctx.model.UserChance }
         })
         // check banned or invalid user
         if (user.isDel || !user.isEffect) throw new Error('User is invalid')
 
-        const now = new Date()
-
         // create default if not exists
-        if (!user.chance)
-            user.chance = await ctx.model.UserChance.create({
-                userId: user.id,
-                level: DEFAULT_LEVEL,
-                uploadSize: DEFAULT_UPLOAD_SIZE,
-                chatChance: DEFAULT_CHAT_CHANCE,
-                chatChanceUpdateAt: now,
-                chatChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE')),
-                chatChanceFreeUpdateAt: now,
-                uploadChance: DEFAULT_UPLOAD_CHANCE,
-                uploadChanceUpdateAt: now,
-                uploadChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE')),
-                uploadChanceFreeUpdateAt: now
-            })
         if (!user.name) user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
         if (!user.avatar) user.avatar = await this.getConfig('DEFAULT_AVATAR_USER')
 
@@ -117,12 +117,10 @@ export default class WeChat extends Service {
         await this.dialog(user.id)
         // add default resource dialog
         const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
-        if (id) {
-            const count = await ctx.model.Resource.count({ where: { id } })
-            if (count) await this.dialog(user.id, id)
-        }
+        const count = await ctx.model.Resource.count({ where: { id } })
+        if (count) await this.dialog(user.id, id)
 
-        // user is existed, update session key
+        // set login token
         user.token = md5(`${openid}${Date.now()}${code}`)
         user.tokenTime = new Date()
         user.wxSessionKey = session_key
@@ -155,8 +153,7 @@ export default class WeChat extends Service {
                 uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
             }
         }
-        console.log(cache)
-        await app.redis.set(`user_${id}`, JSON.stringify(cache))
+        await app.redis.set(`user_${cache.id}`, JSON.stringify(cache))
 
         // save to user table and return
         return cache
@@ -242,21 +239,22 @@ export default class WeChat extends Service {
     // find or create a dialog
     async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
         const { ctx } = this
-        let name = ''
+        let fileName = ''
         if (resourceId) {
             // check resource
             const resource = await ctx.model.Resource.findOne({
-                where: { id: resourceId, isEffect: true, isDel: false }
+                where: { id: resourceId, isEffect: true, isDel: false },
+                attributes: ['fileName']
             })
             if (!resource) throw new Error('Can not find the resource')
-            name = resource.fileName
+            fileName = resource.fileName
         }
 
         // create or find the dialog
         const [res, created] = await ctx.model.Dialog.findOrCreate({ where: { userId, resourceId }, include })
         if (created) {
-            const content = `${ctx.__('Im AI model')}
-            ${resourceId ? ctx.__('finish reading', name) : ctx.__('feel free to chat')}`
+            let content = ctx.__('Im AI model')
+            content += resourceId ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat')
             res.chats = [await ctx.model.Chat.create({ dialogId: res.id, role: ChatRoleEnum.ASSISTANT, content })]
         }
 

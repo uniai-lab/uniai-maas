@@ -5,6 +5,7 @@ import { Readable } from 'stream'
 import { UserContext } from '@interface/Context'
 import auth from '@middleware/auth'
 import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/controller/LeChat'
+import { UserCache } from '@interface/Cache'
 
 @HTTPController({ path: '/lechat' })
 export default class LeChat {
@@ -12,10 +13,9 @@ export default class LeChat {
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.POST })
     async userinfo(@Context() ctx: UserContext) {
         try {
-            const userId = ctx.userId
-            if (!userId) throw new Error('No user id')
+            const user = ctx.user as UserCache
 
-            const res = await ctx.service.leChat.getUser(userId)
+            const res = await ctx.service.leChat.getUser(user.id)
             if (!res) throw new Error('User not found')
 
             const data: UserInfoResponse = {

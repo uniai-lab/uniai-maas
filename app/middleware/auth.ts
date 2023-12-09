@@ -37,13 +37,13 @@ export default function auth() {
                         uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
                     }
                 }
-                await ctx.app.redis.set(`user_${id}`, JSON.stringify(cache))
+                await ctx.app.redis.set(`user_${cache.id}`, JSON.stringify(cache))
 
                 ctx.user = cache
             }
         }
         if (!ctx.user) return ctx.service.res.noAuth()
-        else return await next()
+        return await next()
     }
 }
 

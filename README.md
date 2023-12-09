@@ -122,6 +122,12 @@ npm -g install yarn
 yarn
 ```
 
+**Install node-gyp**
+
+```bash
+npm -g install node-gyp
+```
+
 **Install LibreOffice**
 
 ```bash
@@ -155,12 +161,15 @@ sudo apt install docker.io docker-compose
 Docker start up pgvector, redis, minio
 
 ```bash
+# db
 yarn docker up pgvector
+# cache
 yarn docker up redis
+# local oss
 yarn docker up minio
 ```
 
-TIP: Minio is a local deployed OSS server, you should login to config your bucket and access keys after start up minio docker.
+TIP: Minio is a locally deployed OSS server, you should login to config your bucket and access keys after minio docker is ready.
 
 Location: <http://localhost:9000>
 Default Username: root
