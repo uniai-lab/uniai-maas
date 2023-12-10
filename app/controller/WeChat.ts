@@ -104,12 +104,12 @@ export default class WeChat {
             const user = await ctx.service.weChat.signIn(code, fid)
             const data: UserinfoResponse = {
                 id: user.id,
-                name: user.name || '',
-                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
-                username: user.username || '',
-                token: user.token || '',
                 tokenTime: user.tokenTime,
-                wxOpenId: user.wxOpenId || '',
+                name: user.name,
+                avatar: user.avatar,
+                username: user.username,
+                token: user.token,
+                wxOpenId: user.wxOpenId,
                 chance: {
                     level: user.chance.level,
                     uploadSize: user.chance.uploadSize,
@@ -182,12 +182,12 @@ export default class WeChat {
 
             const data: UserinfoResponse = {
                 id: user.id,
-                name: user.name || '',
-                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
-                username: user.username || '',
-                token: user.token || '',
+                name: user.name,
+                avatar: user.avatar,
+                username: user.username,
+                token: user.token,
                 tokenTime: user.tokenTime,
-                wxOpenId: user.wxOpenId || '',
+                wxOpenId: user.wxOpenId,
                 chance: {
                     level: user.chance.level,
                     uploadSize: user.chance.uploadSize,
@@ -349,12 +349,12 @@ export default class WeChat {
             const user = await ctx.service.weChat.updateUser(id, params.name)
             const data: UserinfoResponse = {
                 id: user.id,
-                name: user.name || '',
-                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
-                username: user.username || '',
-                token: user.token || '',
+                name: user.name,
+                avatar: user.avatar,
+                username: user.username,
+                token: user.token,
                 tokenTime: user.tokenTime,
-                wxOpenId: user.wxOpenId || '',
+                wxOpenId: user.wxOpenId,
                 chance: {
                     level: user.chance.level,
                     uploadSize: user.chance.uploadSize,

@@ -92,11 +92,11 @@ export interface DialogResponse {
 export type UserinfoResponse = {
     id: number
     tokenTime: number
-    token: string
-    name: string
-    username: string
-    avatar: string
-    wxOpenId: string
+    token: string | null
+    name: string | null
+    username: string | null
+    avatar: string | null
+    wxOpenId: string | null
     chance: {
         level: number
         uploadSize: number
