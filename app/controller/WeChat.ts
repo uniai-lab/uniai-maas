@@ -32,7 +32,7 @@ import {
     UploadAvatarResponse,
     UpdateUserRequest
 } from '@interface/controller/WeChat'
-import { extname } from 'path'
+import { basename, extname } from 'path'
 import { UserCache } from '@interface/Cache'
 
 @HTTPController({ path: '/wechat' })
@@ -97,11 +97,12 @@ export default class WeChat {
     // wechat login
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async login(@Context() ctx: UserContext, @HTTPBody() params: SignInRequest) {
+        const transaction = await ctx.model.transaction()
         try {
             const { code, fid } = params
             if (!code) throw new Error('Code is null')
 
-            const user = await ctx.service.weChat.signIn(code, fid)
+            const user = await ctx.service.weChat.login(code, fid)
             const data: UserinfoResponse = {
                 id: user.id,
                 tokenTime: user.tokenTime,
@@ -118,8 +119,10 @@ export default class WeChat {
                 },
                 task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
             }
+            await transaction.commit()
             ctx.service.res.success('Success to WeChat login', data)
         } catch (e) {
+            await transaction.rollback()
             this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
@@ -294,6 +297,7 @@ export default class WeChat {
     @Middleware(auth())
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
     async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
+        const transaction = await ctx.model.transaction()
         try {
             const user = ctx.user as UserCache
             const file = ctx.request.files[0]
@@ -317,8 +321,10 @@ export default class WeChat {
                 updatedAt: res.updatedAt
             }
 
+            await transaction.commit()
             ctx.service.res.success('Success to upload', data)
         } catch (e) {
+            await transaction.rollback()
             this.logger.error(e)
             ctx.service.res.error(e as Error)
         }
@@ -398,14 +404,12 @@ export default class WeChat {
     async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name?: string) {
         try {
             if (!path) throw new Error('Path is null')
-
-            const res = await ctx.service.weChat.file(path)
-            name = name || res.name
+            name = name || basename(path)
 
             ctx.response.type = extname(name)
             ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`) // 强制浏览器下载，设置下载的文件名
 
-            ctx.body = res.file
+            ctx.body = await ctx.service.weChat.file(path)
         } catch (e) {
             this.logger.error(e)
             ctx.service.res.error(e as Error)
