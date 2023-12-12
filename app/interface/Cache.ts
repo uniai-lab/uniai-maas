@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum, ChatSubModelEnum } from '@interface/Enum'
+import { ChatModelEnum } from '@interface/Enum'
 
 export interface ChatStreamCache {
     chatId: number
@@ -19,8 +19,8 @@ export interface UserCache {
     email: string | null
     password: string | null
     token: string | null
-    name: string | null
-    countryCode: number | null
+    name: string
+    countryCode: number
     avatar: string | null
     wxOpenId: string | null
     wxPublicOpenId: string | null

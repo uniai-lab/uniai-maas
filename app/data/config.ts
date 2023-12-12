@@ -75,6 +75,7 @@ const vips: ConfigVIP[] = [
         bgStar: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip0star.png',
         titleImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v0text.png',
         backgroundColor: 'rgb(201,199,222,0.4)',
+        linearGradient: 'linear-gradient(to bottom, rgb(221, 220, 248), rgb(201,199,222,0.1))',
         color: '#3B3761',
         desc: '默认免费用户等级',
         benefits: [
@@ -101,6 +102,7 @@ const vips: ConfigVIP[] = [
         bgStar: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip1star.png',
         titleImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v1text.png',
         backgroundColor: 'rgb(212,152,91,0.2)',
+        linearGradient: 'linear-gradient(to bottom, rgb(221, 220, 248), rgb(201,199,222,0.1))',
         color: '#E6A058',
         desc: '月充值满10元可达成',
         benefits: [
@@ -127,6 +129,7 @@ const vips: ConfigVIP[] = [
         bgStar: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip2star.png',
         titleImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v2text.png',
         backgroundColor: 'rgb(48,89,122,0.12)',
+        linearGradient: 'linear-gradient(to bottom, rgb(221, 220, 248), rgb(201,199,222,0.1))',
         color: '#3B3761',
         desc: '月充值满20元可达成',
         benefits: [
@@ -153,6 +156,7 @@ const vips: ConfigVIP[] = [
         bgStar: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip3star.png',
         titleImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v3text.png',
         backgroundColor: 'rgb(119,153,209,0.24)',
+        linearGradient: 'linear-gradient(to bottom, rgb(221, 220, 248), rgb(201,199,222,0.1))',
         color: '#214B62',
         desc: '月充值满30元可达成',
         benefits: [
@@ -179,6 +183,7 @@ const vips: ConfigVIP[] = [
         bgStar: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip4star.png',
         titleImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v4text.png',
         backgroundColor: 'rgb(126,97,235,0.24)',
+        linearGradient: 'linear-gradient(to bottom, rgb(221, 220, 248), rgb(201,199,222,0.1))',
         color: '#705AC6',
         desc: '月充值满40元可达成',
         benefits: [
@@ -205,6 +210,7 @@ const vips: ConfigVIP[] = [
         bgStar: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip5star.png',
         titleImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/v5text.png',
         backgroundColor: 'rgb(0,0,0,0.17)',
+        linearGradient: 'linear-gradient(to bottom, rgb(221, 220, 248), rgb(201,199,222,0.1))',
         color: '#CCCCCC',
         desc: '月充值满50元可达成',
         benefits: [
@@ -365,7 +371,7 @@ export default [
     },
     {
         key: 'WX_CHAT_SUB_MODEL',
-        value: 'v1.1',
+        value: 'v3.1',
         description: '小程序默认chat子模型'
     },
     {

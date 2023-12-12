@@ -155,6 +155,7 @@ export interface ConfigVIP {
     bgStar: string
     titleImg: string
     backgroundColor: string
+    linearGradient: string
     color: string
     desc: string
     benefits: Benefit[]

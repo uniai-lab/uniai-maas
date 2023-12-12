@@ -28,19 +28,19 @@ export class Embedding2 extends Model {
     @PrimaryKey
     @AutoIncrement
     @Column(DataType.INTEGER)
-    id!: number
+    id: number
 
     /** Page number associated with the embedding. */
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    page!: number
+    page: number
 
     /** Foreign key referencing the associated resource. */
     @AllowNull(false)
     @ForeignKey(() => Resource)
     @Column(DataType.INTEGER)
-    resourceId!: number
+    resourceId: number
 
     /** Array containing the embedding data. */
     @Column({
@@ -77,17 +77,17 @@ export class Embedding2 extends Model {
     @AllowNull(false)
     @Default('')
     @Column(DataType.TEXT)
-    content!: string
+    content: string
 
     /** Number of tokens in the content. */
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
-    tokens!: number
+    tokens: number
 
     /** Belongs to the associated resource. */
     @BelongsTo(() => Resource)
-    resource!: Resource
+    resource: Resource
 }
 
 export default () => Embedding2

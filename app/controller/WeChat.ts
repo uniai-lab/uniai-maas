@@ -33,7 +33,6 @@ import {
     UpdateUserRequest
 } from '@interface/controller/WeChat'
 import { basename, extname } from 'path'
-import { UserCache } from '@interface/Cache'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -181,7 +180,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
 
             const data: UserinfoResponse = {
                 id: user.id,
@@ -211,7 +210,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
             const { input, dialogId } = params
             if (!input) throw new Error('Input nothing')
 
@@ -240,7 +239,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
     async getChat(@Context() ctx: UserContext) {
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
 
             const res = await ctx.service.weChat.getChat(user.id)
             if (!res) return ctx.service.res.success('No chat stream', null)
@@ -268,7 +267,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
 
             const res = await ctx.service.weChat.listChat(user.id, params.dialogId)
             const data: ChatResponse[] = []
@@ -299,7 +298,7 @@ export default class WeChat {
     async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
         const transaction = await ctx.model.transaction()
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
             file.filename = params.fileName || file.filename
@@ -334,7 +333,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/upload-avatar', method: HTTPMethodEnum.POST })
     async uploadAvatar(@Context() ctx: UserContext) {
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
 
@@ -351,7 +350,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
     async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
         try {
-            const { id } = ctx.user as UserCache
+            const { id } = ctx.user!
             const user = await ctx.service.weChat.updateUser(id, params.name)
             const data: UserinfoResponse = {
                 id: user.id,
@@ -420,7 +419,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
     async listDialogResource(@Context() ctx: UserContext) {
         try {
-            const user = ctx.user as UserCache
+            const user = ctx.user!
 
             const res = await ctx.service.weChat.listDialog(user.id)
 

@@ -21,7 +21,7 @@ export class User extends Model {
     @PrimaryKey
     @AutoIncrement
     @Column(DataType.INTEGER)
-    id!: number
+    id: number
 
     @Unique
     @Column(DataType.STRING)
@@ -42,11 +42,13 @@ export class User extends Model {
     @Column(DataType.STRING)
     token: string | null
 
+    @Default('')
     @Column(DataType.STRING)
-    name: string | null
+    name: string
 
+    @Default(86)
     @Column(DataType.INTEGER)
-    countryCode: number | null
+    countryCode: number
 
     @Column(DataType.TEXT)
     avatar: string | null
@@ -63,23 +65,24 @@ export class User extends Model {
     @Column(DataType.STRING)
     wxUnionId: string | null
 
+    @Unique
     @Column(DataType.STRING)
     wxSessionKey: string | null
 
     @AllowNull(false)
     @Default(DataType.NOW)
     @Column(DataType.DATE)
-    tokenTime!: Date
+    tokenTime: Date
 
     @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
-    isDel!: boolean
+    isDel: boolean
 
     @AllowNull(false)
     @Default(true)
     @Column(DataType.BOOLEAN)
-    isEffect!: boolean
+    isEffect: boolean
 
     @HasOne(() => UserChance)
     chance: UserChance
