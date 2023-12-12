@@ -1,12 +1,18 @@
 <!-- @format -->
 
-# <img src="./logo.png" width=31 height=31 /> UniAI
+# <img src="./logo.png" width=23 height=23 /> UniAI
 
-[简体中文说明](./README_CN.md)
+[Read this in Simplified Chinese (简体中文说明)](./README_CN.md)
 
 ![Framework](./framework.png)
 
+## Overview
+
+UniAI, a unified API-based platform, streamlines interactions with diverse and complex AI models. It integrates a range of AI models and utilities to facilitate easier access and management.
+
 ## Integrated Models
+
+UniAI integrates several leading AI models, including:
 
 -   [OpenAI/GPT](https://platform.openai.com)
 -   [IFLYTEK/Spark](https://xinghuo.xfyun.cn)
@@ -18,184 +24,186 @@
 
 ## Samples
 
-Who are using UniAI and where can I experience it?
+Discover how UniAI is utilized and experience it firsthand:
 
 ![wechat miniapps](./miniapp-qrcode.png)
 
-## About UniAI
+## System Requirements
 
-UniAI is designed to simplify your interactions with multiple and complex AI models.
+Ensure you have the following installed:
 
-We aim to provide a united API-based platform that integrates various AI models and utilities.
-
-## Requirements
-
-Before you start, make sure you have:
-
--   Node.js >= 16 <https://github.com/nvm-sh/nvm>
+-   Node.js (version 16 or higher) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
 -   Docker & Docker-compose
--   LibreOffice (libreoffice-convert)
--   pdf-to-img (canvas-node): <https://www.npmjs.com/package/canvas>
+-   LibreOffice for document conversion (libreoffice-convert)
+-   pdf-to-img (canvas-node) - [Canvas NPM Package](https://www.npmjs.com/package/canvas)
 
 ## Getting Started
 
 ### Configuration
 
-1. Create a `.env` file at the root directory:
+Create an `.env` file at the root directory:
 
 ```bash
 touch ./.env
 ```
 
-2. Fill in the environment parameters in the `.env` file as follows:
+Populate the `.env` file with the following environment variables:
 
 ```bash
 
-# APP
-ADMIN_TOKEN=    # default admin token, can be modified in config table
+# Application Configuration
+ADMIN_TOKEN= # Default admin token, can be modified in config table
 
-# OPENAI GPT
-OPENAI_API=http://8.214.93.3                        # OpenAI API URL or proxy
-OPENAI_API_VERSION=v1                               # OpenAI API version (no need to modify)
-OPENAI_API_KEY=                                     # OpenAI API key
+# OPENAI GPT Configuration
 
-# GLM
-GLM_API=http://10.144.1.7:8100              # https://github.com/uni-openai/GLM-API
-GLM_API_REMOTE=https://open.bigmodel.cn     # remote ZHIPU chatglm API
-GLM_API_KEY=                                # ZHIPU AI api key
+OPENAI_API=http://8.214.93.3 # OpenAI API URL or proxy
+OPENAI_API_VERSION=v1 # OpenAI API version (no need to modify)
+OPENAI_API_KEY= # OpenAI API key
 
-# SPARK
+# GLM Configuration
+
+GLM_API=http://10.144.1.7:8100 # GLM API URL (https://github.com/uni-openai/GLM-API)
+GLM_API_REMOTE=https://open.bigmodel.cn # Remote ZHIPU chatglm API
+GLM_API_KEY= # ZHIPU AI API key
+
+# IFLYTEK Spark Configuration
+
 SPARK_API=ws://spark-api.xf-yun.com
-SPARK_API_KEY=      # IFLYTEK Spark API KEY
-SPARK_API_SECRET=   # IFLYTEK Spark API Secret
-SPARK_APP_ID=       # IFLYTEK Spark APP ID
+SPARK_API_KEY= # IFLYTEK Spark API KEY
+SPARK_API_SECRET= # IFLYTEK Spark API Secret
+SPARK_APP_ID= # IFLYTEK Spark APP ID
 
-# PostgreSQL database
+# PostgreSQL Database Configuration
+
 DB_DIALECT=postgres
-POSTGRES_HOST=localhost     # postgresql host url
-POSTGRES_PORT=5432          # postgresql port
-POSTGRES_USER=postgres      # postgresql user
-POSTGRES_PASSWORD=postgres  # postgresql password
-POSTGRES_DB=uniai           # postgresql db
+POSTGRES_HOST=localhost # PostgreSQL host URL
+POSTGRES_PORT=5432 # PostgreSQL port
+POSTGRES_USER=postgres # PostgreSQL user
+POSTGRES_PASS=postgres # PostgreSQL password
+POSTGRES_DB=uniai # PostgreSQL database name
 
-# Redis cache
-REDIS_HOST=localhost        # Redis cache host url
-REDIS_PORT=6379             # Redis cache host port
-REDIS_PASSWORD=redis
+# For Docker start pgvector
+
+POSTGRES_DATA_PATH=/data/docker/pgvector/data
+
+# Redis Cache Configuration
+
+REDIS_HOST=localhost # Redis cache host URL
+REDIS_PORT=6379 # Redis cache port
+REDIS_PASS=redis
 REDIS_DB=0
 
-# WeChat
-WX_APP_ID=                      # wechat app id
-WX_APP_SECRET=                  # wechat app secret
+# WeChat Configuration
+
+WX_APP_ID= # WeChat app ID
+WX_APP_SECRET= # WeChat app secret
 WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
 WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
 WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
-OSS_TYPE=minio
+# MINIO Storage Configuration
 
-# MINIO storage
+OSS_TYPE=minio
 MINIO_ACCESS_KEY=
 MINIO_SECRET_KEY=
 MINIO_END_POINT=localhost
 MINIO_PORT=9000
 MINIO_BUCKET=uniai
 
-# Google Search
+# For Docker start Minio
+
+MINIO_DATA_PATH=/data/docker/minio
+MINIO_ROOT_USER=root
+MINIO_ROOT_PASS=12345678
+
+# Google Search Configuration
+
 GOOGLE_SEARCH_API_TOKEN=
 GOOGLE_SEARCH_ENGINE_ID=
 
-# Stable Diffusion
+# Stable Diffusion Configuration
+
 STABLE_DIFFUSION_API=http://10.144.1.7:3400
 
-MID_JOURNEY_API=        # visit https://github.com/novicezk/midjourney-proxy
-MID_JOURNEY_TOKEN=      # mj-proxy token
+# Mid Journey Configuration
+
+MID_JOURNEY_API= # Visit https://github.com/novicezk/midjourney-proxy
+MID_JOURNEY_TOKEN= # MidJourney proxy token
 
 ```
 
-### Installation
+### Installation Steps
 
-We recommend using `yarn` instead of `npm`:
+**Node-gyp Installation**
+
+```bash
+npm -g install node-gyp
+```
+
+**LibreOffice Installation**
+
+-   Ubuntu: `sudo apt install libreoffice`
+-   Mac: `brew install libreoffice`
+
+**Node-Canvas Support**
+
+-   Reference: [Canvas NPM Documentation](https://www.npmjs.com/package/canvas)
+-   Install dependencies as per your operating system.
+
+**Using Yarn (Recommended over npm)**
 
 ```bash
 npm -g install yarn
 yarn
 ```
 
-**Install node-gyp**
+### Starting the Database
 
-```bash
-npm -g install node-gyp
-```
-
-**Install LibreOffice**
-
-```bash
-# ubuntu
-sudo apt install libreoffice
-
-# Mac
-brew install libreoffice
-```
-
-**Install node-canvas support**
-
-<https://www.npmjs.com/package/canvas>
-
-```bash
-# For Ubuntu
-sudo apt install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-
-#For Mac OS X,
-brew install pkg-config cairo pango libpng jpeg giflib librsvg pixman
-```
-
-### Start DB
-
-If you don't have a vector database such as PostgresSQL (pgvector), you can start one using Docker and Docker-compose:
+For databases like PostgresSQL (pgvector), Docker and Docker-compose can be used for setup:
 
 ```bash
 sudo apt install docker.io docker-compose
 ```
 
-Docker start up pgvector, redis, minio
+**Docker Commands for Database Services**
 
-```bash
-# db
-yarn docker up pgvector
-# cache
-yarn docker up redis
-# local oss
-yarn docker up minio
-```
+-   Start pgvector: `yarn docker up pgvector`
+-   Start Redis: `yarn docker up redis`
+-   Start Minio (local OSS): `yarn docker up minio`
 
-TIP: Minio is a locally deployed OSS server, you should login to config your bucket and access keys after minio docker is ready.
+**Important Notes**
 
-Location: <http://localhost:9000>
-Default Username: root
-Default Password: 12345678
+-   Ensure proper permissions for Docker volumes.
+-   Configure Minio after Docker initialization.
+-   Default Docker settings are available in `.env`.
 
-Copy the keys, secrets, bucket to `.env`
+Minio Access:
 
-## Running UniAI
+-   URL: `http://localhost:9000`
+-   Default Username: `root`
+-   Default Password: `12345678`
 
-### Development Mode
+### Running UniAI
 
-The following command also init database! First do it!
+**Development Mode**
+
+-   Initializes the database.
 
 ```bash
 yarn dev
 ```
 
-### Production Mode
+**Production Mode**
+
+-   Compile TypeScript files and start the application.
 
 ```bash
 yarn tsc
 yarn start
 ```
 
-**⚠️ Do not compile TypeScript files in development mode.**
-**If you have run `tsc`, use `yarn clean` before `yarn dev`.**
+⚠️ **Important**: Avoid compiling TypeScript files in development mode. Use `yarn clean` before `yarn dev` if `tsc` was previously run.
 
 ### Cleaning Up
 
@@ -205,42 +213,33 @@ yarn clean
 
 ## Documentation
 
-UniAI's APIs are accessed through the common Web HTTP methods including SSE.
+Access UniAI's APIs through common Web HTTP methods, including SSE. For detailed documentation, visit [UniAI API Documentation](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J).
 
-Please refer to the documentation at the following address:
-[https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J)
+## Available Models
 
-## Models
-
-UniAI continues to integrate more AI models and extend AI utilities. However, UniAI is not a standalone entity. Since it serves as an integration and connection point for various AI models, tools, and plugins, you'll need to deploy specific models you require on your own. We provide download URLs and guides for these models.
+UniAI integrates various AI models, focusing on NLP and CV domains. Specific models need to be deployed independently. Download URLs and guides are provided.
 
 ### NLP Models
 
--   OpenAI GPT: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
--   GLM/ChatGLM: [https://github.com/uni-openai/GLM-API](https://github.com/uni-openai/GLM-API)
--   IFLYTEK/SPARK: [https://www.xfyun.cn/doc/spark/Web.html](https://www.xfyun.cn/doc/spark/Web.html)
+-   OpenAI GPT, GLM/ChatGLM, IFLYTEK/SPARK
 
 ### CV Models
 
--   OpenAI DALL-E: [https://platform.openai.com/docs/api-reference](https://platform.openai.com/docs/api-reference)
--   Stable Diffusion: [https://github.com/uni-openai/stable-diffusion-simple](https://github.com/uni-openai/stable-diffusion-simple)
--   MidJourney: [https://github.com/novicezk/midjourney-proxy](https://github.com/novicezk/midjourney-proxy)
+-   OpenAI DALL-E, Stable Diffusion, MidJourney
 
-## Future Plans
+## Future Enhancements
 
-UniAI will offer more AI capabilities across the following key features:
+UniAI is planning to expand its capabilities across:
 
 -   Prediction APIs
 -   Training APIs
 -   Prompting APIs
--   Resource APIs
+-   Resource Management APIs
 
 ![future features](./future.png)
 
-## Contributors
+## Contributing
 
-Welcome your contributions!
-
-Reach out to Youwei <huangyw@iict.ac.cn> for more development information.
+Contributions are welcome! For development-related queries, contact Youwei at <huangyw@iict.ac.cn>.
 
 _Powered by [Egg.js](https://www.eggjs.org/) TypeScript_

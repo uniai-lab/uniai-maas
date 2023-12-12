@@ -7,12 +7,12 @@ const {
     DB_DIALECT,
     POSTGRES_DB,
     POSTGRES_HOST,
-    POSTGRES_PASSWORD,
+    POSTGRES_PASS,
     POSTGRES_PORT,
     POSTGRES_USER,
     REDIS_HOST,
     REDIS_PORT,
-    REDIS_PASSWORD,
+    REDIS_PASS,
     REDIS_DB
 } = process.env
 const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
@@ -48,7 +48,7 @@ export default (appInfo: EggAppInfo) => {
     config.sequelize = {
         dialect: DB_DIALECT,
         host: POSTGRES_HOST,
-        password: POSTGRES_PASSWORD,
+        password: POSTGRES_PASS,
         port: POSTGRES_PORT,
         username: POSTGRES_USER,
         database: POSTGRES_DB
@@ -58,7 +58,7 @@ export default (appInfo: EggAppInfo) => {
         client: {
             port: REDIS_PORT,
             host: REDIS_HOST,
-            password: REDIS_PASSWORD,
+            password: REDIS_PASS,
             db: REDIS_DB
         }
     }

@@ -24,13 +24,6 @@ declare global {
             SPARK_API_SECRET: string
             SPARK_APP_ID: string
 
-            // stable diffusion
-            STABLE_DIFFUSION_API: string
-
-            // mid journey
-            MID_JOURNEY_API: string
-            MID_JOURNEY_TOKEN: string
-
             // select a database
             DB_DIALECT: string
 
@@ -38,13 +31,15 @@ declare global {
             POSTGRES_HOST: string
             POSTGRES_PORT: string
             POSTGRES_USER: string
-            POSTGRES_PASSWORD: string
+            POSTGRES_PASS: string
             POSTGRES_DB: string
+            // for docker start pgvector
+            POSTGRES_DATA_PATH: string
 
             // cache redis
             REDIS_PORT: number
             REDIS_HOST: string
-            REDIS_PASSWORD: string
+            REDIS_PASS: string
             REDIS_DB: number
 
             // WeChat API
@@ -68,6 +63,17 @@ declare global {
             MINIO_END_POINT: string
             MINIO_PORT: string
             MINIO_BUCKET: string
+            // for docker start minio
+            MINIO_DATA_PATH: string
+            MINIO_ROOT_USER: string
+            MINIO_ROOT_PASS: string
+
+            // stable diffusion
+            STABLE_DIFFUSION_API: string
+
+            // mid journey
+            MID_JOURNEY_API: string
+            MID_JOURNEY_TOKEN: string
 
             // google search
             GOOGLE_SEARCH_API_TOKEN: string

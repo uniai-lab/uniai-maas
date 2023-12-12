@@ -1,3 +1,5 @@
+# @format
+
 version: '3.5'
 
 services:
@@ -8,8 +10,10 @@ services:
         restart: always
         environment:
             - POSTGRES_USER=${POSTGRES_USER}
-            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_PASSWORD=${POSTGRES_PASS}
             - POSTGRES_PORT=${POSTGRES_PORT}
             - POSTGRES_DB=${POSTGRES_DB}
         ports:
-            - ${POSTGRES_PORT}:${POSTGRES_PORT}
+            - ${POSTGRES_PORT}:5432
+        volumes:
+            - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data

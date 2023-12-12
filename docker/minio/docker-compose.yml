@@ -1,14 +1,18 @@
+# @format
+
 version: '3.5'
 
 services:
-  minio:
-    container_name: uniai-minio
-    privileged: true
-    image: bitnami/minio:latest
-    restart: always
-    environment:
-      - MINIO_ROOT_USER=root
-      - MINIO_ROOT_PASSWORD=12345678
-    ports:
-      - '9000:9000'
-      - '9001:9001'
+    minio:
+        container_name: uniai-minio
+        privileged: true
+        image: bitnami/minio:latest
+        restart: always
+        environment:
+            - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+            - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASS}
+        ports:
+            - 9000:9000
+            - 9001:9001
+        volumes:
+            - ${MINIO_DATA_PATH}:/bitnami/minio/data

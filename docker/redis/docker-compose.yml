@@ -1,13 +1,15 @@
+# @format
+
 version: '3.5'
 
 services:
-  cache:
-    container_name: uniai-redis
-    privileged: true
-    image: redis:latest
-    restart: always
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    ports:
-      - ${REDIS_PORT}:6379
+    cache:
+        container_name: uniai-redis
+        privileged: true
+        image: redis:latest
+        restart: always
+        environment:
+            - REDIS_PASSWORD=${REDIS_PASS}
+        command: redis-server --requirepass ${REDIS_PASS}
+        ports:
+            - ${REDIS_PORT}:6379
