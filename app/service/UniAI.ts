@@ -360,28 +360,24 @@ export default class UniAI extends Service {
         if (model === EmbedModelEnum.GPT) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             const res = await gpt.embedding(pages)
-            const embeddings = res.data.map((v, i) => {
-                return {
-                    resourceId,
-                    page: i + 1,
-                    embedding: v.embedding,
-                    content: pages[i],
-                    tokens: $.countTokens(pages[i])
-                }
-            })
+            const embeddings = res.data.map((v, i) => ({
+                resourceId,
+                page: i + 1,
+                embedding: v.embedding,
+                content: pages[i],
+                tokens: $.countTokens(pages[i])
+            }))
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(embeddings)
         } else if (model === EmbedModelEnum.GLM) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
             const res = await glm.embedding(pages)
-            const embeddings = res.data.map((v, i) => {
-                return {
-                    resourceId,
-                    page: i + 1,
-                    embedding: v,
-                    content: pages[i],
-                    tokens: $.countTokens(pages[i])
-                }
-            })
+            const embeddings = res.data.map((v, i) => ({
+                resourceId,
+                page: i + 1,
+                embedding: v,
+                content: pages[i],
+                tokens: $.countTokens(pages[i])
+            }))
             resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(embeddings)
         } else throw new Error('Embedding model not found')
 

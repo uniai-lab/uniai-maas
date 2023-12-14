@@ -147,6 +147,8 @@ export interface Benefit {
     image: string
     title: string
     tip: string
+    iconShadow: string
+    tipColor: string
 }
 
 export interface ConfigVIP {
@@ -155,6 +157,7 @@ export interface ConfigVIP {
     bgStar: string
     titleImg: string
     backgroundColor: string
+    boxShadow: string
     linearGradient: string
     color: string
     desc: string

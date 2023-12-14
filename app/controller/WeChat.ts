@@ -66,9 +66,7 @@ export default class WeChat {
                     pid,
                     child: res
                         .filter(({ pid }) => pid === id)
-                        .map<TabResponse>(({ id, name, desc, pid }) => {
-                            return { id, name, desc, pid }
-                        })
+                        .map(({ id, name, desc, pid }) => ({ id, name, desc, pid }))
                 })
 
             ctx.service.res.success('Success to list tab', data)

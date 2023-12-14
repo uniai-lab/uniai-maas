@@ -29,8 +29,8 @@ export interface UserCache {
     tokenTime: number
     isEffect: boolean
     isDel: boolean
-    updatedAt?: string
-    createdAt?: string
+    updatedAt?: string | Date
+    createdAt?: string | Date
     chance: {
         id: number
         userId: number
@@ -44,7 +44,7 @@ export interface UserCache {
         uploadChanceUpdateAt: number
         uploadChanceFree: number
         uploadChanceFreeUpdateAt: number
-        updatedAt?: string
-        createdAt?: string
+        updatedAt?: string | Date
+        createdAt?: string | Date
     }
 }

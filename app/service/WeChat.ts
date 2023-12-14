@@ -521,9 +521,7 @@ export default class WeChat extends Service {
             const pages: string[] = []
             for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSS_TYPE))
             res.pages = await ctx.model.Page.bulkCreate(
-                pages.map((v, i) => {
-                    return { resourceId: res.id, page: i + 1, filePath: v }
-                })
+                pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v }))
             )
             res.page = pages.length
             return await res.save()

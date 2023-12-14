@@ -11,6 +11,7 @@ import ExportEmbedding1 from '../../../app/model/Embedding1';
 import ExportEmbedding2 from '../../../app/model/Embedding2';
 import ExportOpenAILog from '../../../app/model/OpenAILog';
 import ExportPage from '../../../app/model/Page';
+import ExportPayment from '../../../app/model/Payment';
 import ExportPhoneCode from '../../../app/model/PhoneCode';
 import ExportResource from '../../../app/model/Resource';
 import ExportResourceType from '../../../app/model/ResourceType';
@@ -28,6 +29,7 @@ declare module 'egg' {
     Embedding2: ReturnType<typeof ExportEmbedding2>;
     OpenAILog: ReturnType<typeof ExportOpenAILog>;
     Page: ReturnType<typeof ExportPage>;
+    Payment: ReturnType<typeof ExportPayment>;
     PhoneCode: ReturnType<typeof ExportPhoneCode>;
     Resource: ReturnType<typeof ExportResource>;
     ResourceType: ReturnType<typeof ExportResourceType>;
