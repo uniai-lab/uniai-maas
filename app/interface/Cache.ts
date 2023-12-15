@@ -19,8 +19,8 @@ export interface UserCache {
     email: string | null
     password: string | null
     token: string | null
-    name: string
-    countryCode: number
+    name: string | null
+    countryCode: number | null
     avatar: string | null
     wxOpenId: string | null
     wxPublicOpenId: string | null

@@ -42,15 +42,11 @@ export class User extends Model {
     @Column(DataType.STRING)
     token: string | null
 
-    @AllowNull(false)
-    @Default('')
     @Column(DataType.STRING)
-    name: string
+    name: string | null
 
-    @AllowNull(false)
-    @Default(86)
     @Column(DataType.INTEGER)
-    countryCode: number
+    countryCode: number | null
 
     @Column(DataType.TEXT)
     avatar: string | null
