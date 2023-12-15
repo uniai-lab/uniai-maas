@@ -301,8 +301,8 @@ export default [
     },
     {
         key: 'SPK_DEFAULT_SUB_MODEL',
-        value: 'v1.1',
-        description: '讯飞星火默认模型'
+        value: 'v3.1',
+        description: '星火默认模型'
     },
     {
         key: 'WX_EMBED_MODEL',
@@ -311,12 +311,12 @@ export default [
     },
     {
         key: 'WX_CHAT_MODEL',
-        value: 'GLM',
+        value: 'SPARK',
         description: '小程序默认chat模型'
     },
     {
         key: 'WX_CHAT_SUB_MODEL',
-        value: 'chatglm-turbo',
+        value: 'v3.1',
         description: '小程序默认chat子模型'
     },
     {
