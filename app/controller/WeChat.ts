@@ -82,7 +82,12 @@ export default class WeChat {
         try {
             const res = await ctx.service.weChat.announce()
 
-            const data: AnnounceResponse[] = res.map(({ title, content, closeable }) => ({ title, content, closeable }))
+            const data: AnnounceResponse[] = res.map(({ id, title, content, closeable }) => ({
+                id,
+                title,
+                content,
+                closeable
+            }))
 
             ctx.service.res.success('Successfully listed announcements', data)
         } catch (e) {

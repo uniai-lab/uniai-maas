@@ -165,6 +165,7 @@ export interface ConfigVIP {
 }
 
 export interface AnnounceResponse {
+    id: number
     title: string
     content: string
     closeable: boolean
