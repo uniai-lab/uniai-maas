@@ -105,6 +105,7 @@ export default class WeChat {
             if (!code) throw new Error('Code is null')
 
             const user = await ctx.service.weChat.login(code, fid)
+
             const data: UserinfoResponse = {
                 id: user.id,
                 tokenTime: user.tokenTime,
@@ -119,7 +120,8 @@ export default class WeChat {
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
-                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
+                benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
             }
             await transaction.commit()
             ctx.service.res.success('Success to WeChat login', data)
@@ -199,7 +201,8 @@ export default class WeChat {
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
-                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
+                benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
             }
             ctx.service.res.success('User information', data)
         } catch (e) {
@@ -355,6 +358,7 @@ export default class WeChat {
         try {
             const { id } = ctx.user!
             const user = await ctx.service.weChat.updateUser(id, params.name)
+
             const data: UserinfoResponse = {
                 id: user.id,
                 name: user.name,
@@ -369,7 +373,8 @@ export default class WeChat {
                     totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                     totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
                 },
-                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
+                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
+                benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
             }
             ctx.service.res.success('Success to update user information', data)
         } catch (e) {

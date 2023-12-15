@@ -59,6 +59,16 @@ export default class WeChat extends Service {
             menuAdv: await this.getConfig<ConfigMenuV2>('USER_MENU_ADV')
         }
     }
+    async getLevelBenefit(level: number) {
+        const { ctx } = this
+        const vips = await ctx.service.weChat.getConfig<ConfigVIP[]>('USER_VIP')
+        const images = await ctx.service.weChat.getConfig<string[]>('USER_MENU_VIP_ICON')
+        if (!vips[level]) throw new Error('User level is invalid')
+        return vips[level].benefits.map((v, i) => {
+            v.image = images[i]
+            return v
+        })
+    }
 
     // get all tabs of index page
     async getTab(pid?: number) {

@@ -104,6 +104,7 @@ export type UserinfoResponse = {
         totalUploadChance: number
     }
     task: ConfigTask[]
+    benefit: Benefit[]
 }
 
 export interface ConfigResponse {

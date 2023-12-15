@@ -51,21 +51,21 @@ const vips: ConfigVIP[] = [
                 image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
                 title: '5MB',
                 tip: '上传限制',
-                iconShadow: ' 0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
+                iconShadow: '0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
                 tipColor: '#666666'
             },
             {
                 image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
                 title: '10个',
                 tip: '每周上传',
-                iconShadow: ' 0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
+                iconShadow: '0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
                 tipColor: '#666666'
             },
             {
                 image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
                 title: '99次',
                 tip: '每周对话',
-                iconShadow: ' 0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
+                iconShadow: '0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
                 tipColor: '#666666'
             }
         ],
@@ -121,21 +121,21 @@ const vips: ConfigVIP[] = [
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367299175-Group%20427318823.png',
                 title: '5MB',
                 tip: '上传限制',
-                iconShadow: ' 0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
+                iconShadow: '0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
                 tipColor: '#666666'
             },
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367310633-%E5%9B%BE%E6%A0%872.png',
                 title: '30个',
                 tip: '每周上传',
-                iconShadow: ' 0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
+                iconShadow: '0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
                 tipColor: '#666666'
             },
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367320834-%E5%9B%BE%E6%A0%873.png',
                 title: '299次',
                 tip: '每周对话',
-                iconShadow: ' 0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
+                iconShadow: '0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
                 tipColor: '#666666'
             }
         ],
@@ -334,6 +334,7 @@ export default [
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/user-home-bg.jpg',
         description: '小程序用户界面背景图'
     },
+    // v1.0
     {
         key: 'USER_MENU',
         value: JSON.stringify(menus),
@@ -343,6 +344,15 @@ export default [
         key: 'USER_TASK',
         value: JSON.stringify(tasks),
         description: '小程序用户菜单栏2'
+    },
+    {
+        key: 'USER_MENU_VIP_ICON',
+        value: JSON.stringify([
+            'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip_upload.png',
+            'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip_file.png',
+            'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip_chat.png'
+        ]),
+        description: '用户界面会员权益图标'
     },
     {
         key: 'USER_MENU_MEMBER',
