@@ -538,8 +538,9 @@ export default class WeChat extends Service {
 
     // generate file url
     url(path: string, name?: string) {
-        const { origin } = this.ctx.request
-        return `${origin}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
+        const { host } = this.ctx.request
+        const http = host.includes('uniai') ? 'https' : 'http'
+        return `${http}://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
     }
 
     // get file

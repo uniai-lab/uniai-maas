@@ -259,7 +259,7 @@ export default class UniAI extends Service {
                 fileExt,
                 embedding,
                 tokens: $.countTokens(content),
-                isEffect: $.filterVerify(content)
+                isEffect: false
             })
         }
 
@@ -352,7 +352,7 @@ export default class UniAI extends Service {
                 fileExt,
                 embedding,
                 tokens: $.countTokens(content),
-                isEffect: $.filterVerify(content)
+                isEffect: false
             })
 
         if (!resource) throw new Error('Fail to create resource for embedding')
@@ -362,10 +362,10 @@ export default class UniAI extends Service {
         if (model === EmbedModelEnum.GPT) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             const res = await gpt.embedding(pages)
-            const embeddings = res.data.map((v, i) => ({
+            const embeddings = res.data.map(({ embedding }, i) => ({
                 resourceId,
                 page: i + 1,
-                embedding: v.embedding,
+                embedding,
                 content: pages[i],
                 tokens: $.countTokens(pages[i])
             }))
@@ -373,10 +373,10 @@ export default class UniAI extends Service {
         } else if (model === EmbedModelEnum.GLM) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
             const res = await glm.embedding(pages)
-            const embeddings = res.data.map((v, i) => ({
+            const embeddings = res.data.map((embedding, i) => ({
                 resourceId,
                 page: i + 1,
-                embedding: v,
+                embedding,
                 content: pages[i],
                 tokens: $.countTokens(pages[i])
             }))
