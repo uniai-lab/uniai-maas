@@ -441,7 +441,7 @@ export default class WeChat {
                     page: resource.page,
                     fileName: resource.fileName,
                     fileSize: resource.fileSize,
-                    filePath: ctx.service.weChat.url(resource.filePath, resource.fileName),
+                    filePath: ctx.service.weChat.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
                     updatedAt: resource.updatedAt,
                     typeId: resource.type.id,
                     type: resource.type.type,
