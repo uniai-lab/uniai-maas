@@ -280,11 +280,6 @@ export default [
         description: '默认关注奖励次数'
     },
     {
-        key: 'INIT_RESOURCE_ID',
-        value: 449,
-        description: '初始化文档ID'
-    },
-    {
         key: 'LIMIT_UPLOAD_SIZE',
         value: 5 * 1024 * 1024,
         description: '默认上传限制（Byte）'
@@ -303,6 +298,16 @@ export default [
         key: 'SPK_DEFAULT_SUB_MODEL',
         value: 'v3.1',
         description: '星火默认模型'
+    },
+    {
+        key: 'INIT_RESOURCE_ID',
+        value: 449,
+        description: '初始化文档ID'
+    },
+    {
+        key: 'WX_REVIEW_FILE',
+        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/file_review.pdf',
+        description: '文件审核通知'
     },
     {
         key: 'WX_EMBED_MODEL',

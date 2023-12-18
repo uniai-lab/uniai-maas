@@ -145,6 +145,16 @@ export default {
     },
 
     /**
+     * Filters sensitive words in content and optionally replaces them.
+     *
+     * @param content - The content to filter.
+     * @returns Verify result, content is valid?
+     */
+    filterVerify(content: string = '') {
+        return filter.verify(content)
+    },
+
+    /**
      * Filters sensitive content using a local JSON file.
      *
      * @param content - The content to filter.

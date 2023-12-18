@@ -78,11 +78,9 @@ export interface DialogResponse {
     dialogId: number
     resourceId: number | null
     page: number
-    totalTokens: number
     fileSize: number
     fileName: string
     filePath: string
-    fileExt: string
     updatedAt: Date
     typeId: number
     type: string

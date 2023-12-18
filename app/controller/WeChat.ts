@@ -33,6 +33,7 @@ import {
     UpdateUserRequest
 } from '@interface/controller/WeChat'
 import { basename, extname } from 'path'
+import $ from '@util/util'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -307,7 +308,7 @@ export default class WeChat {
             const user = ctx.user!
             const file = ctx.request.files[0]
             if (!file) throw new Error('No file')
-            file.filename = params.fileName || file.filename
+            file.filename = $.filterSensitive(params.fileName || file.filename)
 
             const res = await ctx.service.weChat.upload(file, user.id, 1)
             const dialog = await ctx.service.weChat.dialog(user.id, res.id)
@@ -432,21 +433,21 @@ export default class WeChat {
             const res = await ctx.service.weChat.listDialog(user.id)
 
             const data: DialogResponse[] = []
-            for (const { id, resource } of res)
+            for (const { id, resource } of res) {
+                if (!resource.isEffect) resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
                 data.push({
                     dialogId: id,
                     resourceId: resource.id,
                     page: resource.page,
-                    totalTokens: resource.tokens,
                     fileName: resource.fileName,
                     fileSize: resource.fileSize,
-                    fileExt: resource.fileExt,
                     filePath: ctx.service.weChat.url(resource.filePath, resource.fileName),
                     updatedAt: resource.updatedAt,
                     typeId: resource.type.id,
                     type: resource.type.type,
                     description: resource.type.description
                 })
+            }
             ctx.service.res.success('Success to list resources', data)
         } catch (e) {
             this.logger.error(e)

@@ -258,7 +258,8 @@ export default class UniAI extends Service {
                 fileSize,
                 fileExt,
                 embedding,
-                tokens: $.countTokens(content)
+                tokens: $.countTokens(content),
+                isEffect: $.filterVerify(content)
             })
         }
 
@@ -350,7 +351,8 @@ export default class UniAI extends Service {
                 fileSize,
                 fileExt,
                 embedding,
-                tokens: $.countTokens(content)
+                tokens: $.countTokens(content),
+                isEffect: $.filterVerify(content)
             })
 
         if (!resource) throw new Error('Fail to create resource for embedding')

@@ -241,7 +241,7 @@ export default class WeChat extends Service {
             order: [['updatedAt', 'DESC']],
             include: {
                 model: ctx.model.Resource,
-                attributes: ['id', 'page', 'tokens', 'fileName', 'fileSize', 'filePath', 'fileExt', 'updatedAt'],
+                attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'isEffect', 'isDel'],
                 include: [{ model: ctx.model.ResourceType, attributes: ['id', 'type', 'description'] }]
             }
         })
@@ -253,10 +253,7 @@ export default class WeChat extends Service {
         let fileName = ''
         if (resourceId) {
             // check resource
-            const resource = await ctx.model.Resource.findOne({
-                where: { id: resourceId, isEffect: true, isDel: false },
-                attributes: ['fileName']
-            })
+            const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['fileName'] })
             if (!resource) throw new Error('Can not find the resource')
             fileName = resource.fileName
         }
@@ -541,8 +538,8 @@ export default class WeChat extends Service {
 
     // generate file url
     url(path: string, name?: string) {
-        const { host } = this.ctx.request
-        return `https://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
+        const { origin } = this.ctx.request
+        return `${origin}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
     }
 
     // get file
