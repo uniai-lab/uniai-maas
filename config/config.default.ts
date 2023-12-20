@@ -69,7 +69,8 @@ export default (appInfo: EggAppInfo) => {
         }
     }
 
-    config.middleware = ['notFound']
+    // first end user transaction, then response, finally log
+    config.middleware = ['notFound', 'errorHandler']
 
     config.i18n = { defaultLocale: 'zh-CN' }
 

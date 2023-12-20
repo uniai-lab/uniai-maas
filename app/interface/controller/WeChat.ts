@@ -177,3 +177,96 @@ export interface TabResponse {
     pid: number
     child?: TabResponse[]
 }
+
+/* From WeChat APIs */
+export interface WXAuthCodeRequest {
+    grant_type: 'authorization_code'
+    appid: string
+    secret: string
+    js_code: string
+}
+
+export interface WXAuthCodeResponse {
+    openid?: string
+    unionid?: string
+    session_key?: string
+    errcode?: number
+    errmsg?: string
+}
+
+export interface WXAccessTokenRequest {
+    grant_type: 'client_credential'
+    appid: string
+    secret: string
+}
+
+export interface WXAccessTokenResponse {
+    access_token?: string
+    expires_in?: number
+    errcode?: number
+    errmsg?: string
+}
+
+export interface WXSecCheckAPI {
+    errcode?: number
+    errmsg?: string
+}
+
+export interface WXUserPhoneNumberAPI {
+    errcode?: number
+    errmsg?: string
+    phone_info?: {
+        phoneNumber?: string
+        purePhoneNumber?: string
+        countryCode?: string
+        watermark?: {
+            timestamp?: number
+            appid?: string
+        }
+    }
+}
+
+export interface WXDecodedData {
+    phoneNumber: string
+    purePhoneNumber: string
+    countryCode: number
+    watermark: {
+        appid: string
+        timestamp: number
+    }
+}
+
+export interface WXMsgCheckRequest {
+    content?: string
+    media?: { contentType: string; value: Buffer }
+    version?: number
+    scene?: number
+    openid?: string
+    title?: string
+    nickname?: string
+    signature?: string
+}
+
+export interface WXMsgCheckResponse {
+    errcode?: number
+    errmsg?: string
+    detail?: {
+        strategy: string
+        errcode: number
+        suggest: string
+        label: number
+        keyword?: string
+        prob?: number
+        level?: number
+    }[]
+    trace_id?: string
+    result?: {
+        suggest: string
+        label: number
+    }
+}
+
+export interface AuditResult {
+    flag: boolean
+    data: object
+}

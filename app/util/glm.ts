@@ -22,9 +22,10 @@ import {
 import $ from '@util/util'
 import { GLMChatRoleEnum, GLMSubModel } from '@interface/Enum'
 
-const { GLM_API, GLM_API_KEY, GLM_API_REMOTE } = process.env
+const { GLM_LOCAL_API, GLM_REMOTE_API_KEY } = process.env
 const EXPIRE_IN = 10 * 1000
 const EMBED_MODEL = 'text2vec-large-chinese' // 'text2vec-base-chinese-paraphrase'
+const GLM_REMOTE_API = 'https://open.bigmodel.cn'
 
 export default {
     /**
@@ -34,7 +35,7 @@ export default {
      * @returns A promise resolving to the embedding response.
      */
     async embedding(prompt: string[]) {
-        return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${GLM_API}/embedding`, {
+        return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${GLM_LOCAL_API}/embedding`, {
             prompt,
             model: EMBED_MODEL
         })
@@ -61,7 +62,7 @@ export default {
     ) {
         if (model === GLMSubModel.LOCAL) {
             return await $.post<GLMChatRequest, Readable | GLMChatResponse>(
-                `${GLM_API}/chat`,
+                `${GLM_LOCAL_API}/chat`,
                 { messages, stream, temperature, top_p: top, max_tokens: maxLength },
                 { responseType: stream ? 'stream' : 'json' }
             )
@@ -84,8 +85,8 @@ export default {
             prompt.push({ role: USER, content: input.trim() })
 
             const invoke = stream ? 'sse-invoke' : 'invoke'
-            const url = `${GLM_API_REMOTE}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
-            const token = generateToken(GLM_API_KEY, EXPIRE_IN)
+            const url = `${GLM_REMOTE_API}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
+            const token = generateToken(GLM_REMOTE_API_KEY, EXPIRE_IN)
             const res = await $.post<GLMTurboChatRequest, Readable | GLMTurboChatResponse>(
                 url,
                 { prompt, temperature, top_p: top },

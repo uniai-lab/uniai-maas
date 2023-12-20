@@ -48,3 +48,8 @@ export interface UserCache {
         createdAt?: string | Date
     }
 }
+
+export interface WXAccessTokenCache {
+    token: string
+    expire: number
+}

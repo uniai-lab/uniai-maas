@@ -305,6 +305,11 @@ export default [
         description: '初始化文档ID'
     },
     {
+        key: 'CONTENT_AUDITOR',
+        value: 'wechat', // wechat | mint-filter | iflytek
+        description: '内容审核器'
+    },
+    {
         key: 'WX_REVIEW_FILE',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/file_review.pdf',
         description: '文件审核通知'
@@ -326,12 +331,12 @@ export default [
     },
     {
         key: 'WX_RESOURCE_MODEL',
-        value: 'GLM',
+        value: 'SPARK',
         description: '小程序默认resource模型'
     },
     {
         key: 'WX_RESOURCE_SUB_MODEL',
-        value: 'chatglm-turbo',
+        value: 'v3.1',
         description: '小程序默认resource子模型'
     },
     {

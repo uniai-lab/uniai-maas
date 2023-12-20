@@ -21,7 +21,8 @@ import {
 import { GPTSubModel } from '@interface/Enum'
 
 // Destructure environment variables
-const { OPENAI_API, OPENAI_API_KEY, OPENAI_API_VERSION } = process.env
+const { OPENAI_API, OPENAI_API_KEY } = process.env
+const OPENAI_API_VERSION = 'v1'
 const EMBED_MODEL = 'text-embedding-ada-002'
 
 export default {

@@ -9,14 +9,36 @@ import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import md5 from 'md5'
-import { ChatModelEnum, ChatRoleEnum, ChatSubModelEnum, EmbedModelEnum, OSSEnum } from '@interface/Enum'
-import { ChatStreamCache, UserCache } from '@interface/Cache'
+import {
+    ChatModelEnum,
+    ChatRoleEnum,
+    ChatSubModelEnum,
+    ContentAuditEnum,
+    EmbedModelEnum,
+    OSSEnum
+} from '@interface/Enum'
+import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
 import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
-import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
+import {
+    AuditResult,
+    ConfigMenu,
+    ConfigMenuV2,
+    ConfigTask,
+    ConfigVIP,
+    WXAccessTokenRequest,
+    WXAccessTokenResponse,
+    WXAuthCodeRequest,
+    WXAuthCodeResponse,
+    WXDecodedData,
+    WXMsgCheckRequest,
+    WXMsgCheckResponse
+} from '@interface/controller/WeChat'
 import $ from '@util/util'
+import fly from '@util/fly'
+import FormData from 'form-data'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -28,7 +50,14 @@ const DEFAULT_CHAT_CHANCE = 0
 const DEFAULT_UPLOAD_CHANCE = 0
 const DEFAULT_UPLOAD_SIZE = 5 * 1024 * 1024
 const DEFAULT_LEVEL = 0
-const { WX_APP_ID, WX_APP_AUTH_URL, WX_APP_SECRET, OSS_TYPE } = process.env
+
+// WeChat API
+const WX_AUTH_URL = 'https://api.weixin.qq.com/sns/jscode2session'
+const WX_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
+// const WX_PHONE_URL = 'https://api.weixin.qq.com/wxa/business/getuserphonenumber'
+const WX_MSG_CHECK_URL = 'https://api.weixin.qq.com/wxa/msg_sec_check' // use POST
+const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use POST
+const { WX_APP_ID, WX_APP_SECRET, OSS_TYPE } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -87,7 +116,7 @@ export default class WeChat extends Service {
         const { ctx, app } = this
 
         // get access_token, openid, unionid from WeChat API
-        const { openid, session_key } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_APP_AUTH_URL, {
+        const { openid, session_key } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_AUTH_URL, {
             grant_type: 'authorization_code',
             appid: WX_APP_ID,
             secret: WX_APP_SECRET,
@@ -168,6 +197,20 @@ export default class WeChat extends Service {
 
         // save to user table and return
         return cache
+    }
+
+    // decrypt WX data
+    decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string) {
+        const decoded = $.decode(
+            Buffer.from(encryptedData, 'base64'),
+            'aes-128-cbc',
+            Buffer.from(sessionKey, 'base64'),
+            Buffer.from(iv, 'base64')
+        )
+
+        const decodedData = $.json<WXDecodedData>(decoded)
+        if (decodedData?.watermark.appid !== appid) throw new Error('Invalid decrypted data')
+        return decodedData
     }
 
     /* user sign phone number
@@ -458,6 +501,7 @@ export default class WeChat extends Service {
             include: { model: ctx.model.UserChance }
         })
         if (!user) throw new Error('User is not found')
+
         const cache: UserCache = {
             ...user.dataValues,
             tokenTime: user.tokenTime.getTime(),
@@ -483,6 +527,8 @@ export default class WeChat extends Service {
         if (!chance) throw new Error('Fail to find user chance')
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
 
+        // filter sensitive file name
+        file.filename = $.contentFilter(file.filename).replace
         // upload resource to oss
         const resource = await ctx.service.uniAI.upload(file, userId, typeId)
         // embed resource content
@@ -538,13 +584,67 @@ export default class WeChat extends Service {
 
     // generate file url
     url(path: string, name?: string) {
-        const { host } = this.ctx.request
-        const http = host.includes('uniai') ? 'https' : 'http'
+        const { host, protocol } = this.ctx.request
+        const http = $.isTLS(protocol) || $.isDomain(host) ? 'https' : 'http'
         return `${http}://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
     }
 
-    // get file
+    // get file stream from path or url
     async file(path: string) {
         return await $.getFileStream(path)
+    }
+
+    // check content by iFlyTek, WeChat or mint-filter
+    // content is text or image, image is base64 string
+    async audit(content: string) {
+        if (!content.trim()) return { flag: true, data: null }
+        const provider = await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR')
+
+        let res: AuditResult
+        if (provider === ContentAuditEnum.FILTER) res = $.contentFilter(content)
+        else if (provider === ContentAuditEnum.FLY) res = await fly.audit(content)
+        else res = await this.checkContent(content)
+        await this.ctx.model.AuditLog.create({ provider, content, data: res.data, flag: res.flag })
+        return res
+    }
+
+    // use WX API to check content
+    async checkContent(content: string) {
+        const token = await this.getAccessToken()
+        if ($.isBase64(content)) {
+            const form = new FormData()
+            form.append('media', Buffer.from(content, 'base64'), { filename: 'test.png' })
+            const res = await $.post<FormData, WXMsgCheckResponse>(`${WX_MEDIA_CHECK_URL}?access_token=${token}`, form)
+            return { flag: res.errcode === 0, data: res }
+        } else {
+            const res = await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(
+                `${WX_MSG_CHECK_URL}?access_token=${token}`,
+                { content }
+            )
+            return { flag: res.errcode === 0, data: res }
+        }
+    }
+
+    // get WX API access token
+    async getAccessToken() {
+        const cache = await this.app.redis.get('WX_ACCESS_TOKEN')
+        const accessToken = $.json<WXAccessTokenCache>(cache)
+        const now = Date.now()
+
+        // get access token from cache
+        if (accessToken && accessToken.expire > now) return accessToken.token
+        // get access token from WX API
+        else {
+            const res = await $.get<WXAccessTokenRequest, WXAccessTokenResponse>(WX_ACCESS_TOKEN_URL, {
+                grant_type: 'client_credential',
+                appid: WX_APP_ID,
+                secret: WX_APP_SECRET
+            })
+            if (res && res.access_token && res.expires_in) {
+                const cache: WXAccessTokenCache = { expire: now + res.expires_in * 1000, token: res.access_token }
+                await this.app.redis.set('WX_ACCESS_TOKEN', JSON.stringify(cache))
+                return res.access_token
+            } else throw new Error(`Fail to get wx access token, ${res.errcode}:${res.errmsg}`)
+        }
     }
 }

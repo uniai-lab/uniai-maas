@@ -32,6 +32,18 @@ export const SPKSubModelDomain = {
     [SPKSubModel.V2]: 'generalv2',
     [SPKSubModel.V3]: 'generalv3'
 }
+export enum FLYAuditType {
+    TEXT = 'syncText',
+    IMAGE = 'image',
+    AUDIO = 'audio',
+    VIDEO = 'video'
+}
+
+export enum ContentAuditEnum {
+    FILTER = 'mint-filter',
+    WX = 'wechat',
+    FLY = 'iflytek'
+}
 
 export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum, ...EmbedModelEnum }
 export type AIModelEnum = ChatModelEnum | ImgModelEnum | EmbedModelEnum

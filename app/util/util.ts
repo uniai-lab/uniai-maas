@@ -25,6 +25,8 @@ import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
 import * as uuid from 'uuid'
 import { OSSEnum } from '@interface/Enum'
+import isDomain from 'is-valid-domain'
+import isBase64 from 'is-base64'
 
 // Environment variables
 const {
@@ -137,57 +139,29 @@ export default {
      * Filters sensitive words in content and optionally replaces them.
      *
      * @param content - The content to filter.
-     * @param replace - Optional replacement for sensitive words.
-     * @returns The filtered content.
+     * @returns Filtered result, filter flag, filter data, replaced content
      */
-    filterSensitive(content: string, replace: string = '') {
-        return this.jsonFilterSensitive(content, replace)
+    contentFilter(content: string) {
+        const res = filter.filter(content)
+        return { flag: filter.verify(content), data: res.words, replace: res.text }
     },
 
     /**
-     * Filters sensitive words in content and optionally replaces them.
+     * Decrypts data with crypto.
      *
-     * @param content - The content to filter.
-     * @returns Verify result, content is valid?
-     */
-    filterVerify(content: string = '') {
-        return filter.verify(content)
-    },
-
-    /**
-     * Filters sensitive content using a local JSON file.
-     *
-     * @param content - The content to filter.
-     * @param replace - Optional replacement for sensitive content.
-     * @returns The filtered content.
-     */
-    jsonFilterSensitive(content: string, replace: string = '') {
-        return replace ? (filter.verify(content) ? content : replace) : filter.filter(content).text
-    },
-
-    /**
-     * Decrypts data from WeChat phone API.
-     *
-     * @param encryptedData - The encrypted data to decrypt.
+     * @param data - The encrypted data to decrypt.
+     * @param algorithm - Choose the crypto algorithm.
+     * @param key - The key.
      * @param iv - The initialization vector.
-     * @param sessionKey - The session key.
-     * @param appid - The app ID.
      * @returns The decrypted data.
      */
-    decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string) {
-        // Base64 decode
-        const encryptedDataBuffer = Buffer.from(encryptedData, 'base64')
-        const ivBuffer = Buffer.from(iv, 'base64')
-        const sessionKeyBuffer = Buffer.from(sessionKey, 'base64')
-
-        const decipher = crypto.createDecipheriv('aes-128-cbc', sessionKeyBuffer, ivBuffer)
+    decode(data: Buffer, algorithm: string, key: Buffer, iv: Buffer | null) {
+        const decipher = crypto.createDecipheriv(algorithm, key, iv)
         decipher.setAutoPadding(true)
         let decoded: string
-        decoded = decipher.update(encryptedDataBuffer, undefined, 'utf8')
+        decoded = decipher.update(data, undefined, 'utf8')
         decoded += decipher.final('utf8')
-        const decodedData: WXDecodedData = JSON.parse(decoded)
-        if (decodedData.watermark.appid !== appid) throw new Error('Invalid decrypted data')
-        return decodedData
+        return decoded
     },
 
     /**
@@ -457,8 +431,16 @@ export default {
 
         return `${aspectRatioWidth}:${aspectRatioHeight}`
     },
-
     file2base64(file: string) {
         return readFileSync(file).toString('base64')
+    },
+    isDomain(text: string) {
+        return isDomain(text)
+    },
+    isTLS(text: string) {
+        return text.startsWith('https')
+    },
+    isBase64(text: string, allowMime: boolean = false) {
+        return isBase64(text, { allowMime })
     }
 }

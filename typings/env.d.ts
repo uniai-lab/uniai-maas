@@ -10,19 +10,16 @@ declare global {
 
             // OpenAI GPT
             OPENAI_API: string
-            OPENAI_API_VERSION: string
             OPENAI_API_KEY: string
 
             // GLM
-            GLM_API: string
-            GLM_API_REMOTE: string
-            GLM_API_KEY: string
+            GLM_LOCAL_API: string
+            GLM_REMOTE_API_KEY: string
 
             // Spark
-            SPARK_API: string
-            SPARK_API_KEY: string
-            SPARK_API_SECRET: string
-            SPARK_APP_ID: string
+            FLY_API_KEY: string
+            FLY_API_SECRET: string
+            FLY_APP_ID: string
 
             // select a database
             DB_DIALECT: string
@@ -45,10 +42,6 @@ declare global {
             // WeChat API
             WX_APP_ID: string
             WX_APP_SECRET: string
-            WX_APP_AUTH_URL: string
-            WX_APP_ACCESS_TOKEN_URL: string
-            WX_APP_PHONE_URL: string
-            WX_APP_MSG_CHECK: string
 
             OSS_TYPE: OSSEnum
             // tencent oss
