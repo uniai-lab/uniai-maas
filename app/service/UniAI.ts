@@ -244,7 +244,7 @@ export default class UniAI extends Service {
 
         if (!resource) {
             // uploading original file and page imgs
-            filePath = await $.putOSS(filePath, process.env.OSS_TYPE)
+            filePath = await $.putOSS(filePath)
 
             // save to db
             resource = await ctx.model.Resource.create({

@@ -10,7 +10,7 @@ declare global {
 
             // OpenAI GPT
             OPENAI_API: string
-            OPENAI_API_KEY: string
+            OPENAI_KEY: string
 
             // GLM
             GLM_LOCAL_API: string
@@ -42,13 +42,6 @@ declare global {
             // WeChat API
             WX_APP_ID: string
             WX_APP_SECRET: string
-
-            OSS_TYPE: OSSEnum
-            // tencent oss
-            // COS_SECRET_ID: string
-            // COS_SECRET_KEY: string
-            // COS_BUCKET: string
-            // COS_REGION: string
 
             // minio
             MINIO_ACCESS_KEY: string

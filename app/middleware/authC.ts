@@ -1,5 +1,5 @@
 /** @format */
-// This is a middleware to check user login auth, add to controller -> action
+// This is a middleware to check personal user login auth, add to controller -> action
 
 // app/middleware/auth.ts
 import { UserCache } from '@interface/Cache'
@@ -45,18 +45,6 @@ export default function auth() {
             }
         }
         if (!ctx.user) return ctx.service.res.noAuth()
-
-        await next()
-    }
-}
-
-// check admin auth
-export function authAdmin() {
-    return async (ctx: UserContext, next: () => Promise<any>) => {
-        // check admin token from header
-        const token = ctx.get('token')
-        const adminToken = await ctx.app.redis.get('ADMIN_TOKEN')
-        if (token !== adminToken) return ctx.service.res.noAuth()
 
         await next()
     }

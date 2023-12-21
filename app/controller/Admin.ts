@@ -12,7 +12,7 @@ import {
     HTTPQuery
 } from '@eggjs/tegg'
 import { AddFollowRewardRequest, UpdateUserRequest } from '@interface/controller/Admin'
-import { authAdmin } from '@middleware/auth'
+import auth from '@middleware/authB'
 import { EggLogger } from 'egg'
 import config from '@data/config'
 import resourceType from '@data/resourceType'
@@ -23,7 +23,7 @@ export default class Admin {
     @Inject()
     logger: EggLogger
 
-    @Middleware(authAdmin())
+    @Middleware(auth())
     @HTTPMethod({ path: '/add-follow-reward', method: HTTPMethodEnum.POST })
     async addFollowReward(@Context() ctx: EggContext, @HTTPBody() params: AddFollowRewardRequest) {
         try {
@@ -38,7 +38,7 @@ export default class Admin {
         }
     }
 
-    @Middleware(authAdmin())
+    @Middleware(auth())
     @HTTPMethod({ path: '/save-user', method: HTTPMethodEnum.POST })
     async saveUser(@Context() ctx: EggContext, @HTTPBody() params: UpdateUserRequest) {
         try {
@@ -54,7 +54,7 @@ export default class Admin {
         }
     }
 
-    @Middleware(authAdmin())
+    @Middleware(auth())
     @HTTPMethod({ path: '/init', method: HTTPMethodEnum.GET })
     async initData(@Context() ctx: EggContext) {
         try {
@@ -76,7 +76,7 @@ export default class Admin {
         }
     }
 
-    @Middleware(authAdmin())
+    @Middleware(auth())
     @HTTPMethod({ path: '/embed', method: HTTPMethodEnum.GET })
     async embedding(@Context() ctx: EggContext, @HTTPQuery() start: number = 1) {
         try {

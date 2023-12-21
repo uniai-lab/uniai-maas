@@ -22,7 +22,7 @@ import {
     UpdateUserRequest
 } from '@interface/controller/WeChat'
 import { basename, extname } from 'path'
-import auth from '@middleware/auth'
+import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 

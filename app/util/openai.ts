@@ -21,7 +21,7 @@ import {
 import { GPTSubModel } from '@interface/Enum'
 
 // Destructure environment variables
-const { OPENAI_API, OPENAI_API_KEY } = process.env
+const { OPENAI_API, OPENAI_KEY } = process.env
 const OPENAI_API_VERSION = 'v1'
 const EMBED_MODEL = 'text-embedding-ada-002'
 
@@ -37,7 +37,7 @@ export default {
         return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
             `${OPENAI_API}/${OPENAI_API_VERSION}/embeddings`,
             { model: EMBED_MODEL, input },
-            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: 'json' }
+            { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: 'json' }
         )
     },
 
@@ -63,7 +63,7 @@ export default {
         return await $.post<GPTChatRequest | GPTChatStreamRequest, Readable | GPTChatResponse>(
             `${OPENAI_API}/${OPENAI_API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
-            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: stream ? 'stream' : 'json' }
+            { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: stream ? 'stream' : 'json' }
         )
     },
 
@@ -85,7 +85,7 @@ export default {
                 n,
                 size: `${width}x${height}` as GPTImagineSize
             },
-            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, responseType: 'json' }
+            { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: 'json' }
         )
     }
 }

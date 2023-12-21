@@ -10,7 +10,10 @@ export default function log() {
         const userId = ctx.user?.id
         try {
             await next()
-            const { status, msg, data } = ctx.response.body as StandardResponse<object>
+            const { status, msg, data } =
+                ctx.response.type === 'application/json'
+                    ? (ctx.response.body as StandardResponse<object>)
+                    : { status: 1, msg: ctx.response.message, data: ctx.response.type }
             const log = { userId, ip, method, header, body, query, files, status, data, msg, controller, action }
             await ctx.model.HTTPLog.create(log)
         } catch (e) {

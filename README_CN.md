@@ -56,7 +56,7 @@ ADMIN_TOKEN=                        # Default admin token, can be modified in co
 # OPENAI GPT Configuration
 OPENAI_API=http://8.214.93.3        # OpenAI API URL or proxy
 OPENAI_API_VERSION=v1               # OpenAI API version (no need to modify)
-OPENAI_API_KEY=                     # OpenAI API key
+OPENAI_KEY=                     # OpenAI API key
 
 # GLM Configuration
 GLM_API=http://10.144.1.7:8100      # GLM API URL (https://github.com/uni-openai/GLM-API)
@@ -94,7 +94,6 @@ WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
 WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
 # MINIO Storage Configuration
-OSS_TYPE=minio
 MINIO_ACCESS_KEY=
 MINIO_SECRET_KEY=
 MINIO_END_POINT=localhost

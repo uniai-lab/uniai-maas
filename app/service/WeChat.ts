@@ -57,7 +57,7 @@ const WX_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
 // const WX_PHONE_URL = 'https://api.weixin.qq.com/wxa/business/getuserphonenumber'
 const WX_MSG_CHECK_URL = 'https://api.weixin.qq.com/wxa/msg_sec_check' // use POST
 const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use POST
-const { WX_APP_ID, WX_APP_SECRET, OSS_TYPE } = process.env
+const { WX_APP_ID, WX_APP_SECRET } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -559,9 +559,9 @@ export default class WeChat extends Service {
             const oss = res.filePath.split('/')[0] as OSSEnum
             // if oss type is not consistent, generate a new file name, upload file and update resource filePath
             const path = await $.getStreamFile(stream, basename(res.filePath))
-            if (oss !== OSS_TYPE) {
+            if (oss !== OSSEnum.MIN) {
                 // update new filePath and fileExt
-                res.filePath = await $.putOSS(path, OSS_TYPE)
+                res.filePath = await $.putOSS(path)
                 res.fileExt = extname(path).replace('.', '')
                 res.fileSize = statSync(path).size
             }
@@ -572,7 +572,7 @@ export default class WeChat extends Service {
 
             // upload and save page imgs
             const pages: string[] = []
-            for (const i in imgs) pages.push(await $.putOSS(imgs[i], OSS_TYPE))
+            for (const i in imgs) pages.push(await $.putOSS(imgs[i]))
             res.pages = await ctx.model.Page.bulkCreate(
                 pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v }))
             )

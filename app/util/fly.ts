@@ -47,9 +47,9 @@ export default {
         temperature?: number,
         maxLength?: number
     ) {
-        for (const i in messages)
-            if (!Object.values(SPKChatRoleEnum).includes(messages[i].role)) messages[i].role = SPKChatRoleEnum.USER
-        console.log(messages)
+        // filter other roles
+        for (const i in messages) if (!SPKChatRoleEnum[messages[i].role]) messages[i].role = SPKChatRoleEnum.USER
+
         const url = getSparkURL(model)
         const ws = new WebSocket(url)
 

@@ -3,7 +3,8 @@
 /* eslint-disable */
 
 import 'egg';
-import ExportAuth from '../../../app/middleware/auth';
+import ExportAuthB from '../../../app/middleware/authB';
+import ExportAuthC from '../../../app/middleware/authC';
 import ExportErrorHandler from '../../../app/middleware/errorHandler';
 import ExportLog from '../../../app/middleware/log';
 import ExportNotFound from '../../../app/middleware/notFound';
@@ -11,7 +12,8 @@ import ExportTransaction from '../../../app/middleware/transaction';
 
 declare module 'egg' {
   interface IMiddleware {
-    auth: typeof ExportAuth;
+    authB: typeof ExportAuthB;
+    authC: typeof ExportAuthC;
     errorHandler: typeof ExportErrorHandler;
     log: typeof ExportLog;
     notFound: typeof ExportNotFound;

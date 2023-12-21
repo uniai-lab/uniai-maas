@@ -55,26 +55,19 @@ Populate the `.env` file with the following environment variables:
 ADMIN_TOKEN= # Default admin token, can be modified in config table
 
 # OPENAI GPT Configuration
-
 OPENAI_API=http://8.214.93.3 # OpenAI API URL or proxy
-OPENAI_API_VERSION=v1 # OpenAI API version (no need to modify)
-OPENAI_API_KEY= # OpenAI API key
+OPENAI_KEY= # OpenAI API key
 
 # GLM Configuration
+GLM_LOCAL_API=http://10.144.1.2:8100
+GLM_REMOTE_API_KEY=
 
-GLM_API=http://10.144.1.7:8100 # GLM API URL (https://github.com/uni-openai/GLM-API)
-GLM_API_REMOTE=https://open.bigmodel.cn # Remote ZHIPU chatglm API
-GLM_API_KEY= # ZHIPU AI API key
-
-# IFLYTEK Spark Configuration
-
-SPARK_API=ws://spark-api.xf-yun.com
-SPARK_API_KEY= # IFLYTEK Spark API KEY
-SPARK_API_SECRET= # IFLYTEK Spark API Secret
-SPARK_APP_ID= # IFLYTEK Spark APP ID
+# iFlyTek SPARK
+FLY_APP_ID=
+FLY_API_KEY=
+FLY_API_SECRET=
 
 # PostgreSQL Database Configuration
-
 DB_DIALECT=postgres
 POSTGRES_HOST=localhost # PostgreSQL host URL
 POSTGRES_PORT=5432 # PostgreSQL port
@@ -83,28 +76,19 @@ POSTGRES_PASS=postgres # PostgreSQL password
 POSTGRES_DB=uniai # PostgreSQL database name
 
 # For Docker start pgvector
-
 POSTGRES_DATA_PATH=/data/docker/pgvector/data
 
 # Redis Cache Configuration
-
 REDIS_HOST=localhost # Redis cache host URL
 REDIS_PORT=6379 # Redis cache port
 REDIS_PASS=redis
 REDIS_DB=0
 
 # WeChat Configuration
-
 WX_APP_ID= # WeChat app ID
 WX_APP_SECRET= # WeChat app secret
-WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
-WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
-WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
-WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
 
 # MINIO Storage Configuration
-
-OSS_TYPE=minio
 MINIO_ACCESS_KEY=
 MINIO_SECRET_KEY=
 MINIO_END_POINT=localhost
@@ -112,22 +96,18 @@ MINIO_PORT=9000
 MINIO_BUCKET=uniai
 
 # For Docker start Minio
-
 MINIO_DATA_PATH=/data/docker/minio
 MINIO_ROOT_USER=root
 MINIO_ROOT_PASS=12345678
 
 # Google Search Configuration
-
 GOOGLE_SEARCH_API_TOKEN=
 GOOGLE_SEARCH_ENGINE_ID=
 
 # Stable Diffusion Configuration
-
 STABLE_DIFFUSION_API=http://10.144.1.7:3400
 
 # Mid Journey Configuration
-
 MID_JOURNEY_API= # Visit https://github.com/novicezk/midjourney-proxy
 MID_JOURNEY_TOKEN= # MidJourney proxy token
 

@@ -3,7 +3,7 @@
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { Readable } from 'stream'
 import { UserContext } from '@interface/Context'
-import auth from '@middleware/auth'
+import auth from '@middleware/authC'
 import { SignInRequest, UserInfoResponse, ChatRequest } from '@interface/controller/LeChat'
 import { UserCache } from '@interface/Cache'
 
