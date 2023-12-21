@@ -1,7 +1,7 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, HTTPQuery } from '@eggjs/tegg'
-import { ChatRoleEnum } from '@interface/Enum'
+import { ChatRoleEnum, ContentAuditEnum } from '@interface/Enum'
 import { UserContext } from '@interface/Context'
 import {
     SignInRequest,
@@ -25,6 +25,8 @@ import { basename, extname } from 'path'
 import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
+import $ from '@util/util'
+import { readFileSync } from 'fs'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -270,7 +272,7 @@ export default class WeChat {
             typeId: res.typeId,
             page: res.page,
             tokens: res.tokens,
-            fileName: res.fileName,
+            fileName: $.contentFilter(res.fileName).text,
             fileSize: res.fileSize,
             filePath: res.filePath,
             userId: res.userId,
@@ -326,6 +328,9 @@ export default class WeChat {
         if (!id) throw new Error('Resource ID is null')
 
         const res = await ctx.service.weChat.resource(id)
+
+        // filter file name
+        res.fileName = $.contentFilter(res.fileName).text
         const path = ctx.service.weChat.url(res.filePath, res.fileName)
         const data: ResourceResponse = {
             id: res.id,
@@ -348,6 +353,8 @@ export default class WeChat {
         const data: DialogResponse[] = []
         for (const { id, resource } of res) {
             if (!resource.isEffect) resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
+            // filter file name
+            resource.fileName = $.contentFilter(resource.fileName).text
             data.push({
                 dialogId: id,
                 resourceId: resource.id,
@@ -366,8 +373,13 @@ export default class WeChat {
 
     @Middleware(log())
     @HTTPMethod({ path: '/audit', method: HTTPMethodEnum.POST })
-    async contentCheck(@Context() ctx: UserContext, @HTTPBody() params: { content: string }) {
-        const res = await ctx.service.weChat.audit(params.content)
+    async contentCheck(
+        @Context() ctx: UserContext,
+        @HTTPBody() params: { content: string; provider: ContentAuditEnum }
+    ) {
+        const file = ctx.request.files[0]
+        if (file) params.content = readFileSync(file.filepath, 'base64')
+        const res = await ctx.service.weChat.audit(params.content, params.provider)
         ctx.service.res.success('Success', res)
     }
 }

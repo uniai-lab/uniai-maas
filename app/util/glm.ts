@@ -53,7 +53,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
-        model: GLMSubModel,
+        model: GLMSubModel = GLMSubModel.TURBO,
         messages: GLMChatMessage[],
         stream: boolean = false,
         top?: number,

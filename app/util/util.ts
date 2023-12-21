@@ -20,7 +20,7 @@ import { google } from 'googleapis'
 import { convert } from 'html-to-text'
 import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
-import Filter from 'mint-filter'
+import Mint from 'mint-filter'
 import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
 import * as uuid from 'uuid'
@@ -39,9 +39,6 @@ const {
     MINIO_BUCKET
 } = process.env
 
-// universal sentence encoder model path
-const USE_PATH = `${ROOT_PATH}/app/public/models/universal-sentence-encoder`
-
 // Minimum split size for text
 const MIN_SPLIT_SIZE = 400
 
@@ -56,7 +53,7 @@ const minio = new MINIO.Client({
 
 // Sensitive words filter
 const json = JSON.parse(readFileSync(`${ROOT_PATH}/config/sensitive.json`, 'utf-8'))
-const filter = new Filter(json)
+const mint = new Mint(json)
 
 // Google Custom Search API
 const customsearch = google.customsearch('v1')
@@ -135,15 +132,11 @@ export default {
         })
     },
 
-    /**
-     * Filters sensitive words in content and optionally replaces them.
-     *
-     * @param content - The content to filter.
-     * @returns Filtered result, filter flag, filter data, replaced content
-     */
-    contentFilter(content: string) {
-        const res = filter.filter(content)
-        return { flag: filter.verify(content), data: res.words, replace: res.text }
+    contentFilter(content: string, replace: boolean = true) {
+        return {
+            verify: mint.verify(content),
+            ...mint.filter(content, { replace })
+        }
     },
 
     /**

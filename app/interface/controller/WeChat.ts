@@ -266,7 +266,12 @@ export interface WXMsgCheckResponse {
     }
 }
 
-export interface AuditResult {
+export interface AuditResponse {
     flag: boolean
-    data: object
+    data: object | null
+}
+
+export interface AIAuditResponse {
+    risk?: boolean
+    description?: string
 }

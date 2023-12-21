@@ -306,8 +306,23 @@ export default [
     },
     {
         key: 'CONTENT_AUDITOR',
-        value: 'wechat', // wechat | mint-filter | iflytek
+        value: 'AI', // WeChat | mint-filter | iFlyTek | AI
         description: '内容审核器'
+    },
+    {
+        key: 'AUDITOR_AI_MODEL',
+        value: 'GLM',
+        description: 'AI审核模型'
+    },
+    {
+        key: 'AUDITOR_AI_SUB_MODEL',
+        value: 'chatglm3-6b-32k',
+        description: 'AI审核子模型'
+    },
+    {
+        key: 'AUDITOR_AI_PROMPT',
+        value: '内容合规性审查任务：要求检测内容中是否涉及政治敏感、色情、暴恐、侮辱等不合规不合法信息，返回JSON格式`{risk:boolean, description:string}`，risk字段表示是否包含不合规信息风险，description字段给出解释。检测内容如下：',
+        description: 'AI审核提示词'
     },
     {
         key: 'WX_REVIEW_FILE',

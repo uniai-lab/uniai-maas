@@ -40,7 +40,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     chat(
-        model: SPKSubModel,
+        model: SPKSubModel = SPKSubModel.V3,
         messages: SPKChatMessage[],
         stream: boolean = false,
         top?: number,
@@ -105,12 +105,11 @@ export default {
     async audit(content: string) {
         const type: FLYAuditType = $.isBase64(content) ? FLYAuditType.IMAGE : FLYAuditType.TEXT
         const url = getAuditURL(type)
-        const res = await $.post<FlyAuditRequest, FlyAuditResponse>(url, {
+        return await $.post<FlyAuditRequest, FlyAuditResponse>(url, {
             content,
             is_match_all: 0,
             categories: ['pornDetection', 'violentTerrorism', 'political', 'contraband']
         })
-        return { flag: res.code === '000000' && res.data.result.suggest === 'pass', data: res }
     }
 }
 

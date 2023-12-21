@@ -18,12 +18,13 @@ import {
     OSSEnum
 } from '@interface/Enum'
 import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
-import { GPTChatStreamResponse } from '@interface/OpenAI'
+import { GPTChatResponse, GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
 import {
-    AuditResult,
+    AIAuditResponse,
+    AuditResponse,
     ConfigMenu,
     ConfigMenuV2,
     ConfigTask,
@@ -88,6 +89,8 @@ export default class WeChat extends Service {
             menuAdv: await this.getConfig<ConfigMenuV2>('USER_MENU_ADV')
         }
     }
+
+    // get user's level benefit
     async getLevelBenefit(level: number) {
         const { ctx } = this
         const vips = await ctx.service.weChat.getConfig<ConfigVIP[]>('USER_VIP')
@@ -308,6 +311,7 @@ export default class WeChat extends Service {
             dialog = await ctx.model.Dialog.create({ userId, resourceId })
             let content = ctx.__('Im AI model')
             content += fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat')
+            content = $.contentFilter(content).text
             dialog.chats = await ctx.model.Chat.bulkCreate([
                 { dialogId: dialog.id, role: ChatRoleEnum.ASSISTANT, content }
             ])
@@ -357,6 +361,9 @@ export default class WeChat extends Service {
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
+        // add user chat history
+        for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
+
         // add related resource
         if (resourceId) {
             let content = ctx.__('document content start')
@@ -369,9 +376,6 @@ export default class WeChat extends Service {
             content += `\n${ctx.__('document content end')}\n${ctx.__('answer according to')}`
             prompts.push({ role: SYSTEM, content })
         }
-
-        // add user chat history
-        for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
 
         prompts.push({ role: USER, content: input })
 
@@ -527,8 +531,6 @@ export default class WeChat extends Service {
         if (!chance) throw new Error('Fail to find user chance')
         if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
 
-        // filter sensitive file name
-        file.filename = $.contentFilter(file.filename).replace
         // upload resource to oss
         const resource = await ctx.service.uniAI.upload(file, userId, typeId)
         // embed resource content
@@ -549,10 +551,16 @@ export default class WeChat extends Service {
     async resource(id: number) {
         const { ctx } = this
         const res = await ctx.model.Resource.findByPk(id, {
-            attributes: ['id', 'fileName', 'fileSize', 'fileExt', 'filePath'],
+            attributes: ['id', 'fileName', 'fileSize', 'fileExt', 'filePath', 'content', 'isEffect', 'isDel'],
             include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
         })
         if (!res) throw new Error('Can not find the resource by ID')
+
+        // audit resource content
+        const { flag } = await this.audit(res.content)
+        res.isEffect = flag
+
+        // extract resource pages
         if (!res.pages.length) {
             // download file to local path
             const stream = await $.getFileStream(res.filePath)
@@ -577,9 +585,8 @@ export default class WeChat extends Service {
                 pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v }))
             )
             res.page = pages.length
-            return await res.save()
         }
-        return res
+        return await res.save()
     }
 
     // generate file url
@@ -595,34 +602,60 @@ export default class WeChat extends Service {
     }
 
     // check content by iFlyTek, WeChat or mint-filter
-    // content is text or image, image is base64 string
-    async audit(content: string) {
-        if (!content.trim()) return { flag: true, data: null }
-        const provider = await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR')
+    // content is text or image, image should be base64 string
+    async audit(content: string, provider?: ContentAuditEnum) {
+        const res: AuditResponse = { flag: true, data: null }
 
-        let res: AuditResult
-        if (provider === ContentAuditEnum.FILTER) res = $.contentFilter(content)
-        else if (provider === ContentAuditEnum.FLY) res = await fly.audit(content)
-        else res = await this.checkContent(content)
-        await this.ctx.model.AuditLog.create({ provider, content, data: res.data, flag: res.flag })
+        if (!content.trim()) return res
+
+        provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
+        if (provider === ContentAuditEnum.WX) {
+            const result = await this.contentCheck(content)
+            res.flag = result.errcode === 0
+            res.data = result
+        } else if (provider === ContentAuditEnum.FLY) {
+            const result = await fly.audit(content)
+            res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
+            res.data = result
+        } else if (provider === ContentAuditEnum.AI) {
+            const model = await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL')
+            const subModel = await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL')
+            const message: ChatMessage[] = [
+                { role: ChatRoleEnum.SYSTEM, content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content}”` }
+            ]
+            const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 0.75, 0, 32000)
+            if (model === ChatModelEnum.GPT || model === ChatModelEnum.GLM) {
+                const json = $.json<AIAuditResponse>((result as GPTChatResponse).choices[0].message.content)
+                json !== null && json.risk !== undefined ? (res.flag = !json.risk) : (res.flag = false)
+                res.data = json || result
+            } else if (model === ChatModelEnum.SPARK) {
+                const json = $.json<AIAuditResponse>((result as SPKChatResponse).payload.choices.text[0].content)
+                json !== null && json.risk !== undefined ? (res.flag = !json.risk) : (res.flag = false)
+                res.data = json || result
+            }
+        } else {
+            const result = $.contentFilter(content)
+            res.flag = result.verify
+            res.data = result
+        }
+
+        // record audit log
+        await this.ctx.model.AuditLog.create({ provider, content, ...res })
         return res
     }
 
     // use WX API to check content
-    async checkContent(content: string) {
+    // image content should be base64
+    async contentCheck(content: string) {
         const token = await this.getAccessToken()
         if ($.isBase64(content)) {
             const form = new FormData()
             form.append('media', Buffer.from(content, 'base64'), { filename: 'test.png' })
-            const res = await $.post<FormData, WXMsgCheckResponse>(`${WX_MEDIA_CHECK_URL}?access_token=${token}`, form)
-            return { flag: res.errcode === 0, data: res }
-        } else {
-            const res = await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(
-                `${WX_MSG_CHECK_URL}?access_token=${token}`,
-                { content }
-            )
-            return { flag: res.errcode === 0, data: res }
-        }
+            return await $.post<FormData, WXMsgCheckResponse>(`${WX_MEDIA_CHECK_URL}?access_token=${token}`, form)
+        } else
+            return await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(`${WX_MSG_CHECK_URL}?access_token=${token}`, {
+                content
+            })
     }
 
     // get WX API access token

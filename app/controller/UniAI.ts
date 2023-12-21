@@ -2,7 +2,7 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { Readable } from 'stream'
-import { ChatModelEnum, EmbedModelEnum, GLMSubModel, ImgModelEnum } from '@interface/Enum'
+import { ChatModelEnum, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -33,9 +33,8 @@ export default class UniAI {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
-        const { top, temperature, maxLength, prompts, chunk, stream } = params
+        const { top, temperature, maxLength, prompts, chunk, stream, subModel } = params
         const model = params.model || ChatModelEnum.GLM
-        const subModel = params.subModel || GLMSubModel.LOCAL
         if (!prompts.length) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, stream, model, subModel, top, temperature, maxLength)
@@ -85,7 +84,8 @@ export default class UniAI {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
-        const { prompts, top, temperature, maxLength, model, subModel, chunk } = params
+        const { prompts, top, temperature, maxLength, subModel, chunk } = params
+        const model = params.model || ChatModelEnum.GLM
         if (!prompts.length) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, true, model, subModel, top, temperature, maxLength)

@@ -132,7 +132,7 @@ export default class UniAI extends Service {
     async chat(
         prompts: ChatMessage[],
         stream: boolean = false,
-        model: ChatModelEnum = ChatModelEnum.GLM,
+        model: ChatModelEnum = ChatModelEnum.SPARK,
         subModel?: ChatSubModelEnum,
         top?: number,
         temperature?: number,
@@ -258,8 +258,7 @@ export default class UniAI extends Service {
                 fileSize,
                 fileExt,
                 embedding,
-                tokens: $.countTokens(content),
-                isEffect: false
+                tokens: $.countTokens(content)
             })
         }
 
@@ -351,8 +350,7 @@ export default class UniAI extends Service {
                 fileSize,
                 fileExt,
                 embedding,
-                tokens: $.countTokens(content),
-                isEffect: false
+                tokens: $.countTokens(content)
             })
 
         if (!resource) throw new Error('Fail to create resource for embedding')

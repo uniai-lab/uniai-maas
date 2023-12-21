@@ -40,9 +40,10 @@ export enum FLYAuditType {
 }
 
 export enum ContentAuditEnum {
-    FILTER = 'mint-filter',
-    WX = 'wechat',
-    FLY = 'iflytek'
+    MINT = 'mint-filter', // a local json dict filter
+    WX = 'WeChat', // WeChat message check
+    FLY = 'iFlyTek', // 科大讯飞NLP合规性接口
+    AI = 'AI' // use LLM AI model
 }
 
 export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum, ...EmbedModelEnum }

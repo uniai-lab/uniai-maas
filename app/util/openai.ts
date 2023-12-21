@@ -53,7 +53,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
-        model: GPTSubModel,
+        model: GPTSubModel = GPTSubModel.GPT3,
         messages: GPTChatMessage[],
         stream: boolean = false,
         top?: number,
