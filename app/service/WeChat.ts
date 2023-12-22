@@ -606,7 +606,7 @@ export default class WeChat extends Service {
     async audit(content: string, provider?: ContentAuditEnum) {
         const res: AuditResponse = { flag: true, data: null }
 
-        if (!content.trim()) return res
+        if (!content.trim()) throw new Error('Content is empty')
 
         provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
         if (provider === ContentAuditEnum.WX) {
@@ -623,16 +623,16 @@ export default class WeChat extends Service {
             const message: ChatMessage[] = [
                 { role: ChatRoleEnum.SYSTEM, content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content}”` }
             ]
+            console.log(message)
             const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 0.75, 0, 32000)
-            if (model === ChatModelEnum.GPT || model === ChatModelEnum.GLM) {
-                const json = $.json<AIAuditResponse>((result as GPTChatResponse).choices[0].message.content)
-                json !== null && json.risk !== undefined ? (res.flag = !json.risk) : (res.flag = false)
-                res.data = json || result
-            } else if (model === ChatModelEnum.SPARK) {
-                const json = $.json<AIAuditResponse>((result as SPKChatResponse).payload.choices.text[0].content)
-                json !== null && json.risk !== undefined ? (res.flag = !json.risk) : (res.flag = false)
-                res.data = json || result
-            }
+            const text =
+                model === ChatModelEnum.SPARK
+                    ? (result as SPKChatResponse).payload.choices.text[0].content
+                    : (result as GPTChatResponse).choices[0].message.content
+
+            const json = $.json<AIAuditResponse>(text)
+            json !== null && json.safe !== undefined ? (res.flag = json.safe) : (res.flag = false)
+            res.data = result
         } else {
             const result = $.contentFilter(content)
             res.flag = result.verify
@@ -651,11 +651,12 @@ export default class WeChat extends Service {
         if ($.isBase64(content)) {
             const form = new FormData()
             form.append('media', Buffer.from(content, 'base64'), { filename: 'test.png' })
-            return await $.post<FormData, WXMsgCheckResponse>(`${WX_MEDIA_CHECK_URL}?access_token=${token}`, form)
-        } else
-            return await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(`${WX_MSG_CHECK_URL}?access_token=${token}`, {
-                content
-            })
+            const url = `${WX_MEDIA_CHECK_URL}?access_token=${token}`
+            return await $.post<FormData, WXMsgCheckResponse>(url, form)
+        } else {
+            const url = `${WX_MSG_CHECK_URL}?access_token=${token}`
+            return await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(url, { content })
+        }
     }
 
     // get WX API access token

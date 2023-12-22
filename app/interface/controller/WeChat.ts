@@ -272,6 +272,6 @@ export interface AuditResponse {
 }
 
 export interface AIAuditResponse {
-    risk?: boolean
+    safe?: boolean
     description?: string
 }

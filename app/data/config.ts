@@ -1,6 +1,8 @@
 /** @format */
 
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
+import { readFileSync } from 'fs'
+import ROOT_PATH from 'app-root-path'
 
 const menus: ConfigMenu[] = [
     {
@@ -321,7 +323,7 @@ export default [
     },
     {
         key: 'AUDITOR_AI_PROMPT',
-        value: '内容合规性审查任务：要求检测内容中是否涉及政治敏感、色情、暴恐、侮辱等不合规不合法信息，返回JSON格式`{risk:boolean, description:string}`，risk字段表示是否包含不合规信息风险，description字段给出解释。检测内容如下：',
+        value: readFileSync(`${ROOT_PATH}/app/data/prompt-audit.txt`, 'utf-8'),
         description: 'AI审核提示词'
     },
     {
