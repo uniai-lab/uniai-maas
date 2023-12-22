@@ -621,7 +621,10 @@ export default class WeChat extends Service {
             const model = await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL')
             const subModel = await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL')
             const message: ChatMessage[] = [
-                { role: ChatRoleEnum.SYSTEM, content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content}”` }
+                {
+                    role: ChatRoleEnum.SYSTEM,
+                    content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content.replace(/\r\n|\n/g, ' ')}”`
+                }
             ]
             console.log(message)
             const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 0.75, 0, 32000)

@@ -227,7 +227,7 @@ export default class WeChat {
             model: res.model,
             avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI')
         }
-        ctx.service.res.success('Get chat stream', data)
+        ctx.service.res.success('Success to get chat stream', data)
     }
 
     @Middleware(auth(), log())
@@ -252,7 +252,7 @@ export default class WeChat {
                 dialogId: res.id,
                 userId: res.userId
             })
-        ctx.service.res.success('Chat result', data)
+        ctx.service.res.success('Success to list chat history', data)
     }
 
     @Middleware(auth(), log(), transaction())
@@ -340,7 +340,7 @@ export default class WeChat {
             path,
             pages: res.pages.map(v => ctx.service.weChat.url(v.filePath))
         }
-        ctx.service.res.success('Success get resource', data)
+        ctx.service.res.success('Success to get resource', data)
     }
 
     @Middleware(auth(), log())
