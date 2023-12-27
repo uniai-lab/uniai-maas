@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum, ImgModelEnum, ChatSubModelEnum, EmbedModelEnum } from '@interface/Enum'
+import { ChatModelEnum, ImgModelEnum, ChatSubModelEnum, EmbedModelEnum, ContentAuditEnum } from '@interface/Enum'
 import { GLMChatMessage } from '@interface/GLM'
 import { GPTChatMessage } from '@interface/OpenAI'
 import { SPKChatMessage } from '@interface/Spark'
@@ -119,4 +119,21 @@ export interface ResourcePage {
     similar: number
     page: number
     resourceId: number
+}
+
+export interface AuditRequest {
+    content: string
+    provider: ContentAuditEnum
+    model: ChatModelEnum
+    subModel: ChatSubModelEnum
+}
+
+export interface AuditResponse {
+    flag: boolean
+    data: object | null
+}
+
+export interface AIAuditResponse {
+    safe?: boolean
+    description?: string
 }

@@ -1,6 +1,6 @@
 {
     "name": "uni-ai",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "UniAI is a platform that integrates multiple AI models",
     "egg": {
         "typescript": true,
@@ -45,10 +45,8 @@
         "egg-view-nunjucks": "^2.3.0",
         "eventsource-parser": "^1.1.1",
         "form-data": "^4.0.0",
-        "googleapis": "^128.0.0",
         "gpt-3-encoder": "^1.1.4",
         "html-to-text": "^9.0.5",
-        "ioredis": "^5.3.2",
         "is-base64": "^1.1.0",
         "is-valid-domain": "^0.1.6",
         "jsonwebtoken": "^9.0.2",
@@ -64,10 +62,8 @@
         "pg": "^8.11.3",
         "pg-hstore": "^2.3.4",
         "sbd": "^1.0.19",
-        "sentence-splitter": "^4.3.0",
         "sequelize": "^6.34.0",
         "sequelize-typescript": "^2.1.5",
-        "uuid": "^9.0.1",
         "ws": "^8.14.2"
     },
     "devDependencies": {
@@ -82,7 +78,6 @@
         "@types/node": "^20.8.10",
         "@types/sbd": "^1.0.4",
         "@types/sequelize": "^4.28.17",
-        "@types/uuid": "^9.0.7",
         "@types/validator": "^13.11.5",
         "@types/ws": "^8.5.8",
         "@typescript-eslint/eslint-plugin": "^6.9.1",

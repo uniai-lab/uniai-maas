@@ -7,13 +7,15 @@ import { createParser } from 'eventsource-parser'
 import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
 import { extname } from 'path'
-import { ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
-import { GPTChatMessage, GPTChatStreamResponse } from '@interface/OpenAI'
+import { AIAuditResponse, AuditResponse, ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
+import { GPTChatMessage, GPTChatResponse, GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatMessage, GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatMessage, SPKChatResponse } from '@interface/Spark'
 import {
     ChatModelEnum,
+    ChatRoleEnum,
     ChatSubModelEnum,
+    ContentAuditEnum,
     EmbedModelEnum,
     GLMSubModel,
     GPTSubModel,
@@ -219,50 +221,41 @@ export default class UniAI extends Service {
         tabId: number = DEFAULT_RESOURCE_TAB
     ) {
         const { ctx } = this
-        const limit = await this.getConfig('LIMIT_UPLOAD_SIZE')
 
         // limit upload file size
         const fileSize = statSync(file.filepath).size
-        if (fileSize > parseInt(limit)) throw new Error('File size exceeds limit')
-        const fileName = file.filename
-        let filePath = file.filepath // local tmp file path
-        const fileExt = extname(filePath).replace('.', '')
+        if (fileSize > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))) throw new Error('File size exceeds limit')
 
         // get content
-        const { content, page } = await $.convertText(filePath)
+        const { content, page } = await $.convertText(file.filepath)
         if (!content) throw new Error('Fail to extract content text')
 
         // split and embedding first page
-        const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
+        const firstPage = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
         if (!firstPage) throw new Error('Fail to split first page')
         const embedding = (await glm.embedding([firstPage])).data[0]
         if (!embedding) throw new Error('Fail to embed first page')
 
-        // count similar
+        // try to find the similar resource
         const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
-        let resource = resources[0]
 
-        if (!resource) {
-            // uploading original file and page imgs
-            filePath = await $.putOSS(filePath)
-
-            // save to db
-            resource = await ctx.model.Resource.create({
+        // find or create resource
+        return (
+            resources[0] ||
+            (await ctx.model.Resource.create({
                 page,
                 content,
                 userId,
                 typeId,
                 tabId,
-                fileName,
-                filePath,
+                fileName: file.filename,
+                filePath: await $.putOSS(file.filepath),
                 fileSize,
-                fileExt,
+                fileExt: extname(file.filepath).replace('.', ''),
                 embedding,
                 tokens: $.countTokens(content)
-            })
-        }
-
-        return resource
+            }))
+        )
     }
 
     // create embedding
@@ -302,13 +295,13 @@ export default class UniAI extends Service {
         // find by resource content
         else {
             // check all resource info
-            content = $.tinyText(content)
             if (!content) throw new Error('File content is empty')
             if (!fileName) throw new Error('File name is empty')
             if (!filePath) throw new Error('File path is empty')
             if (!fileSize) throw new Error('File size is empty')
             fileExt = fileExt || extname(filePath).replace('.', '')
             if (!fileExt) throw new Error('Can not detect file extension')
+            content = $.tinyText(content)
 
             // embedding first page
             const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
@@ -416,5 +409,51 @@ export default class UniAI extends Service {
         const { MJ } = ImgModelEnum
         if (model === MJ) return mj.queue()
         else throw new Error('Image queue model not found')
+    }
+
+    // check content by iFlyTek, WeChat or mint-filter
+    // content is text or image, image should be base64 string
+    async audit(content: string, provider?: ContentAuditEnum, model?: ChatModelEnum, subModel?: ChatSubModelEnum) {
+        if (!content.trim()) throw new Error('Content is empty')
+
+        const res: AuditResponse = { flag: true, data: null }
+
+        provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
+        if (provider === ContentAuditEnum.WX) {
+            const result = await this.ctx.service.weChat.contentCheck(content)
+            res.flag = result.errcode === 0
+            res.data = result
+        } else if (provider === ContentAuditEnum.FLY) {
+            const result = await fly.audit(content)
+            res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
+            res.data = result
+        } else if (provider === ContentAuditEnum.AI) {
+            model = model || (await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL'))
+            subModel = subModel || (await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL'))
+            const message: ChatMessage[] = [
+                {
+                    role: ChatRoleEnum.SYSTEM,
+                    content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content.replace(/\r\n|\n/g, ' ')}”`
+                }
+            ]
+            console.log(message)
+            const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 0.75, 0)
+            const text =
+                model === ChatModelEnum.SPARK
+                    ? (result as SPKChatResponse).payload.choices.text[0].content
+                    : (result as GPTChatResponse).choices[0].message.content
+
+            const json = $.json<AIAuditResponse>(text)
+            res.flag = json?.safe || false
+            res.data = result
+        } else {
+            const result = $.contentFilter(content)
+            res.flag = result.verify
+            res.data = result
+        }
+
+        // record audit log
+        await this.ctx.model.AuditLog.create({ provider, content, ...res })
+        return res
     }
 }

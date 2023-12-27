@@ -23,8 +23,6 @@ import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
 import {
-    AIAuditResponse,
-    AuditResponse,
     ConfigMenu,
     ConfigMenuV2,
     ConfigTask,
@@ -533,18 +531,24 @@ export default class WeChat extends Service {
 
         // upload resource to oss
         const resource = await ctx.service.uniAI.upload(file, userId, typeId)
-        // embed resource content
-        const embedModel = await this.getConfig<EmbedModelEnum>('WX_EMBED_MODEL')
-        const res = await ctx.service.uniAI.embedding(embedModel, resource.id)
-        // process resource, split pages as images
-        await this.resource(res.id)
 
-        // reduce chance
+        // audit resource content
+        const { flag } = await ctx.service.uniAI.audit(resource.content)
+        resource.isEffect = flag
+
+        // embed resource content
+        await ctx.service.uniAI.embedding(await this.getConfig<EmbedModelEnum>('WX_EMBED_MODEL'), resource.id)
+
+        // split pages as images
+        await this.resource(resource.id)
+
+        // reduce user chance
         if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
         else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
         else throw new Error('Fail to reduce upload chance')
         await this.updateUserCache(chance.userId)
-        return res
+
+        return await resource.save()
     }
 
     // find resource, pages by ID
@@ -555,10 +559,6 @@ export default class WeChat extends Service {
             include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
         })
         if (!res) throw new Error('Can not find the resource by ID')
-
-        // audit resource content
-        const { flag } = await this.audit(res.content)
-        res.isEffect = flag
 
         // extract resource pages
         if (!res.pages.length) {
@@ -586,7 +586,7 @@ export default class WeChat extends Service {
             )
             res.page = pages.length
         }
-        return await res.save()
+        return res
     }
 
     // generate file url
@@ -599,52 +599,6 @@ export default class WeChat extends Service {
     // get file stream from path or url
     async file(path: string) {
         return await $.getFileStream(path)
-    }
-
-    // check content by iFlyTek, WeChat or mint-filter
-    // content is text or image, image should be base64 string
-    async audit(content: string, provider?: ContentAuditEnum) {
-        const res: AuditResponse = { flag: true, data: null }
-
-        if (!content.trim()) throw new Error('Content is empty')
-
-        provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
-        if (provider === ContentAuditEnum.WX) {
-            const result = await this.contentCheck(content)
-            res.flag = result.errcode === 0
-            res.data = result
-        } else if (provider === ContentAuditEnum.FLY) {
-            const result = await fly.audit(content)
-            res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
-            res.data = result
-        } else if (provider === ContentAuditEnum.AI) {
-            const model = await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL')
-            const subModel = await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL')
-            const message: ChatMessage[] = [
-                {
-                    role: ChatRoleEnum.SYSTEM,
-                    content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content.replace(/\r\n|\n/g, ' ')}”`
-                }
-            ]
-            console.log(message)
-            const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 0.75, 0, 32000)
-            const text =
-                model === ChatModelEnum.SPARK
-                    ? (result as SPKChatResponse).payload.choices.text[0].content
-                    : (result as GPTChatResponse).choices[0].message.content
-
-            const json = $.json<AIAuditResponse>(text)
-            json !== null && json.safe !== undefined ? (res.flag = json.safe) : (res.flag = false)
-            res.data = result
-        } else {
-            const result = $.contentFilter(content)
-            res.flag = result.verify
-            res.data = result
-        }
-
-        // record audit log
-        await this.ctx.model.AuditLog.create({ provider, content, ...res })
-        return res
     }
 
     // use WX API to check content

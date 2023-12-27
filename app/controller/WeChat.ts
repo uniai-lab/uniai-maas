@@ -1,7 +1,7 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, HTTPQuery } from '@eggjs/tegg'
-import { ChatRoleEnum, ContentAuditEnum } from '@interface/Enum'
+import { ChatRoleEnum } from '@interface/Enum'
 import { UserContext } from '@interface/Context'
 import {
     SignInRequest,
@@ -26,7 +26,6 @@ import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import $ from '@util/util'
-import { readFileSync } from 'fs'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -369,17 +368,5 @@ export default class WeChat {
             })
         }
         ctx.service.res.success('Success to list resources', data)
-    }
-
-    @Middleware(log())
-    @HTTPMethod({ path: '/audit', method: HTTPMethodEnum.POST })
-    async contentCheck(
-        @Context() ctx: UserContext,
-        @HTTPBody() params: { content: string; provider: ContentAuditEnum }
-    ) {
-        const file = ctx.request.files[0]
-        if (file) params.content = readFileSync(file.filepath, 'base64')
-        const res = await ctx.service.weChat.audit(params.content, params.provider)
-        ctx.service.res.success('Success', res)
     }
 }

@@ -104,10 +104,6 @@ MINIO_DATA_PATH=/data/docker/minio
 MINIO_ROOT_USER=root
 MINIO_ROOT_PASS=12345678
 
-# Google Search Configuration
-GOOGLE_SEARCH_API_TOKEN=
-GOOGLE_SEARCH_ENGINE_ID=
-
 # Stable Diffusion Configuration
 STABLE_DIFFUSION_API=http://10.144.1.7:3400
 

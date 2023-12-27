@@ -323,7 +323,7 @@ export default [
     },
     {
         key: 'AUDITOR_AI_PROMPT',
-        value: readFileSync(`${ROOT_PATH}/app/data/prompt-audit.txt`, 'utf-8'),
+        value: readFileSync(`${ROOT_PATH}/app/data/prompt-audit.md`, 'utf-8'),
         description: 'AI审核提示词'
     },
     {

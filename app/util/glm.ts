@@ -72,10 +72,7 @@ export default {
             let input = ''
             const { SYSTEM, USER, ASSISTANT } = GLMChatRoleEnum
             for (const { role, content } of messages) {
-                if (role === SYSTEM) {
-                    prompt.push({ role: USER, content })
-                    prompt.push({ role: ASSISTANT, content: 'Yes' })
-                } else if (role === USER) input += `\n${content}`
+                if (role === USER || role === SYSTEM) input += `\n${content}`
                 else {
                     prompt.push({ role: USER, content: input.trim() })
                     prompt.push({ role: ASSISTANT, content })

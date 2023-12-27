@@ -14,10 +14,10 @@ UniAI, a unified API-based platform, streamlines interactions with diverse and c
 
 UniAI integrates several leading AI models, including:
 
--   [OpenAI/GPT](https://platform.openai.com)
 -   [IFLYTEK/Spark](https://xinghuo.xfyun.cn)
 -   [THUDM/ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
 -   [ZHIPU/ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
+-   [OpenAI/GPT](https://platform.openai.com)
 -   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 -   [OpenAI/DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
@@ -99,10 +99,6 @@ MINIO_BUCKET=uniai
 MINIO_DATA_PATH=/data/docker/minio
 MINIO_ROOT_USER=root
 MINIO_ROOT_PASS=12345678
-
-# Google Search Configuration
-GOOGLE_SEARCH_API_TOKEN=
-GOOGLE_SEARCH_ENGINE_ID=
 
 # Stable Diffusion Configuration
 STABLE_DIFFUSION_API=http://10.144.1.7:3400

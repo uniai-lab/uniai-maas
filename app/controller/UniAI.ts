@@ -17,7 +17,8 @@ import {
     ChatResponse,
     QueueRequest,
     UploadRequest,
-    UploadResponse
+    UploadResponse,
+    AuditRequest
 } from '@interface/controller/UniAI'
 import { GPTChatResponse, GPTImagineResponse } from '@interface/OpenAI'
 import { GLMChatResponse } from '@interface/GLM'
@@ -27,6 +28,7 @@ import { SDImagineResponse, SDTaskResponse } from '@interface/SD'
 import auth from '@middleware/authB'
 import log from '@middleware/log'
 import transaction from '@middleware/transaction'
+import { readFileSync } from 'fs'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -39,11 +41,11 @@ export default class UniAI {
 
         const res = await ctx.service.uniAI.chat(prompts, stream, model, subModel, top, temperature, maxLength)
         if (res instanceof Readable) ctx.body = ctx.service.uniAI.parseSSE(res, model, chunk)
-        else if (model === ChatModelEnum.GPT) {
-            // chat to GPT
+        else if (model === ChatModelEnum.GPT || model === ChatModelEnum.GLM) {
+            // chat to GPT/GLM
             const { choices, model, object, usage } = res as GPTChatResponse
             if (choices[0].message?.content)
-                ctx.service.res.success('Success to chat to OpenAI/GPT', {
+                ctx.service.res.success(`Success to chat to ${model}`, {
                     content: choices[0].message.content,
                     promptTokens: usage?.prompt_tokens,
                     completionTokens: usage?.completion_tokens,
@@ -51,25 +53,12 @@ export default class UniAI {
                     model,
                     object
                 } as ChatResponse)
-            else throw new Error('Error to chat to GPT')
-        } else if (model === ChatModelEnum.GLM) {
-            // chat to GLM
-            const { choices, model, object, usage } = res as GLMChatResponse
-            if (choices[0].message?.content)
-                ctx.service.res.success('Success to chat to THUDM/GLM', {
-                    content: choices[0].message.content,
-                    promptTokens: usage?.prompt_tokens,
-                    completionTokens: usage?.completion_tokens,
-                    totalTokens: usage?.total_tokens,
-                    model,
-                    object
-                } as ChatResponse)
-            else throw new Error('Error to chat to GLM')
+            else throw new Error(`Error to chat to ${model}`)
         } else if (model === ChatModelEnum.SPARK) {
             // chat to SPARK
             const { payload } = res as SPKChatResponse
             if (payload.choices.text[0].content)
-                ctx.service.res.success('Success to chat to iFlyTek/SPARK', {
+                ctx.service.res.success(`Success to chat to ${model}`, {
                     content: payload.choices.text[0].content,
                     promptTokens: payload.usage?.text.prompt_tokens,
                     completionTokens: payload.usage?.text.completion_tokens,
@@ -77,7 +66,7 @@ export default class UniAI {
                     model: payload.model,
                     object: payload.object
                 } as ChatResponse)
-            else throw new Error('Error to chat to SPARK')
+            else throw new Error(`Error to chat to ${model}`)
         }
     }
 
@@ -212,7 +201,7 @@ export default class UniAI {
             data.taskId = res.result
             data.info = res.description
         }
-        ctx.service.res.success('Success image change', data)
+        ctx.service.res.success('Success to image change', data)
     }
 
     @Middleware(auth(), log())
@@ -224,6 +213,18 @@ export default class UniAI {
         if (model === ImgModelEnum.MJ)
             for (const { id, progress, imageUrl, description, failReason } of res)
                 data.push({ id, progress, image: imageUrl, info: description, failReason })
-        ctx.service.res.success('Success image queue', data)
+        ctx.service.res.success('Success to image queue', data)
+    }
+
+    @Middleware(auth(), log())
+    @HTTPMethod({ path: '/audit', method: HTTPMethodEnum.POST })
+    async contentCheck(@Context() ctx: EggContext, @HTTPBody() params: AuditRequest) {
+        const { provider, model, subModel } = params
+        const file = ctx.request.files[0]
+        const content = file ? readFileSync(file.filepath, 'base64') : params.content
+
+        const res = await ctx.service.uniAI.audit(content, provider, model, subModel)
+
+        ctx.service.res.success('Success', res)
     }
 }

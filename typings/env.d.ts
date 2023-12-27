@@ -60,10 +60,6 @@ declare global {
             // mid journey
             MID_JOURNEY_API: string
             MID_JOURNEY_TOKEN: string
-
-            // google search
-            GOOGLE_SEARCH_API_TOKEN: string
-            GOOGLE_SEARCH_ENGINE_ID: string
         }
     }
 }

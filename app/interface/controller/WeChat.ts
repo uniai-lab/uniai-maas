@@ -265,13 +265,3 @@ export interface WXMsgCheckResponse {
         label: number
     }
 }
-
-export interface AuditResponse {
-    flag: boolean
-    data: object | null
-}
-
-export interface AIAuditResponse {
-    safe?: boolean
-    description?: string
-}

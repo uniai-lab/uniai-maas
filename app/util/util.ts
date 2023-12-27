@@ -1,5 +1,5 @@
 /**
- * Common utility functions for the web project.
+ * Common utility functions for the UniAI.
  *
  * @format prettier
  * @author devilyouwei
@@ -10,53 +10,38 @@ import { Readable } from 'stream'
 import { basename, extname, join } from 'path'
 import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
-import crypto from 'crypto'
+import crypto, { randomUUID } from 'crypto'
 import isJSON from '@stdlib/assert-is-json'
 import pdf from '@cyber2024/pdf-parse-fixed'
 import libreoffice from 'libreoffice-convert'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-3-encoder'
-import { google } from 'googleapis'
 import { convert } from 'html-to-text'
 import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
 import Mint from 'mint-filter'
 import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
-import * as uuid from 'uuid'
-import { OSSEnum } from '@interface/Enum'
 import isDomain from 'is-valid-domain'
 import isBase64 from 'is-base64'
 
 // Environment variables
-const {
-    GOOGLE_SEARCH_API_TOKEN,
-    GOOGLE_SEARCH_ENGINE_ID,
-    MINIO_ACCESS_KEY,
-    MINIO_END_POINT,
-    MINIO_PORT,
-    MINIO_SECRET_KEY,
-    MINIO_BUCKET
-} = process.env
+const { MINIO_ACCESS_KEY, MINIO_END_POINT, MINIO_PORT, MINIO_SECRET_KEY, MINIO_BUCKET } = process.env
 
 // Minimum split size for text
 const MIN_SPLIT_SIZE = 400
 
+// Sensitive words dictionary for mint filter
+const MINT_JSON_DICT = `${ROOT_PATH}/config/sensitive.json`
+
 // MinIO client
-const minio = new MINIO.Client({
+const oss = new MINIO.Client({
     endPoint: MINIO_END_POINT,
     accessKey: MINIO_ACCESS_KEY,
     secretKey: MINIO_SECRET_KEY,
     port: parseInt(MINIO_PORT),
     useSSL: false
 })
-
-// Sensitive words filter
-const json = JSON.parse(readFileSync(`${ROOT_PATH}/config/sensitive.json`, 'utf-8'))
-const mint = new Mint(json)
-
-// Google Custom Search API
-const customsearch = google.customsearch('v1')
 
 export default {
     /**
@@ -67,12 +52,8 @@ export default {
      * @param config - Optional Axios request configuration.
      * @returns A Promise that resolves with the response data.
      */
-    async get<RequestT = any, ResponseT = any>(
-        url: string,
-        params?: RequestT,
-        config?: AxiosRequestConfig
-    ): Promise<ResponseT> {
-        return (await axios.get(url, { params, ...config })).data
+    async get<RequestT, ResponseT>(url: string, params?: RequestT, config?: AxiosRequestConfig) {
+        return (await axios.get<ResponseT>(url, { params, ...config })).data
     },
 
     /**
@@ -83,26 +64,8 @@ export default {
      * @param config - Optional Axios request configuration.
      * @returns A Promise that resolves with the response data.
      */
-    async post<RequestT, ResponseT>(url: string, body?: RequestT, config?: AxiosRequestConfig): Promise<ResponseT> {
-        return (await axios.post(url, body, config)).data
-    },
-
-    /**
-     * Searches online using Google Custom Search.
-     *
-     * @param prompt - The search query.
-     * @param num - The number of search results to return.
-     * @returns A Promise that resolves with the search results.
-     */
-    async search(prompt: string, num: number) {
-        return (
-            await customsearch.cse.list({
-                auth: GOOGLE_SEARCH_API_TOKEN,
-                cx: GOOGLE_SEARCH_ENGINE_ID,
-                q: prompt,
-                num // Number of search results to return
-            })
-        ).data
+    async post<RequestT, ResponseT>(url: string, body?: RequestT, config?: AxiosRequestConfig) {
+        return (await axios.post<ResponseT>(url, body, config)).data
     },
 
     /**
@@ -112,7 +75,7 @@ export default {
      * @returns A Promise that resolves with the extracted text.
      */
     async url2text(url: string) {
-        const html = await this.get<undefined, string>(url, undefined, { timeout: 5000 })
+        const html: string = await this.get(url, null, { timeout: 5000 })
         return this.html2text(html)
     },
 
@@ -132,11 +95,18 @@ export default {
         })
     },
 
+    /**
+     * Filters the content based on sensitive words.
+     *
+     * @param content - The content to filter.
+     * @param replace - Optional flag to indicate whether to replace sensitive words with placeholders. Defaults to `true`.
+     * @returns An object containing the verification result and filtered content.
+     */
     contentFilter(content: string, replace: boolean = true) {
-        return {
-            verify: mint.verify(content),
-            ...mint.filter(content, { replace })
-        }
+        // Sensitive words filter
+        const json = this.json<string[]>(readFileSync(MINT_JSON_DICT, 'utf-8'))
+        const mint = new Mint(json!)
+        return { verify: mint.verify(content), ...mint.filter(content, { replace }) }
     },
 
     /**
@@ -191,7 +161,7 @@ export default {
      * @param path - The path to the office file.
      * @returns A Promise that resolves with the path to the converted PDF file.
      */
-    async convertPDF(path: string) {
+    convertPDF(path: string) {
         return new Promise<string>((resolve, reject) => {
             libreoffice.convert(readFileSync(path), '.pdf', undefined, (err, data) => {
                 if (err) reject(err)
@@ -211,7 +181,7 @@ export default {
      * @returns A Promise that resolves with an array of image paths.
      */
     async convertIMG(path: string) {
-        // If not a PDF, first convert to PDF
+        // If not a PDF, convert to PDF
         if (extname(path) !== '.pdf') path = await this.convertPDF(path)
 
         const imgs: string[] = []
@@ -234,8 +204,8 @@ export default {
      */
     async convertText(path: string) {
         if (extname(path) !== '.pdf') path = await this.convertPDF(path)
-        const file = await pdf(readFileSync(path))
-        return { content: this.tinyText(file.text), page: file.numpages }
+        const { text, numpages } = await pdf(readFileSync(path))
+        return { content: this.tinyText(text), page: numpages }
     },
 
     /**
@@ -244,9 +214,8 @@ export default {
      * @param text - The text to process.
      * @returns The processed text.
      */
-    tinyText(text?: string | null) {
-        if (!text) return ''
-        else return text.replace(/[\n\r]{2,}/g, '\n').trim()
+    tinyText(text: string) {
+        return text.replace(/[\n\r]{2,}/g, '\n').trim()
     },
 
     /**
@@ -290,15 +259,12 @@ export default {
      * Uploads a file to Object Storage Service (OSS)
      *
      * @param path - The path to the file to upload.
-     * @param oss - The OSS type (default is minio).
      * @returns The URL of the uploaded file on oss, e.g., cos/aaa.pdf minio/bbb.pdf oss/ccc.pdf.
      */
-    async putOSS(path: string, oss: OSSEnum = OSSEnum.MIN) {
+    async putOSS(path: string) {
         const name = basename(path)
-        if (oss === OSSEnum.MIN) await minio.fPutObject(MINIO_BUCKET, name, path)
-        //if (oss === OSSEnum.COS) await cos.uploadFile({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name, FilePath: path })
-        else throw new Error('OSS type not found')
-        return `${oss}/${name}`
+        await oss.fPutObject(MINIO_BUCKET, name, path)
+        return `minio/${name}`
     },
 
     /**
@@ -307,15 +273,9 @@ export default {
      * @param name - The name of the file to download.
      * @param oss - The type of OSS (COS or MIN) to use. Defaults to COS.
      * @returns A readable stream of the downloaded file.
-     * @throws An error if the OSS type is not found.
      */
-    async getOSSFile(name: string, oss: OSSEnum = OSSEnum.COS) {
-        if (oss === OSSEnum.MIN) return await minio.getObject(MINIO_BUCKET, name)
-        // if (oss === OSSEnum.COS) {
-        // const res = await cos.getObject({ Bucket: COS_BUCKET, Region: COS_REGION, Key: name })
-        // return Readable.from(res.Body)
-        // }
-        else throw new Error('OSS type not found')
+    async getOSSFile(name: string) {
+        return await oss.getObject(MINIO_BUCKET, name)
     },
 
     /**
@@ -323,7 +283,6 @@ export default {
      *
      * @param url The URL from which to fetch the file.
      * @returns A Promise that resolves to a Readable stream of the fetched file.
-     * @throws Will throw an error if the HTTP request fails or if the URL is invalid.
      */
     async getHttpFile(url: string) {
         return await this.get<undefined, Readable>(url, undefined, { responseType: 'stream' })
@@ -334,7 +293,6 @@ export default {
      *
      * @param filePath The path to the local file to be read.
      * @returns A Readable stream of the file content.
-     * @throws Will throw an error if the file does not exist or cannot be accessed.
      */
     getLocalFile(path: string) {
         if (existsSync(path)) return createReadStream(path)
@@ -348,10 +306,7 @@ export default {
      * @returns A readable stream of the file.
      */
     async getFileStream(path: string) {
-        const oss = path.split('/')[0] as OSSEnum
-        const name = basename(path)
-
-        if (Object.values(OSSEnum).includes(oss)) return await this.getOSSFile(name, oss)
+        if (path.startsWith('minio')) return await this.getOSSFile(path.split('/')[1])
         else if (path.startsWith('http://') || path.startsWith('https://')) return await this.getHttpFile(path)
         else return this.getLocalFile(path)
     },
@@ -364,7 +319,7 @@ export default {
      * @returns A Promise that resolves to the local path of the saved file.
      */
     async getStreamFile(stream: Readable, name: string) {
-        const path = join(tmpdir(), `${uuid.v4()}${extname(name)}`)
+        const path = join(tmpdir(), `${randomUUID()}${extname(name)}`)
         return new Promise<string>((resolve, reject) =>
             stream
                 .pipe(createWriteStream(path))
@@ -424,15 +379,44 @@ export default {
 
         return `${aspectRatioWidth}:${aspectRatioHeight}`
     },
+
+    /**
+     * Converts a file to base64 encoding.
+     *
+     * @param file - The path to the file.
+     * @returns The base64 encoded string.
+     */
     file2base64(file: string) {
         return readFileSync(file).toString('base64')
     },
+
+    /**
+     * Checks if a string is a valid domain name.
+     *
+     * @param text - The string to check.
+     * @returns `true` if the string is a valid domain name, otherwise `false`.
+     */
     isDomain(text: string) {
         return isDomain(text)
     },
+
+    /**
+     * Checks if a string represents a TLS/HTTPS URL.
+     *
+     * @param text - The string to check.
+     * @returns `true` if the string starts with "https", otherwise `false`.
+     */
     isTLS(text: string) {
         return text.startsWith('https')
     },
+
+    /**
+     * Checks if a string is a valid base64 encoded value.
+     *
+     * @param text - The string to check.
+     * @param allowMime - Optional flag to allow MIME types as part of the base64 string. Defaults to `false`.
+     * @returns `true` if the string is a valid base64 encoded value, otherwise `false`.
+     */
     isBase64(text: string, allowMime: boolean = false) {
         return isBase64(text, { allowMime })
     }
