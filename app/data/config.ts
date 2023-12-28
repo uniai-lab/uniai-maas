@@ -197,6 +197,16 @@ export default [
         description: '小程序版本'
     },
     {
+        key: 'SHOW_NEW_APP',
+        value: true,
+        description: '是否显示跳转新APP'
+    },
+    {
+        key: 'NEW_APP_ID',
+        value: 'wxf124c05330d154e7',
+        description: '新APP的ID'
+    },
+    {
         key: 'ADMIN_TOKEN',
         value: process.env.ADMIN_TOKEN,
         description: '超级管理员密码'

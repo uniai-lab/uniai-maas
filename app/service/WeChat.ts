@@ -84,7 +84,9 @@ export default class WeChat extends Service {
             menuInfo: await this.getConfig<ConfigMenuV2>('USER_MENU_INFO'),
             menuShare: await this.getConfig<ConfigMenuV2>('USER_MENU_SHARE'),
             menuFocus: await this.getConfig<ConfigMenuV2>('USER_MENU_FOCUS'),
-            menuAdv: await this.getConfig<ConfigMenuV2>('USER_MENU_ADV')
+            menuAdv: await this.getConfig<ConfigMenuV2>('USER_MENU_ADV'),
+            showNewApp: await this.getConfig('SHOW_NEW_APP'),
+            newAppId: await this.getConfig('NEW_APP_ID')
         }
     }
 

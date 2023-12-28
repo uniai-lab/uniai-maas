@@ -32,7 +32,7 @@ const { MINIO_ACCESS_KEY, MINIO_END_POINT, MINIO_PORT, MINIO_SECRET_KEY, MINIO_B
 const MIN_SPLIT_SIZE = 400
 
 // Sensitive words dictionary for mint filter
-const MINT_JSON_DICT = `${ROOT_PATH}/config/sensitive.json`
+const MINT_JSON_DICT = `${ROOT_PATH}/app/data/sensitive.json`
 
 // MinIO client
 const oss = new MINIO.Client({

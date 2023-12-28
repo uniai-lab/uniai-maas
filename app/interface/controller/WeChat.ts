@@ -122,6 +122,8 @@ export interface ConfigResponse {
     menuShare: ConfigMenuV2
     menuFocus: ConfigMenuV2
     menuAdv: ConfigMenuV2
+    showNewApp: string
+    newAppId: string
 }
 
 export interface ConfigTask {
