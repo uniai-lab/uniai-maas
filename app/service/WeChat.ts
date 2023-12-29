@@ -9,16 +9,9 @@ import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import md5 from 'md5'
-import {
-    ChatModelEnum,
-    ChatRoleEnum,
-    ChatSubModelEnum,
-    ContentAuditEnum,
-    EmbedModelEnum,
-    OSSEnum
-} from '@interface/Enum'
+import { ChatModelEnum, ChatRoleEnum, ChatSubModelEnum, EmbedModelEnum, OSSEnum } from '@interface/Enum'
 import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
-import { GPTChatResponse, GPTChatStreamResponse } from '@interface/OpenAI'
+import { GPTChatStreamResponse } from '@interface/OpenAI'
 import { GLMChatStreamResponse } from '@interface/GLM'
 import { SPKChatResponse } from '@interface/Spark'
 import { ChatMessage } from '@interface/controller/UniAI'
@@ -36,7 +29,6 @@ import {
     WXMsgCheckResponse
 } from '@interface/controller/WeChat'
 import $ from '@util/util'
-import fly from '@util/fly'
 import FormData from 'form-data'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
@@ -45,10 +37,6 @@ const CHAT_BACKTRACK = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const ERROR_CHAT_ID = 0.1
 const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
-const DEFAULT_CHAT_CHANCE = 0
-const DEFAULT_UPLOAD_CHANCE = 0
-const DEFAULT_UPLOAD_SIZE = 5 * 1024 * 1024
-const DEFAULT_LEVEL = 0
 
 // WeChat API
 const WX_AUTH_URL = 'https://api.weixin.qq.com/sns/jscode2session'
@@ -133,8 +121,8 @@ export default class WeChat extends Service {
             where: { wxOpenId: openid },
             include: ctx.model.UserChance
         })
-        // create a new user
         if (!user) {
+            // create a new user
             user = await ctx.model.User.create({
                 wxOpenId: openid,
                 avatar: await this.getConfig('DEFAULT_AVATAR_USER')
@@ -142,16 +130,11 @@ export default class WeChat extends Service {
             user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
             user.chance = await ctx.model.UserChance.create({
                 userId: user.id,
-                level: DEFAULT_LEVEL,
-                uploadSize: DEFAULT_UPLOAD_SIZE,
-                chatChance: DEFAULT_CHAT_CHANCE,
-                chatChanceUpdateAt: now,
-                chatChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE')),
+                chatChanceFree: parseInt(await this.getConfig('WEEK_FREE_CHAT_CHANCE')),
                 chatChanceFreeUpdateAt: now,
-                uploadChance: DEFAULT_UPLOAD_CHANCE,
-                uploadChanceUpdateAt: now,
-                uploadChanceFree: parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE')),
-                uploadChanceFreeUpdateAt: now
+                uploadChanceFree: parseInt(await this.getConfig('WEEK_FREE_UPLOAD_CHANCE')),
+                uploadChanceFreeUpdateAt: now,
+                uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
             })
             // give share reward
             if (fid) await this.shareReward(fid)
@@ -639,5 +622,20 @@ export default class WeChat extends Service {
                 return res.access_token
             } else throw new Error(`Fail to get wx access token, ${res.errcode}:${res.errmsg}`)
         }
+    }
+
+    // watch adv reward
+    async watchAdv(userId: number) {
+        const chance = await this.ctx.model.UserChance.findOne({
+            where: { userId },
+            attributes: ['id', 'userId', 'chatChance', 'chatChanceUpdateAt']
+        })
+        if (!chance) throw new Error('Invalid user chance')
+
+        chance.chatChance += parseInt(await this.getConfig('ADV_REWARD_CHAT_CHANCE'))
+        chance.chatChanceUpdateAt = new Date()
+
+        await chance.save()
+        await this.updateUserCache(userId)
     }
 }

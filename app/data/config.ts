@@ -4,30 +4,44 @@ import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/cont
 import { readFileSync } from 'fs'
 import ROOT_PATH from 'app-root-path'
 
+const ADV_REWARD_CHAT_CHANCE = 10
+const SHARE_REWARD_CHAT_CHANCE = 10
+const SHARE_REWARD_UPLOAD_CHANCE = 5
+const WEEK_FREE_CHAT_CHANCE = 99
+const WEEK_FREE_UPLOAD_CHANCE = 10
+const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
+const INIT_RESOURCE_ID = 449
+
 const menus: ConfigMenu[] = [
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
-        title: '5MB',
+        title: `${LIMIT_UPLOAD_SIZE / 1024 / 1024} MB`,
         tip: '上传限制'
     },
     {
-        image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
-        title: '10个',
-        tip: '每周上传'
+        image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
+        title: `${WEEK_FREE_CHAT_CHANCE} 次`,
+        tip: '每周对话'
     },
     {
-        image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
-        title: '99次',
-        tip: '每周对话'
+        image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
+        title: `${WEEK_FREE_UPLOAD_CHANCE} 个`,
+        tip: '每周上传'
     }
 ]
 
 const tasks: ConfigTask[] = [
     {
         title: '分享给好友',
-        tip: '对话+20 上传+5',
+        tip: `对话+${SHARE_REWARD_CHAT_CHANCE} 上传+${SHARE_REWARD_UPLOAD_CHANCE}`,
         button: '立即分享',
         type: 1 // 分享
+    },
+    {
+        title: '观看广告',
+        tip: `对话+${ADV_REWARD_CHAT_CHANCE}`,
+        button: '看一看',
+        type: 3 // 看广告
     },
     {
         title: '关注公众号',
@@ -257,33 +271,33 @@ export default [
         description: '默认用户名'
     },
     {
-        key: 'DEFAULT_FREE_CHAT_CHANCE',
-        value: 99,
+        key: 'WEEK_FREE_CHAT_CHANCE',
+        value: WEEK_FREE_CHAT_CHANCE,
         description: '每周免费对话次数'
     },
     {
-        key: 'DEFAULT_FREE_UPLOAD_CHANCE',
-        value: 10,
+        key: 'WEEK_FREE_UPLOAD_CHANCE',
+        value: WEEK_FREE_UPLOAD_CHANCE,
         description: '每周免费上传次数'
     },
     {
         key: 'SHARE_REWARD_CHAT_CHANCE',
-        value: 20,
+        value: SHARE_REWARD_CHAT_CHANCE,
         description: '分享奖励对话次数'
     },
     {
         key: 'SHARE_REWARD_UPLOAD_CHANCE',
-        value: 5,
+        value: SHARE_REWARD_UPLOAD_CHANCE,
         description: '分享奖励上传次数'
     },
     {
         key: 'ADV_REWARD_CHAT_CHANCE',
-        value: 20,
+        value: ADV_REWARD_CHAT_CHANCE,
         description: '广告增加聊天次数'
     },
     {
         key: 'ADV_REWARD_UPLOAD_CHANCE',
-        value: 2,
+        value: ADV_REWARD_CHAT_CHANCE,
         description: '广告增加上传次数'
     },
     {
@@ -293,7 +307,7 @@ export default [
     },
     {
         key: 'LIMIT_UPLOAD_SIZE',
-        value: 5 * 1024 * 1024,
+        value: LIMIT_UPLOAD_SIZE,
         description: '默认上传限制（Byte）'
     },
     {
@@ -313,7 +327,7 @@ export default [
     },
     {
         key: 'INIT_RESOURCE_ID',
-        value: 449,
+        value: INIT_RESOURCE_ID,
         description: '初始化文档ID'
     },
     {
@@ -344,32 +358,27 @@ export default [
     {
         key: 'WX_EMBED_MODEL',
         value: 'GLM',
-        description: '小程序默认embed模型'
+        description: '小程序embed模型'
     },
     {
         key: 'WX_CHAT_MODEL',
         value: 'SPARK',
-        description: '小程序默认chat模型'
+        description: '小程序chat模型'
     },
     {
         key: 'WX_CHAT_SUB_MODEL',
         value: 'v3.1',
-        description: '小程序默认chat子模型'
+        description: '小程序chat子模型'
     },
     {
         key: 'WX_RESOURCE_MODEL',
         value: 'SPARK',
-        description: '小程序默认resource模型'
+        description: '小程序resource模型'
     },
     {
         key: 'WX_RESOURCE_SUB_MODEL',
         value: 'v3.1',
-        description: '小程序默认resource子模型'
-    },
-    {
-        key: 'USER_BACKGROUND_IMG',
-        value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/user-home-bg.jpg',
-        description: '小程序用户界面背景图'
+        description: '小程序resource子模型'
     },
     // v1.0
     {
@@ -394,7 +403,7 @@ export default [
     {
         key: 'USER_MENU_MEMBER',
         value: JSON.stringify({
-            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1702545386798.png',
+            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128714624.png',
             title: '充值记录',
             tip: '历史充值记录',
             show: true
@@ -404,7 +413,7 @@ export default [
     {
         key: 'USER_MENU_INFO',
         value: JSON.stringify({
-            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1702545354024.png',
+            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128704007.png',
             title: '个人资料',
             tip: '修改个人信息',
             show: true
@@ -414,7 +423,7 @@ export default [
     {
         key: 'USER_MENU_SHARE',
         value: JSON.stringify({
-            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1702545377991.png',
+            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128723551.png',
             title: '分享给好友',
             tip: '增加20次对话和5次上传',
             show: true
@@ -424,7 +433,7 @@ export default [
     {
         key: 'USER_MENU_FOCUS',
         value: JSON.stringify({
-            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1702545371315.png',
+            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128731207.png',
             title: '关注公众号',
             tip: '中科苏州智能计算技术研究院',
             show: true
@@ -434,7 +443,7 @@ export default [
     {
         key: 'USER_MENU_ADV',
         value: JSON.stringify({
-            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1702545303066.png',
+            icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128696275.png',
             title: '观看广告',
             tip: '增加20次对话和2次上传',
             show: true

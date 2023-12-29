@@ -370,4 +370,12 @@ export default class WeChat {
         }
         ctx.service.res.success('Success to list resources', data)
     }
+
+    @Middleware(auth(), log())
+    @HTTPMethod({ path: '/watch-adv', method: HTTPMethodEnum.GET })
+    async watchAdv(@Context() ctx: UserContext) {
+        const user = ctx.user!
+        await ctx.service.weChat.watchAdv(user.id)
+        ctx.service.res.success('Success to get advertisement reward', null)
+    }
 }
