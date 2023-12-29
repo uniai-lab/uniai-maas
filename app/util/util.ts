@@ -32,7 +32,7 @@ const { MINIO_ACCESS_KEY, MINIO_END_POINT, MINIO_PORT, MINIO_SECRET_KEY, MINIO_B
 const MIN_SPLIT_SIZE = 400
 
 // Sensitive words dictionary for mint filter
-const MINT_JSON_DICT = `${ROOT_PATH}/app/data/sensitive.json`
+const mint = new Mint(JSON.parse(readFileSync(`${ROOT_PATH}/app/data/sensitive.json`, 'utf-8')))
 
 // MinIO client
 const oss = new MINIO.Client({
@@ -104,8 +104,6 @@ export default {
      */
     contentFilter(content: string, replace: boolean = true) {
         // Sensitive words filter
-        const json = this.json<string[]>(readFileSync(MINT_JSON_DICT, 'utf-8'))
-        const mint = new Mint(json!)
         return { verify: mint.verify(content), ...mint.filter(content, { replace }) }
     },
 

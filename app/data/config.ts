@@ -1,8 +1,8 @@
 /** @format */
 
+import ROOT_PATH from 'app-root-path'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
 import { readFileSync } from 'fs'
-import ROOT_PATH from 'app-root-path'
 
 const ADV_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_CHAT_CHANCE = 10
@@ -40,7 +40,7 @@ const tasks: ConfigTask[] = [
     {
         title: '观看广告',
         tip: `对话+${ADV_REWARD_CHAT_CHANCE}`,
-        button: '看一看',
+        button: '立即观看',
         type: 3 // 看广告
     },
     {
@@ -194,6 +194,7 @@ const vips: ConfigVIP[] = [
     }
 ]
 
+// write rows to config table
 export default [
     {
         key: 'APP_NAME',
@@ -212,7 +213,7 @@ export default [
     },
     {
         key: 'SHOW_NEW_APP',
-        value: true,
+        value: false,
         description: '是否显示跳转新APP'
     },
     {
