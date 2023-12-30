@@ -15,6 +15,7 @@ export class HTTPLog extends Model {
     userId: number
 
     @AllowNull(false)
+    @Default('')
     @Column(DataType.STRING)
     ip: string
 
