@@ -9,12 +9,16 @@ import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import md5 from 'md5'
-import { ChatModelEnum, ChatRoleEnum, ChatSubModelEnum, EmbedModelEnum, OSSEnum } from '@interface/Enum'
+import {
+    ChatModelEnum,
+    ChatRoleEnum,
+    ChatSubModelEnum,
+    ContentAuditEnum,
+    EmbedModelEnum,
+    OSSEnum
+} from '@interface/Enum'
 import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
-import { GPTChatStreamResponse } from '@interface/OpenAI'
-import { GLMChatStreamResponse } from '@interface/GLM'
-import { SPKChatResponse } from '@interface/Spark'
-import { ChatMessage } from '@interface/controller/UniAI'
+import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
     ConfigMenu,
     ConfigMenuV2,
@@ -34,6 +38,7 @@ import FormData from 'form-data'
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
 const CHAT_BACKTRACK = 10
+const DIALOG_LIMIT = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const ERROR_CHAT_ID = 0.1
 const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
@@ -299,8 +304,8 @@ export default class WeChat extends Service {
                 { dialogId: dialog.id, role: ChatRoleEnum.ASSISTANT, content }
             ])
         }
-
-        return dialog
+        dialog.dialogAt = new Date()
+        return await dialog.save()
     }
 
     // list all the chats from a user and dialog
@@ -310,7 +315,7 @@ export default class WeChat extends Service {
             model: ctx.model.Chat,
             limit,
             order: [['createdAt', 'DESC']],
-            where: { isDel: false, isEffect: true }
+            where: { isDel: false }
         }
         const dialog = dialogId
             ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
@@ -334,12 +339,20 @@ export default class WeChat extends Service {
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
-            include: { model: ctx.model.Chat, limit: CHAT_BACKTRACK, order: [['id', 'desc']] }
+            where: dialogId
+                ? { id: dialogId, userId, isEffect: true, isDel: false }
+                : { resourceId: null, userId, isEffect: true, isDel: false },
+            limit: DIALOG_LIMIT,
+            include: {
+                model: ctx.model.Chat,
+                limit: CHAT_BACKTRACK,
+                order: [['updatedAt', 'desc']],
+                where: { isEffect: true, isDel: false }
+            }
         })
         if (!dialog) throw new Error('Can not find dialog')
         dialog.chats.reverse()
-        const resourceId = dialog.resourceId
+        dialogId = dialog.id
 
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
@@ -348,6 +361,7 @@ export default class WeChat extends Service {
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
 
         // add related resource
+        const resourceId = dialog.resourceId
         if (resourceId) {
             let content = ctx.__('document content start')
             // query resource
@@ -378,9 +392,9 @@ export default class WeChat extends Service {
         // set chat stream cache, should after chat stream started
         const cache: ChatStreamCache = {
             chatId: 0,
-            dialogId: dialog.id,
-            content: '',
+            dialogId,
             resourceId,
+            content: '',
             model,
             subModel,
             time: Date.now()
@@ -388,62 +402,42 @@ export default class WeChat extends Service {
         await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
 
         const parser = createParser(e => {
-            try {
-                if (e.type === 'event') {
-                    if (model === ChatModelEnum.GPT) {
-                        const obj = $.json<GPTChatStreamResponse>(e.data)
-                        cache.content += obj?.choices[0].delta.content || ''
-                        cache.subModel = obj?.model || null
-                    }
-                    if (model === ChatModelEnum.GLM) {
-                        const obj = $.json<GLMChatStreamResponse>(e.data)
-                        cache.content += obj?.choices[0].delta.content || ''
-                        cache.subModel = obj?.model || null
-                    }
-                    if (model === ChatModelEnum.SPARK) {
-                        const obj = $.json<SPKChatResponse>(e.data)
-                        cache.content += obj?.payload.choices.text[0].content || ''
-                        cache.subModel = obj?.payload.model || null
-                    }
+            if (e.type === 'event') {
+                const obj = $.json<ChatResponse>(e.data)
+                if (obj) {
+                    cache.content += obj.content
+                    cache.subModel = obj.model
                     app.redis.set(`chat_${userId}`, JSON.stringify(cache))
                 }
-            } catch (e) {
-                cache.chatId = ERROR_CHAT_ID
-                cache.content = (e as Error).message
-                app.redis.set(`chat_${userId}`, JSON.stringify(cache))
             }
         })
 
         // add listen stream
-        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-        stream.on('error', e => {
+        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
+        stream.on('error', async e => {
             cache.content = e.message
-            cache.chatId = ERROR_CHAT_ID
-            app.redis.set(`chat_${userId}`, JSON.stringify(cache))
         })
         stream.on('end', async () => {
             if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
             else await user.decrement({ chatChance: 1 })
-            await this.updateUserCache(user.userId)
-
+            this.updateUserCache(user.userId)
+        })
+        stream.on('close', async () => {
+            parser.reset()
+            const { dialogId, resourceId, content, model, subModel } = cache
+            const role = ASSISTANT
             // save assistant response
-            if (cache.content) {
-                const chat = await ctx.model.Chat.create({
-                    dialogId: cache.dialogId,
-                    resourceId,
-                    role: ASSISTANT,
-                    content: cache.content,
-                    model: cache.model,
-                    subModel: cache.subModel
-                })
+            if (content) {
+                const chat = await ctx.model.Chat.create({ dialogId, resourceId, role, content, model, subModel })
                 cache.chatId = chat.id
             } else cache.chatId = ERROR_CHAT_ID
             app.redis.set(`chat_${userId}`, JSON.stringify(cache))
         })
-        stream.on('close', () => parser.reset())
 
+        // WeChat need to audit input content
+        const isEffect = (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag
         // save user prompt
-        return await ctx.model.Chat.create({ dialogId: dialog.id, role: USER, content: input })
+        return await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
     }
 
     // get current chat stream by userId

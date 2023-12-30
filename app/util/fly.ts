@@ -6,9 +6,10 @@
  * @author devilyouwei
  */
 
-import os from 'os'
-import { createHmac, randomUUID } from 'crypto'
 import WebSocket from 'ws'
+import moment from 'moment'
+import { hostname } from 'os'
+import { createHmac, randomUUID } from 'crypto'
 import { PassThrough, Readable } from 'stream'
 import {
     FlyAuditParams,
@@ -19,8 +20,8 @@ import {
     SPKChatResponse
 } from '@interface/Spark'
 import { FLYAuditType, SPKChatRoleEnum, SPKSubModel, SPKSubModelDomain } from '@interface/Enum'
+import { ChatResponse } from '@interface/controller/UniAI'
 import $ from '@util/util'
-import moment from 'moment'
 
 const { FLY_API_KEY, FLY_APP_ID, FLY_API_SECRET } = process.env
 
@@ -47,59 +48,83 @@ export default {
         temperature?: number,
         maxLength?: number
     ) {
-        // filter other roles
+        // only user and assistant role supported
         for (const i in messages) if (!SPKChatRoleEnum[messages[i].role]) messages[i].role = SPKChatRoleEnum.USER
 
+        // get specific generated URL
         const url = getSparkURL(model)
         const ws = new WebSocket(url)
 
-        const domain = SPKSubModelDomain[model]
-
+        // top is integer in [1,6]
+        if (typeof top === 'number') {
+            top = Math.floor(top * 10)
+            top = top < 1 ? 1 : top
+            top = top > 6 ? 6 : top
+        }
         const input: SPKChatRequest = {
             header: { app_id: FLY_APP_ID },
-            parameter: { chat: { domain, temperature, max_tokens: maxLength, top_k: top } },
+            parameter: { chat: { domain: SPKSubModelDomain[model], temperature, max_tokens: maxLength, top_k: top } },
             payload: { message: { text: messages } }
         }
 
-        ws.on('open', () => ws.send(JSON.stringify(input)))
-
-        return new Promise<SPKChatResponse | Readable>((resolve, reject) => {
+        return new Promise<ChatResponse | Readable>((resolve, reject) => {
+            const data: ChatResponse = {
+                content: '',
+                model: `spark-${model}`,
+                object: '',
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0
+            }
+            ws.on('open', () => ws.send(JSON.stringify(input)))
             if (stream) {
-                const stream = new PassThrough()
+                // transfer to SSE data stream
+                const output = new PassThrough()
                 ws.on('message', (e: Buffer) => {
-                    const res = $.json<SPKChatResponse>(e.toString('utf8'))
-                    if (!res) return stream.destroy(new Error('Response data is not JSON'))
-                    if (res.header.code !== 0) return stream.destroy(new Error(res.header.message))
+                    const res = $.json<SPKChatResponse>(e.toString('utf-8'))
+                    if (!res) return output.destroy(new Error('Response data is not JSON'))
 
-                    // Simulate SSE data stream
-                    res.payload.model = `spark-${model}`
-                    res.payload.object = `chat.completion.chunk`
-                    stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                    if (res.header.code === 0 && res.payload) {
+                        data.content = res.payload.choices.text[0].content
+                        data.promptTokens = res.payload?.usage?.text.prompt_tokens || 0
+                        data.completionTokens = res.payload?.usage?.text.completion_tokens || 0
+                        data.totalTokens = res.payload?.usage?.text.total_tokens || 0
+                        data.object = `chat.completion.chunk`
+                        output.write(`data: ${JSON.stringify(data)}\n\n`)
+                    } else {
+                        output.destroy(new Error(res.header.message))
+                        ws.close()
+                    }
+
+                    if (res.header.status === 2) ws.close()
                 })
-                ws.on('error', e => stream.destroy(e))
-                ws.on('close', () => stream.end())
-                resolve(stream as Readable)
+                ws.on('close', () => output.end())
+                ws.on('error', e => output.destroy(e))
+                resolve(output as Readable)
             } else {
-                let res: SPKChatResponse | null = null
-                ws.on('error', e => reject(e))
                 ws.on('message', (e: Buffer) => {
-                    const data = $.json<SPKChatResponse>(e.toString('utf8'))
-                    if (!data) return reject(new Error('Response data is not JSON'))
-                    if (data.header.code !== 0) return reject(new Error(data.header.message))
-                    if (res) {
-                        res.payload.choices.text[0].content += data.payload.choices.text[0].content
-                        res.payload.usage = data.payload.usage
-                    } else res = data
+                    const res = $.json<SPKChatResponse>(e.toString('utf-8'))
+                    if (!res) return reject(new Error('Response data is not JSON'))
+
+                    if (res.header.code === 0 && res.payload) {
+                        data.content += res.payload.choices.text[0].content
+                        data.promptTokens = res.payload.usage?.text.prompt_tokens || 0
+                        data.completionTokens = res.payload.usage?.text.completion_tokens || 0
+                        data.totalTokens = res.payload.usage?.text.total_tokens || 0
+                        data.object = `chat.completion`
+                    } else {
+                        reject(new Error(res.header.message))
+                        ws.close()
+                    }
+
+                    if (res.header.status === 2) ws.close()
                 })
-                ws.on('close', () => {
-                    if (!res) return reject(new Error('Response data is null'))
-                    res.payload.model = `spark-${model}`
-                    res.payload.object = `chat.completion`
-                    resolve(res)
-                })
+                ws.on('close', () => resolve(data))
+                ws.on('error', e => reject(e))
             }
         })
     },
+
     // use iFlyTek Audit API to audit text and image
     // input content for image is file base64
     async audit(content: string) {
@@ -120,7 +145,7 @@ export default {
  * @returns The WebSocket URL.
  */
 function getSparkURL(version: SPKSubModel) {
-    const host = os.hostname()
+    const host = hostname()
     const date = new Date().toUTCString()
     const algorithm = 'hmac-sha256'
     const headers = 'host date request-line'

@@ -9,13 +9,12 @@ export type ChatMessage = GPTChatMessage | GLMChatMessage | SPKChatMessage
 
 export interface ChatRequest {
     prompts: ChatMessage[]
-    maxLength?: number
-    top?: number
-    temperature?: number
     model?: ChatModelEnum
     subModel?: ChatSubModelEnum
-    chunk?: boolean
     stream?: boolean
+    top?: number
+    temperature?: number
+    maxLength?: number
 }
 
 export interface QueryResourceRequest {

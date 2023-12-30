@@ -37,7 +37,7 @@ export interface SPKChatResponse {
         sid: string
         status: number
     }
-    payload: {
+    payload?: {
         choices: {
             status: number
             seq: number

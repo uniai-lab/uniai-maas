@@ -2,15 +2,13 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { PassThrough, Readable } from 'stream'
-import { createParser } from 'eventsource-parser'
 import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
 import { extname } from 'path'
 import { AIAuditResponse, AuditResponse, ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
-import { GPTChatMessage, GPTChatResponse, GPTChatStreamResponse } from '@interface/OpenAI'
-import { GLMChatMessage, GLMChatStreamResponse } from '@interface/GLM'
-import { SPKChatMessage, SPKChatResponse } from '@interface/Spark'
+import { GPTChatMessage } from '@interface/OpenAI'
+import { GLMChatMessage } from '@interface/GLM'
+import { SPKChatMessage } from '@interface/Spark'
 import {
     ChatModelEnum,
     ChatRoleEnum,
@@ -33,6 +31,8 @@ import fly from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
 import $ from '@util/util'
+import { PassThrough, Readable } from 'stream'
+import { createParser } from 'eventsource-parser'
 
 const MAX_PAGE = 6
 const MAX_TOKEN = 8192
@@ -144,7 +144,7 @@ export default class UniAI extends Service {
             subModel = (subModel as GPTSubModel) || (await this.getConfig<GPTSubModel>('GPT_DEFAULT_SUB_MODEL'))
             return await gpt.chat(subModel, prompts as GPTChatMessage[], stream, top, temperature, maxLength)
         } else if (model === ChatModelEnum.GLM) {
-            subModel = (subModel as GLMSubModel) || (await this.getConfig<GPTSubModel>('GLM_DEFAULT_SUB_MODEL'))
+            subModel = (subModel as GLMSubModel) || (await this.getConfig<GLMSubModel>('GLM_DEFAULT_SUB_MODEL'))
             return await glm.chat(subModel, prompts as GLMChatMessage[], stream, top, temperature, maxLength)
         } else if (model === ChatModelEnum.SPARK) {
             subModel = (subModel as SPKSubModel) || (await this.getConfig<SPKSubModel>('SPK_DEFAULT_SUB_MODEL'))
@@ -152,65 +152,25 @@ export default class UniAI extends Service {
         } else throw new Error('Chat model not found')
     }
 
-    // handle chat stream
-    parseSSE(message: Readable, model: ChatModelEnum = ChatModelEnum.GLM, chunk: boolean = false) {
-        this.ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
-        // define return data
-        const res: StandardResponse<ChatResponse> = {
-            status: 1,
-            data: { content: '', promptTokens: 0, completionTokens: 0, totalTokens: 0, model: '', object: '' },
-            msg: 'success to get chat stream message'
-        }
-        // count tokens
-        const stream = new PassThrough()
+    // concat chat stream chunk
+    concatChunk(stream: Readable) {
+        const output = new PassThrough()
+        let content = ''
         const parser = createParser(e => {
             if (e.type === 'event') {
-                if (model === ChatModelEnum.GPT) {
-                    const obj = $.json<GPTChatStreamResponse>(e.data)
-                    if (obj?.choices[0].delta?.content) {
-                        if (chunk) res.data.content = obj.choices[0].delta.content
-                        else res.data.content += obj.choices[0].delta.content
-                        res.data.model = obj.model
-                        res.data.object = obj.object
-                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
-                    }
-                }
-                if (model === ChatModelEnum.GLM) {
-                    const obj = $.json<GLMChatStreamResponse>(e.data)
-                    if (obj?.choices[0].delta?.content) {
-                        if (chunk) res.data.content = obj.choices[0].delta.content
-                        else res.data.content += obj.choices[0].delta.content
-                        res.data.model = obj.model
-                        res.data.object = obj.object
-                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
-                    }
-                }
-                if (model === ChatModelEnum.SPARK) {
-                    const obj = $.json<SPKChatResponse>(e.data)
-                    if (obj?.payload.choices.text[0].content) {
-                        const { payload } = obj
-                        if (chunk) res.data.content = payload.choices.text[0].content
-                        else res.data.content += payload.choices.text[0].content
-                        res.data.completionTokens = payload.usage?.text.completion_tokens || 0
-                        res.data.promptTokens = payload.usage?.text.prompt_tokens || 0
-                        res.data.totalTokens = payload.usage?.text.total_tokens || 0
-                        res.data.model = payload.model
-                        res.data.object = payload.object
-                        stream.write(`data: ${JSON.stringify(res)}\n\n`)
-                    }
+                const obj = $.json<ChatResponse>(e.data)
+                if (obj) {
+                    obj.content = content += obj.content
+                    output.write(`data: ${JSON.stringify(obj)}\n\n`)
                 }
             }
         })
 
-        message.on('data', (buff: Buffer) => parser.feed(buff.toString('utf8')))
-        message.on('error', e => {
-            res.data.content = e.message
-            stream.write(`data: ${JSON.stringify(res)}\n\n`)
-            stream.end()
-        })
-        message.on('end', () => stream.end())
-        message.on('close', () => parser.reset())
-        return stream as Readable
+        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
+        stream.on('error', e => output.destroy(e))
+        stream.on('end', () => output.end())
+        stream.on('close', () => parser.reset())
+        return output as Readable
     }
 
     // upload file
@@ -414,7 +374,8 @@ export default class UniAI extends Service {
     // check content by iFlyTek, WeChat or mint-filter
     // content is text or image, image should be base64 string
     async audit(content: string, provider?: ContentAuditEnum, model?: ChatModelEnum, subModel?: ChatSubModelEnum) {
-        if (!content.trim()) throw new Error('Content is empty')
+        if (!content.trim()) throw new Error('Audit content is empty')
+        content = content.replace(/\r\n|\n/g, ' ')
 
         const res: AuditResponse = { flag: true, data: null }
 
@@ -430,22 +391,19 @@ export default class UniAI extends Service {
         } else if (provider === ContentAuditEnum.AI) {
             model = model || (await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL'))
             subModel = subModel || (await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL'))
-            const message: ChatMessage[] = [
-                {
-                    role: ChatRoleEnum.SYSTEM,
-                    content: `${await this.getConfig('AUDITOR_AI_PROMPT')}\n“${content.replace(/\r\n|\n/g, ' ')}”`
-                }
-            ]
+            content = (await this.getConfig('AUDITOR_AI_PROMPT')) + content
+            const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content }]
             console.log(message)
-            const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 0.75, 0)
-            const text =
-                model === ChatModelEnum.SPARK
-                    ? (result as SPKChatResponse).payload.choices.text[0].content
-                    : (result as GPTChatResponse).choices[0].message.content
 
-            const json = $.json<AIAuditResponse>(text)
-            res.flag = json?.safe || false
-            res.data = result
+            try {
+                const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 1, 0.1)
+                const json = $.json<AIAuditResponse>((result as ChatResponse).content)
+                res.flag = json?.safe || false
+                res.data = result
+            } catch (e) {
+                res.flag = false
+                res.data = e as Error
+            }
         } else {
             const result = $.contentFilter(content)
             res.flag = result.verify

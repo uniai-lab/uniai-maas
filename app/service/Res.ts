@@ -3,40 +3,50 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
-import { PassThrough } from 'stream'
+import { PassThrough, Readable } from 'stream'
+import $ from '@util/util'
+import { createParser } from 'eventsource-parser'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Res extends Service {
     // success response format
-    success<T>(msg: string, data: T) {
-        const response: StandardResponse<T> = {
-            status: 1,
-            msg: this.ctx.__(msg),
-            data
-        }
-        this.ctx.body = response
-    }
-    // error response format
-    error(e: Error, stream: boolean = false) {
-        if (stream) {
-            this.ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
+    success(msg: string, data: string | object | Readable | null = null) {
+        const { ctx } = this
+        const res: StandardResponse = { status: 1, msg: ctx.__(msg), data: null }
+        if (data instanceof Readable) {
+            ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
+            // parse stream
             const stream = new PassThrough()
-            this.ctx.body = stream
-            const data: StandardResponse<null> = { status: 0, msg: this.ctx.__(e.message), data: null }
-            stream.write(`data: ${JSON.stringify(data)}\n\n`)
-            stream.end()
+            const parser = createParser(e => {
+                if (e.type === 'event') {
+                    res.data = $.json(e.data)
+                    stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                }
+            })
+
+            data.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
+            data.on('error', e => {
+                res.msg = e.message
+                res.status = 0
+                stream.write(`data: ${JSON.stringify(res)}\n\n`)
+                stream.end()
+                // stream.destroy(e)
+            })
+            data.on('end', () => stream.end())
+            data.on('close', () => parser.reset())
+
+            ctx.body = stream
         } else {
-            const response: StandardResponse<null> = { status: 0, msg: this.ctx.__(e.message), data: null }
-            this.ctx.body = response
+            res.data = data
+            ctx.body = res
         }
     }
-    // error with no auth
+    // error response
+    error(e: Error) {
+        this.ctx.body = { status: 0, msg: this.ctx.__(e.message), data: null }
+    }
+    // error response because of no auth
     noAuth() {
-        const response: StandardResponse<null> = {
-            status: -1,
-            msg: this.ctx.__('No auth to access'),
-            data: null
-        }
-        this.ctx.body = response
+        this.ctx.body = { status: -1, msg: this.ctx.__('No auth to access'), data: null }
     }
 }

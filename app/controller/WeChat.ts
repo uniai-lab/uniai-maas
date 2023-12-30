@@ -195,11 +195,11 @@ export default class WeChat {
             chatId: res.id,
             type: true,
             role: res.role,
-            model: res.model,
-            resourceId: res.resourceId,
-            content: $.contentFilter(res.content).verify ? res.content : ctx.__('not compliant'),
+            content: res.isEffect ? res.content : ctx.__('not compliant'),
             userId: user.id,
             dialogId: res.dialogId,
+            resourceId: res.resourceId,
+            model: res.model,
             avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
         }
 
@@ -242,7 +242,7 @@ export default class WeChat {
                 chatId: item.id,
                 role: item.role,
                 type: item.role === ChatRoleEnum.USER,
-                content: $.contentFilter(item.content).verify ? item.content : ctx.__('not compliant'),
+                content: item.isEffect ? item.content : ctx.__('not compliant'),
                 resourceId: item.resourceId,
                 model: item.model,
                 avatar:
@@ -376,6 +376,6 @@ export default class WeChat {
     async watchAdv(@Context() ctx: UserContext) {
         const user = ctx.user!
         await ctx.service.weChat.watchAdv(user.id)
-        ctx.service.res.success('Success to get advertisement reward', null)
+        ctx.service.res.success('Success to get advertisement reward')
     }
 }

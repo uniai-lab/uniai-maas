@@ -33,12 +33,12 @@ export default class LeChat {
     @Middleware(auth())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
-        const { prompts, model, chunk, top, temperature, maxLength } = params
+        const { prompts, model, top, temperature, maxLength } = params
         if (!prompts.length) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, true, model, undefined, top, temperature, maxLength)
 
-        ctx.body = ctx.service.uniAI.parseSSE(res as Readable, model, chunk)
+        ctx.body = res as Readable
     }
 
     @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })

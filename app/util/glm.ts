@@ -19,8 +19,9 @@ import {
     GLMChatStreamResponse,
     GLMTurboChatResponse
 } from '@interface/GLM'
-import $ from '@util/util'
 import { GLMChatRoleEnum, GLMSubModel } from '@interface/Enum'
+import { ChatResponse } from '@interface/controller/UniAI'
+import $ from '@util/util'
 
 const { GLM_LOCAL_API, GLM_REMOTE_API_KEY } = process.env
 const EXPIRE_IN = 10 * 1000
@@ -60,12 +61,47 @@ export default {
         temperature?: number,
         maxLength?: number
     ) {
+        const data: ChatResponse = {
+            content: '',
+            model: '',
+            object: '',
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0
+        }
         if (model === GLMSubModel.LOCAL) {
-            return await $.post<GLMChatRequest, Readable | GLMChatResponse>(
+            const res = await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_LOCAL_API}/chat`,
                 { messages, stream, temperature, top_p: top, max_tokens: maxLength },
                 { responseType: stream ? 'stream' : 'json' }
             )
+            if (res instanceof Readable) {
+                const output = new PassThrough()
+                const parser = createParser(e => {
+                    if (e.type === 'event') {
+                        const obj = $.json<GLMChatStreamResponse>(e.data)
+                        if (obj?.choices[0].delta?.content) {
+                            data.content = obj.choices[0].delta.content
+                            data.model = obj.model
+                            data.object = obj.object
+                            output.write(`data: ${JSON.stringify(data)}\n\n`)
+                        }
+                    }
+                })
+                res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
+                res.on('error', e => output.destroy(e))
+                res.on('end', () => output.end())
+                res.on('close', () => parser.reset())
+                return output as Readable
+            } else {
+                data.content = res.choices[0].message.content || ''
+                data.model = res.model
+                data.object = res.object
+                data.promptTokens = res.usage?.prompt_tokens || 0
+                data.completionTokens = res.usage?.completion_tokens || 0
+                data.totalTokens = res.usage?.total_tokens || 0
+                return data
+            }
         } else if (model === GLMSubModel.TURBO) {
             // Recreate prompt for chatglm-turbo
             const prompt: GLMChatMessage[] = []
@@ -97,42 +133,33 @@ export default {
                 const output = new PassThrough()
                 const parser = createParser(e => {
                     if (e.type === 'event') {
-                        const content = e.data
-                        const id = e.id || ''
-                        const json: GLMChatStreamResponse = {
-                            id,
-                            model: 'chatglm-turbo',
-                            object: 'chat.completion.chunk',
-                            created: Date.now(),
-                            choices: [{ delta: { content, role: 'assistant' }, finish_reason: 'stop', index: 0 }]
+                        if (e.data) {
+                            data.content = e.data
+                            data.model = 'chatglm-turbo'
+                            data.object = 'chat.completion.chunk'
+                            output.write(`data: ${JSON.stringify(data)}\n\n`)
                         }
-                        if (content) output.write(`data: ${JSON.stringify(json)}\n\n`)
                     }
                 })
-                res.on('data', (buff: Buffer) => parser.feed(buff.toString()))
+                res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
                 res.on('error', e => output.destroy(e))
                 res.on('end', () => output.end())
                 res.on('close', () => parser.reset())
                 return output as Readable
             } else {
                 // Check response
-                if (res.code && res.code !== 200) throw new Error(res.msg)
+                if (res.code !== 200) throw new Error(res.msg)
                 if (!res.data) throw new Error('Empty chat data response')
 
-                const message = res.data.choices[0]
-                message.content = message.content.replace(/^"|"$/g, '').trim()
-                return {
-                    id: '0',
-                    model: 'chatglm-turbo',
-                    object: 'chat.completion',
-                    created: Date.now(),
-                    choices: [{ message, index: 0, finish_reason: 'stop' }],
-                    usage: res.data.usage
-                } as GLMChatResponse
+                data.content = res.data.choices[0].content.replace(/^"|"$/g, '').trim()
+                data.model = 'chatglm-turbo'
+                data.object = 'chat.completion'
+                data.promptTokens = res.data.usage.prompt_tokens
+                data.completionTokens = res.data.usage.completion_tokens
+                data.totalTokens = res.data.usage.total_tokens
+                return data
             }
-        } else {
-            throw new Error('GLM model not found')
-        }
+        } else throw new Error('GLM sub model not found')
     }
 }
 

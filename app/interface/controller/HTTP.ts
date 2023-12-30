@@ -1,7 +1,7 @@
 /** @format */
 
-interface StandardResponse<T> {
+interface StandardResponse {
     status: number
-    data: T
+    data: object | null | string
     msg: string
 }

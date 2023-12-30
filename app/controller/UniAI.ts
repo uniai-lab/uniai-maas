@@ -35,51 +35,23 @@ export default class UniAI {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
-        const { top, temperature, maxLength, prompts, chunk, stream, subModel } = params
+        const { top, temperature, maxLength, prompts, stream, subModel } = params
         const model = params.model || ChatModelEnum.GLM
-        if (!prompts.length) throw new Error('Empty prompts')
+        if (!prompts[0] || !prompts[0].content) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, stream, model, subModel, top, temperature, maxLength)
-        if (res instanceof Readable) ctx.body = ctx.service.uniAI.parseSSE(res, model, chunk)
-        else if (model === ChatModelEnum.GPT || model === ChatModelEnum.GLM) {
-            // chat to GPT/GLM
-            const { choices, model, object, usage } = res as GPTChatResponse
-            if (choices[0].message?.content)
-                ctx.service.res.success(`Success to chat to ${model}`, {
-                    content: choices[0].message.content,
-                    promptTokens: usage?.prompt_tokens,
-                    completionTokens: usage?.completion_tokens,
-                    totalTokens: usage?.total_tokens,
-                    model,
-                    object
-                } as ChatResponse)
-            else throw new Error(`Error to chat to ${model}`)
-        } else if (model === ChatModelEnum.SPARK) {
-            // chat to SPARK
-            const { payload } = res as SPKChatResponse
-            if (payload.choices.text[0].content)
-                ctx.service.res.success(`Success to chat to ${model}`, {
-                    content: payload.choices.text[0].content,
-                    promptTokens: payload.usage?.text.prompt_tokens,
-                    completionTokens: payload.usage?.text.completion_tokens,
-                    totalTokens: payload.usage?.text.total_tokens,
-                    model: payload.model,
-                    object: payload.object
-                } as ChatResponse)
-            else throw new Error(`Error to chat to ${model}`)
-        }
+        ctx.service.res.success(`Success to chat to ${model}`, res)
     }
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
-        const { prompts, top, temperature, maxLength, subModel, chunk } = params
+        const { prompts, top, temperature, maxLength, subModel } = params
         const model = params.model || ChatModelEnum.GLM
-        if (!prompts.length) throw new Error('Empty prompts')
+        if (!prompts[0] || !prompts[0].content) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, true, model, subModel, top, temperature, maxLength)
-
-        ctx.body = ctx.service.uniAI.parseSSE(res as Readable, model, chunk)
+        ctx.service.res.success(`Success to chat to ${model}`, ctx.service.uniAI.concatChunk(res as Readable))
     }
 
     @Middleware(auth(), log())

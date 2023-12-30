@@ -8,20 +8,20 @@ export default function log() {
         const { ip, method, header, body, query, files, url } = ctx.request
         const [controller, action] = url.split(/[\/?]/).filter(item => item.trim() !== '')
         const userId = ctx.user?.id
+        const res: StandardResponse = { status: 1, msg: '', data: null }
         try {
             await next()
-            const { status, msg, data } =
-                ctx.response.type === 'application/json'
-                    ? (ctx.response.body as StandardResponse<object>)
-                    : { status: 1, msg: ctx.response.message, data: ctx.response.type }
-            const log = { userId, ip, method, header, body, query, files, status, data, msg, controller, action }
-            await ctx.model.HTTPLog.create(log)
+            const { response } = ctx
+            res.data = response.body.data || response.type
+            res.msg = response.body.msg || response.message
         } catch (e) {
-            const status = 0
-            const msg = (e as Error).message
-            const log = { userId, ip, method, header, body, query, files, status, msg, controller, action }
-            await ctx.model.HTTPLog.create(log)
+            res.status = 0
+            res.msg = (e as Error).message
             throw e
+        } finally {
+            const { status, msg, data } = res
+            const log = { userId, ip, method, header, body, query, files, status, data, msg, controller, action }
+            ctx.model.HTTPLog.create(log)
         }
     }
 }

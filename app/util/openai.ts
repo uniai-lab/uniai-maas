@@ -6,7 +6,7 @@
  */
 
 import $ from '@util/util'
-import { Readable } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import {
     GPTChatRequest,
     GPTChatResponse,
@@ -16,9 +16,12 @@ import {
     GPTImagineRequest,
     GPTImagineResponse,
     GPTChatMessage,
-    GPTImagineSize
+    GPTImagineSize,
+    GPTChatStreamResponse
 } from '@interface/OpenAI'
 import { GPTSubModel } from '@interface/Enum'
+import { createParser } from 'eventsource-parser'
+import { ChatResponse } from '@interface/controller/UniAI'
 
 // Destructure environment variables
 const { OPENAI_API, OPENAI_KEY } = process.env
@@ -60,11 +63,46 @@ export default {
         temperature?: number,
         maxLength?: number
     ) {
-        return await $.post<GPTChatRequest | GPTChatStreamRequest, Readable | GPTChatResponse>(
+        const res = await $.post<GPTChatRequest | GPTChatStreamRequest, Readable | GPTChatResponse>(
             `${OPENAI_API}/${OPENAI_API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
             { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: stream ? 'stream' : 'json' }
         )
+        const data: ChatResponse = {
+            content: '',
+            model: '',
+            object: '',
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0
+        }
+        if (res instanceof Readable) {
+            const output = new PassThrough()
+            const parser = createParser(e => {
+                if (e.type === 'event') {
+                    const obj = $.json<GPTChatStreamResponse>(e.data)
+                    if (obj?.choices[0].delta?.content) {
+                        data.content = obj.choices[0].delta.content
+                        data.model = obj.model
+                        data.object = obj.object
+                        output.write(`data: ${JSON.stringify(data)}\n\n`)
+                    }
+                }
+            })
+            res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
+            res.on('error', e => output.destroy(e))
+            res.on('end', () => output.end())
+            res.on('close', () => parser.reset())
+            return output as Readable
+        } else {
+            data.content = res.choices[0].message.content || ''
+            data.model = res.model
+            data.object = res.object
+            data.promptTokens = res.usage?.prompt_tokens || 0
+            data.completionTokens = res.usage?.completion_tokens || 0
+            data.totalTokens = res.usage?.total_tokens || 0
+            return data
+        }
     },
 
     /**
