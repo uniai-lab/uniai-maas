@@ -272,7 +272,7 @@ export default class WeChat extends Service {
         return await ctx.model.Dialog.findAll({
             where: { userId, resourceId: { [Op.ne]: null }, isEffect: true, isDel: false },
             attributes: ['id'],
-            order: [['updatedAt', 'DESC']],
+            order: [['dialogAt', 'DESC']],
             include: {
                 model: ctx.model.Resource,
                 attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'isEffect', 'isDel'],

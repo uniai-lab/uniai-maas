@@ -33,7 +33,7 @@ export class Dialog extends Model {
     @Column(DataType.INTEGER)
     resourceId: number | null
 
-    // @AllowNull(false)
+    @AllowNull(false)
     @Default(DataType.NOW)
     @Column(DataType.DATE)
     dialogAt: Date
