@@ -273,6 +273,7 @@ export default class WeChat extends Service {
             where: { userId, resourceId: { [Op.ne]: null }, isEffect: true, isDel: false },
             attributes: ['id'],
             order: [['dialogAt', 'DESC']],
+            limit: DIALOG_LIMIT,
             include: {
                 model: ctx.model.Resource,
                 attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'isEffect', 'isDel'],
@@ -342,7 +343,6 @@ export default class WeChat extends Service {
             where: dialogId
                 ? { id: dialogId, userId, isEffect: true, isDel: false }
                 : { resourceId: null, userId, isEffect: true, isDel: false },
-            limit: DIALOG_LIMIT,
             include: {
                 model: ctx.model.Chat,
                 limit: CHAT_BACKTRACK,
