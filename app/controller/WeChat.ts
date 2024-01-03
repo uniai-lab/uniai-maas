@@ -220,7 +220,7 @@ export default class WeChat {
             chatId: res.chatId,
             type: false,
             role: ChatRoleEnum.ASSISTANT,
-            content: res.content,
+            content: res.isEffect ? res.content : ctx.__('not compliant'),
             userId: user.id,
             dialogId: res.dialogId,
             resourceId: res.resourceId,

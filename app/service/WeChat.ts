@@ -40,7 +40,6 @@ const PAGE_LIMIT = 6
 const CHAT_BACKTRACK = 10
 const DIALOG_LIMIT = 10
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
-const ERROR_CHAT_ID = 0.1
 const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
 
 // WeChat API
@@ -329,6 +328,7 @@ export default class WeChat extends Service {
     // chat
     async chat(input: string, userId: number, dialogId: number = 0) {
         const { ctx, app } = this
+
         // check processing chat stream
         const check = await this.getChat(userId)
         if (check && !check.chatId) throw new Error('You have another processing chat')
@@ -385,6 +385,11 @@ export default class WeChat extends Service {
         const subModel = resourceId
             ? await this.getConfig<ChatSubModelEnum>('WX_RESOURCE_SUB_MODEL')
             : await this.getConfig<ChatSubModelEnum>('WX_CHAT_SUB_MODEL')
+        // WeChat require to audit input content
+        const isEffect =
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag
         // start chat stream
         const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
         if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
@@ -397,7 +402,8 @@ export default class WeChat extends Service {
             content: '',
             model,
             subModel,
-            time: Date.now()
+            time: Date.now(),
+            isEffect
         }
         await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
 
@@ -414,9 +420,7 @@ export default class WeChat extends Service {
 
         // add listen stream
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-        stream.on('error', async e => {
-            cache.content = e.message
-        })
+        stream.on('error', async e => (cache.content = e.message))
         stream.on('end', async () => {
             if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
             else await user.decrement({ chatChance: 1 })
@@ -428,14 +432,20 @@ export default class WeChat extends Service {
             const role = ASSISTANT
             // save assistant response
             if (content) {
-                const chat = await ctx.model.Chat.create({ dialogId, resourceId, role, content, model, subModel })
+                const chat = await ctx.model.Chat.create({
+                    dialogId,
+                    resourceId,
+                    role,
+                    content,
+                    model,
+                    subModel,
+                    isEffect
+                })
                 cache.chatId = chat.id
-            } else cache.chatId = ERROR_CHAT_ID
-            app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+            } else app.redis.del(`chat_${userId}`)
         })
 
-        // WeChat need to audit input content
-        const isEffect = (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag
         // save user prompt
         return await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
     }
@@ -582,17 +592,26 @@ export default class WeChat extends Service {
 
     // use WX API to check content
     // image content should be base64
-    async contentCheck(content: string) {
+    async msgCheck(content: string) {
         const token = await this.getAccessToken()
+        const openid = this.ctx.user?.wxOpenId
         if ($.isBase64(content)) {
             const form = new FormData()
             form.append('media', Buffer.from(content, 'base64'), { filename: 'test.png' })
             const url = `${WX_MEDIA_CHECK_URL}?access_token=${token}`
-            return await $.post<FormData, WXMsgCheckResponse>(url, form)
+            const res = await $.post<FormData, WXMsgCheckResponse>(url, form)
+            if (res.errcode === 40001) await this.delAccessToken()
+            return res
         } else {
+            const form: WXMsgCheckRequest = { content, version: openid ? 2 : 1, scene: 1, openid }
             const url = `${WX_MSG_CHECK_URL}?access_token=${token}`
-            return await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(url, { content })
+            const res = await $.post<WXMsgCheckRequest, WXMsgCheckResponse>(url, form)
+            if (res.errcode === 40001) await this.delAccessToken()
+            return res
         }
+    }
+    async delAccessToken() {
+        await this.app.redis.del('WX_ACCESS_TOKEN')
     }
 
     // get WX API access token

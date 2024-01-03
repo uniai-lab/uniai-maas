@@ -10,6 +10,7 @@ export interface ChatStreamCache {
     resourceId: number | null
     model: ChatModelEnum | null
     subModel: string | null
+    isEffect: boolean
 }
 
 export interface UserCache {
