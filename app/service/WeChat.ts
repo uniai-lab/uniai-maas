@@ -387,8 +387,8 @@ export default class WeChat extends Service {
             : await this.getConfig<ChatSubModelEnum>('WX_CHAT_SUB_MODEL')
         // WeChat require to audit input content
         const isEffect =
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag &&
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
             true
         // start chat stream
@@ -430,13 +430,12 @@ export default class WeChat extends Service {
         stream.on('close', async () => {
             parser.reset()
             const { dialogId, resourceId, content, model, subModel } = cache
-            const role = ASSISTANT
             // save assistant response
             if (content) {
                 const chat = await ctx.model.Chat.create({
                     dialogId,
                     resourceId,
-                    role,
+                    role: ASSISTANT,
                     content,
                     model,
                     subModel,
