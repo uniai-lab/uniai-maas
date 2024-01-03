@@ -121,10 +121,7 @@ export default class WeChat extends Service {
 
         // try to create new user or find user
         const now = new Date()
-        let user = await ctx.model.User.findOne({
-            where: { wxOpenId: openid },
-            include: ctx.model.UserChance
-        })
+        let user = await ctx.model.User.findOne({ where: { wxOpenId: openid }, include: ctx.model.UserChance })
         if (!user) {
             // create a new user
             user = await ctx.model.User.create({
@@ -169,6 +166,7 @@ export default class WeChat extends Service {
             user.chance.uploadChanceFreeUpdateAt = now
             await user.chance.save()
         }
+        await user.save()
 
         // refresh cache
         const cache: UserCache = {
@@ -182,7 +180,6 @@ export default class WeChat extends Service {
                 uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
             }
         }
-        await user.save()
         await app.redis.set(`user_${cache.id}`, JSON.stringify(cache))
 
         // save to user table and return
@@ -389,7 +386,7 @@ export default class WeChat extends Service {
         const isEffect =
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag &&
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
+            // (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
             true
         // start chat stream
         const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
