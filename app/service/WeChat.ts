@@ -388,8 +388,9 @@ export default class WeChat extends Service {
         // WeChat require to audit input content
         const isEffect =
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag &&
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag
+            true
         // start chat stream
         const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
         if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
