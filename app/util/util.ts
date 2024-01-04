@@ -387,6 +387,22 @@ export default {
     file2base64(file: string) {
         return readFileSync(file).toString('base64')
     },
+    /**
+     * Converts a base64 encoded string back to a file.
+     *
+     * @param base64str - The base64 encoded string.
+     * @param outputPath - (Optional) The path where the output file will be saved. Defaults to system temp directory.
+     * @param fileExtension - (Optional) The file extension if known.
+     * @returns The path where the file was saved.
+     */
+    base64toFile(base64str: string, outputPath?: string, fileExtension?: string): string {
+        const buffer: Buffer = Buffer.from(base64str, 'base64')
+        const finalOutputPath: string =
+            outputPath || join(tmpdir(), `${randomUUID()}${fileExtension ? '.' + fileExtension : ''}`)
+
+        writeFileSync(finalOutputPath, buffer)
+        return finalOutputPath
+    },
 
     /**
      * Checks if a string is a valid domain name.

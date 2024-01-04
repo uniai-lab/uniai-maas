@@ -17,6 +17,7 @@ export interface ChatResponse {
     type: boolean
     role: ChatRoleEnum
     avatar: string | null
+    isEffect: boolean
 }
 
 export interface ChatListRequest {

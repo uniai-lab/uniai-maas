@@ -14,21 +14,18 @@ import {
     TaskResponse,
     ImgChangeRequest,
     ChatRequest,
-    ChatResponse,
     QueueRequest,
     UploadRequest,
     UploadResponse,
     AuditRequest
 } from '@interface/controller/UniAI'
-import { GPTChatResponse, GPTImagineResponse } from '@interface/OpenAI'
-import { GLMChatResponse } from '@interface/GLM'
-import { SPKChatResponse } from '@interface/Spark'
+import { GPTImagineResponse } from '@interface/OpenAI'
 import { MJImagineResponse, MJTaskResponse } from '@interface/MJ'
 import { SDImagineResponse, SDTaskResponse } from '@interface/SD'
 import auth from '@middleware/authB'
 import log from '@middleware/log'
 import transaction from '@middleware/transaction'
-import { readFileSync } from 'fs'
+import $ from '@util/util'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
@@ -193,7 +190,7 @@ export default class UniAI {
     async contentCheck(@Context() ctx: EggContext, @HTTPBody() params: AuditRequest) {
         const { provider, model, subModel } = params
         const file = ctx.request.files[0]
-        const content = file ? readFileSync(file.filepath, 'base64') : params.content
+        const content = file ? $.file2base64(file.filepath) : params.content
 
         const res = await ctx.service.uniAI.audit(content, provider, model, subModel)
 

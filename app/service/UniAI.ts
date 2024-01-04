@@ -382,13 +382,11 @@ export default class UniAI extends Service {
         provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
         console.log(content)
         if (provider === ContentAuditEnum.WX) {
-            const result = await this.ctx.service.weChat.msgCheck(content)
-            console.log(result)
-            res.flag = result.errcode === 0 && result.result?.suggest === 'pass'
+            const result = await this.ctx.service.weChat.contentCheck(content)
+            res.flag = result.result ? result.result.suggest === 'pass' : result.errcode === 0
             res.data = result
         } else if (provider === ContentAuditEnum.FLY) {
             const result = await fly.audit(content)
-            console.log(result)
             res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
             res.data = result
         } else if (provider === ContentAuditEnum.AI) {
@@ -399,7 +397,6 @@ export default class UniAI extends Service {
 
             try {
                 const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 1, 0.1)
-                console.log(result)
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
@@ -409,7 +406,6 @@ export default class UniAI extends Service {
             }
         } else {
             const result = $.contentFilter(content)
-            console.log(result)
             res.flag = result.verify
             res.data = result
         }

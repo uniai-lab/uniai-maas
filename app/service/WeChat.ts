@@ -312,7 +312,7 @@ export default class WeChat extends Service {
             model: ctx.model.Chat,
             limit,
             order: [['createdAt', 'DESC']],
-            where: { isDel: false }
+            where: { isDel: false, isEffect: true }
         }
         const dialog = dialogId
             ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
@@ -347,7 +347,7 @@ export default class WeChat extends Service {
                 where: { isEffect: true, isDel: false }
             }
         })
-        if (!dialog) throw new Error('Can not find dialog')
+        if (!dialog) throw new Error('Dialog is not available')
         dialog.chats.reverse()
         dialogId = dialog.id
 
@@ -372,8 +372,14 @@ export default class WeChat extends Service {
         }
 
         prompts.push({ role: USER, content: input })
-
         console.log(prompts)
+
+        // WeChat require to audit input content
+        const isEffect =
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag &&
+            (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
+            // (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
+            true
 
         // choose model according to config
         const model = resourceId
@@ -382,12 +388,7 @@ export default class WeChat extends Service {
         const subModel = resourceId
             ? await this.getConfig<ChatSubModelEnum>('WX_RESOURCE_SUB_MODEL')
             : await this.getConfig<ChatSubModelEnum>('WX_CHAT_SUB_MODEL')
-        // WeChat require to audit input content
-        const isEffect =
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag &&
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
-            // (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
-            true
+
         // start chat stream
         const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
         if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
@@ -589,7 +590,7 @@ export default class WeChat extends Service {
 
     // use WX API to check content
     // image content should be base64
-    async msgCheck(content: string) {
+    async contentCheck(content: string) {
         const token = await this.getAccessToken()
         const openid = this.ctx.user?.wxOpenId
         if ($.isBase64(content)) {

@@ -200,7 +200,8 @@ export default class WeChat {
             dialogId: res.dialogId,
             resourceId: res.resourceId,
             model: res.model,
-            avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
+            avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+            isEffect: res.isEffect
         }
 
         ctx.service.res.success('Success start chat stream', data)
@@ -225,7 +226,8 @@ export default class WeChat {
             dialogId: res.dialogId,
             resourceId: res.resourceId,
             model: res.model,
-            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI')
+            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+            isEffect: res.isEffect
         }
         ctx.service.res.success('Success to get chat stream', data)
     }
@@ -250,7 +252,8 @@ export default class WeChat {
                         ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
                         : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
                 dialogId: res.id,
-                userId: res.userId
+                userId: res.userId,
+                isEffect: res.isEffect
             })
         ctx.service.res.success('Success to list chat history', data)
     }
