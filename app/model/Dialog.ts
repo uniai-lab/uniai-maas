@@ -34,11 +34,6 @@ export class Dialog extends Model {
     resourceId: number | null
 
     @AllowNull(false)
-    @Default(DataType.NOW)
-    @Column(DataType.DATE)
-    dialogAt: Date
-
-    @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
     isDel: boolean

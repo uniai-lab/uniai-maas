@@ -3,7 +3,7 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
-import { IncludeOptions, Op, WhereOptions } from 'sequelize'
+import { IncludeOptions, Op, WhereOptions, where } from 'sequelize'
 import { Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
@@ -136,16 +136,19 @@ export default class WeChat extends Service {
                 uploadChanceFreeUpdateAt: now,
                 uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
             })
+
+            // add free chat dialog
+            await this.addDialog(user.id)
+
+            // add default resource dialog
+            const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
+            const count = await ctx.model.Resource.count({ where: { id } })
+            if (count) await this.addDialog(user.id, id)
+
             // give share reward
             if (fid) await this.shareReward(fid)
         }
 
-        // add free chat dialog
-        await this.dialog(user.id)
-        // add default resource dialog
-        const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
-        const count = await ctx.model.Resource.count({ where: { id } })
-        if (count) await this.dialog(user.id, id)
         // check banned or invalid user
         if (user.isDel || !user.isEffect) throw new Error('User is invalid')
 
@@ -267,7 +270,7 @@ export default class WeChat extends Service {
         return await ctx.model.Dialog.findAll({
             where: { userId, resourceId: { [Op.ne]: null }, isEffect: true, isDel: false },
             attributes: ['id'],
-            order: [['dialogAt', 'DESC']],
+            order: [['updatedAt', 'DESC']],
             limit: DIALOG_LIMIT,
             include: {
                 model: ctx.model.Resource,
@@ -277,30 +280,42 @@ export default class WeChat extends Service {
         })
     }
 
-    // find or create a dialog
-    async dialog(userId: number, resourceId: number | null = null, include?: IncludeOptions) {
+    // find or add a dialog
+    async addDialog(userId: number, resourceId: number | null = null) {
         const { ctx } = this
+
         let fileName = ''
+        // check resource
         if (resourceId) {
-            // check resource
             const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['fileName'] })
             if (!resource) throw new Error('Can not find the resource')
             fileName = resource.fileName
         }
 
-        // find the dialog
-        let dialog = await ctx.model.Dialog.findOne({ where: { userId, resourceId }, include })
         // create a new dialog
-        if (!dialog) {
-            dialog = await ctx.model.Dialog.create({ userId, resourceId })
-            let content = ctx.__('Im AI model')
-            content += fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat')
-            content = $.contentFilter(content).text
-            dialog.chats = await ctx.model.Chat.bulkCreate([
-                { dialogId: dialog.id, role: ChatRoleEnum.ASSISTANT, content }
-            ])
-        }
-        dialog.dialogAt = new Date()
+        const dialog = await ctx.model.Dialog.create({ userId, resourceId })
+
+        // create default dialog chats
+        const content =
+            ctx.__('Im AI model') + (fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat'))
+        dialog.chats = await ctx.model.Chat.bulkCreate([
+            { dialogId: dialog.id, role: ChatRoleEnum.ASSISTANT, content: $.contentFilter(content).text }
+        ])
+
+        return dialog
+    }
+
+    // delete a dialog
+    async delDialog(id: number, userId: number) {
+        const { ctx } = this
+        const dialog = await ctx.model.Dialog.findOne({ where: { id, userId } })
+        if (!dialog) throw new Error('Can not find the resource')
+
+        // delata dialog
+        dialog.isDel = true
+
+        // delete chats
+        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: id } })
         return await dialog.save()
     }
 
@@ -607,6 +622,8 @@ export default class WeChat extends Service {
             return res
         }
     }
+
+    // clear access token
     async delAccessToken() {
         await this.app.redis.del('WX_ACCESS_TOKEN')
     }

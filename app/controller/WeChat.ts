@@ -267,7 +267,7 @@ export default class WeChat {
         file.filename = params.fileName || file.filename
 
         const res = await ctx.service.weChat.upload(file, user.id, 1)
-        const dialog = await ctx.service.weChat.dialog(user.id, res.id)
+        const dialog = await ctx.service.weChat.addDialog(user.id, res.id)
 
         const data: UploadResponse = {
             id: res.id,
@@ -284,6 +284,14 @@ export default class WeChat {
         }
 
         ctx.service.res.success('Success to upload', data)
+    }
+
+    @Middleware(auth(), log(), transaction())
+    @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
+    async delDialog(@Context() ctx: UserContext, @HTTPQuery() id: number) {
+        const user = ctx.user!
+        await ctx.service.weChat.delDialog(id, user.id)
+        ctx.service.res.success('Success to delete a dialog')
     }
 
     @Middleware(auth(), log())
