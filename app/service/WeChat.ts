@@ -306,16 +306,16 @@ export default class WeChat extends Service {
     }
 
     // delete a dialog
-    async delDialog(id: number, userId: number) {
+    async delDialog(userId: number, id: number | null = null) {
         const { ctx } = this
-        const dialog = await ctx.model.Dialog.findOne({ where: { id, userId } })
-        if (!dialog) throw new Error('Can not find the resource')
+        const dialog = await ctx.model.Dialog.findOne({ where: id ? { id, userId } : { userId, resourceId: null } })
+        if (!dialog) throw new Error('Can not find the dialog')
 
-        // delata dialog
-        dialog.isDel = true
+        // delete dialog
+        if (id) dialog.isDel = true
 
         // delete chats
-        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: id } })
+        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
         return await dialog.save()
     }
 

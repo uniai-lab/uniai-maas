@@ -17,7 +17,7 @@ import { Chat } from './Chat'
 import { Resource } from './Resource'
 import { User } from './User'
 
-@Table({ modelName: 'dialog', indexes: [{ fields: ['user_id', 'resource_id'], unique: true }] })
+@Table({ modelName: 'dialog' })
 export class Dialog extends Model {
     @PrimaryKey
     @AutoIncrement

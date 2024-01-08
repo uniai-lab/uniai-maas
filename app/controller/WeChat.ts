@@ -286,14 +286,6 @@ export default class WeChat {
         ctx.service.res.success('Success to upload', data)
     }
 
-    @Middleware(auth(), log(), transaction())
-    @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
-    async delDialog(@Context() ctx: UserContext, @HTTPQuery() id: number) {
-        const user = ctx.user!
-        await ctx.service.weChat.delDialog(id, user.id)
-        ctx.service.res.success('Success to delete a dialog')
-    }
-
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/upload-avatar', method: HTTPMethodEnum.POST })
     async uploadAvatar(@Context() ctx: UserContext) {
@@ -380,6 +372,14 @@ export default class WeChat {
             })
         }
         ctx.service.res.success('Success to list resources', data)
+    }
+
+    @Middleware(auth(), log(), transaction())
+    @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
+    async delDialog(@Context() ctx: UserContext, @HTTPQuery() id?: number) {
+        const user = ctx.user!
+        await ctx.service.weChat.delDialog(user.id, id)
+        ctx.service.res.success('Success to delete a dialog')
     }
 
     @Middleware(auth(), log())
