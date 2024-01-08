@@ -3,7 +3,7 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
-import { IncludeOptions, Op, WhereOptions, where } from 'sequelize'
+import { IncludeOptions, Op, WhereOptions } from 'sequelize'
 import { Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
@@ -137,17 +137,22 @@ export default class WeChat extends Service {
                 uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
             })
 
-            // add free chat dialog
-            await this.addDialog(user.id)
-
-            // add default resource dialog
-            const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
-            const count = await ctx.model.Resource.count({ where: { id } })
-            if (count) await this.addDialog(user.id, id)
-
             // give share reward
             if (fid) await this.shareReward(fid)
         }
+
+        // add free chat dialog
+        if (!(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: null } })))
+            await this.addDialog(user.id)
+
+        // add default resource dialog
+        const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
+        if (
+            id &&
+            (await ctx.model.Resource.count({ where: { id } })) &&
+            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: id } }))
+        )
+            await this.addDialog(user.id, id)
 
         // check banned or invalid user
         if (user.isDel || !user.isEffect) throw new Error('User is invalid')
@@ -296,8 +301,9 @@ export default class WeChat extends Service {
         const dialog = await ctx.model.Dialog.create({ userId, resourceId })
 
         // create default dialog chats
-        const content =
-            ctx.__('Im AI model') + (fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat'))
+        const content = `${ctx.__('Im AI model')}${
+            fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat')
+        }`
         dialog.chats = await ctx.model.Chat.bulkCreate([
             { dialogId: dialog.id, role: ChatRoleEnum.ASSISTANT, content: $.contentFilter(content).text }
         ])
