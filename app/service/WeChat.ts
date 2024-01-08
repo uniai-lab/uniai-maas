@@ -68,7 +68,6 @@ export default class WeChat extends Service {
             shareTitle: await this.getConfig('SHARE_TITLE'),
             shareDesc: await this.getConfig('SHARE_DESC'),
             shareImg: await this.getConfig('SHARE_IMG'),
-            userBackground: await this.getConfig('USER_BACKGROUND_IMG'),
             menu: await this.getConfig<ConfigMenu[]>('USER_MENU'),
             task: await this.getConfig<ConfigTask[]>('USER_TASK'),
             vip: await this.getConfig<ConfigVIP[]>('USER_VIP'),
@@ -590,9 +589,9 @@ export default class WeChat extends Service {
 
     // use WX API to check content
     // image content should be base64
-    async contentCheck(content: string) {
+    async contentCheck(content: string, user?: UserCache) {
         const token = await this.getAccessToken()
-        const openid = this.ctx.user?.wxOpenId
+        const openid = user?.wxOpenId || ''
         if ($.isBase64(content)) {
             const form = new FormData()
             form.append('media', Buffer.from(content, 'base64'), { filename: 'test.png' })

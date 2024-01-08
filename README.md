@@ -8,7 +8,9 @@
 
 ## Overview
 
-UniAI, a unified API-based platform, streamlines interactions with diverse and complex AI models. It integrates a range of AI models and utilities to facilitate easier access and management.
+UniAI, a unified API-based platform, streamlines interactions with diverse and complex AI models.
+
+UniAI integrates a range of AI models and utilities to facilitate easier access and management.
 
 ## Integrated Models
 
@@ -30,7 +32,7 @@ Discover how UniAI is utilized and experience it firsthand:
 
 ## System Requirements
 
-Ensure you have the following installed:
+Ensure you have the following `NPM` libs installed:
 
 -   Node.js (version 16 or higher) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
 -   Docker & Docker-compose
@@ -41,13 +43,13 @@ Ensure you have the following installed:
 
 ### Configuration
 
-Create an `.env` file at the root directory:
+Create an `.env` file at the project root path:
 
 ```bash
 touch ./.env
 ```
 
-Populate the `.env` file with the following environment variables:
+Fill the `.env` file with the following environment variables:
 
 ```bash
 
@@ -76,7 +78,7 @@ POSTGRES_PASS=postgres # PostgreSQL password
 POSTGRES_DB=uniai # PostgreSQL database name
 
 # For Docker start pgvector
-POSTGRES_DATA_PATH=/data/docker/pgvector/data
+POSTGRES_DATA_PATH=./data
 
 # Redis Cache Configuration
 REDIS_HOST=localhost # Redis cache host URL
@@ -96,7 +98,7 @@ MINIO_PORT=9000
 MINIO_BUCKET=uniai
 
 # For Docker start Minio
-MINIO_DATA_PATH=/data/docker/minio
+MINIO_DATA_PATH=./data
 MINIO_ROOT_USER=root
 MINIO_ROOT_PASS=12345678
 

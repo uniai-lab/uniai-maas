@@ -188,11 +188,11 @@ export default class UniAI {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/audit', method: HTTPMethodEnum.POST })
     async contentCheck(@Context() ctx: EggContext, @HTTPBody() params: AuditRequest) {
-        const { provider, model, subModel } = params
+        const { provider } = params
         const file = ctx.request.files[0]
         const content = file ? $.file2base64(file.filepath) : params.content
 
-        const res = await ctx.service.uniAI.audit(content, provider, model, subModel)
+        const res = await ctx.service.uniAI.audit(content, provider)
 
         ctx.service.res.success('Success', res)
     }

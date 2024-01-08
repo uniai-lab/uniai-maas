@@ -33,6 +33,7 @@ import mj from '@util/mj'
 import $ from '@util/util'
 import { PassThrough, Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
+import { UserContext } from '@interface/Context'
 
 const MAX_PAGE = 6
 const MAX_TOKEN = 8192
@@ -373,16 +374,17 @@ export default class UniAI extends Service {
 
     // check content by iFlyTek, WeChat or mint-filter
     // content is text or image, image should be base64 string
-    async audit(content: string, provider?: ContentAuditEnum, model?: ChatModelEnum, subModel?: ChatSubModelEnum) {
+    async audit(content: string, provider?: ContentAuditEnum) {
         if (!content.trim()) throw new Error('Audit content is empty')
         content = content.replace(/\r\n|\n/g, ' ')
 
         const res: AuditResponse = { flag: true, data: null }
+        const ctx = this.ctx as UserContext
 
         provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
         console.log(content)
         if (provider === ContentAuditEnum.WX) {
-            const result = await this.ctx.service.weChat.contentCheck(content)
+            const result = await ctx.service.weChat.contentCheck(content, ctx.user)
             res.flag = result.result ? result.result.suggest === 'pass' : result.errcode === 0
             res.data = result
         } else if (provider === ContentAuditEnum.FLY) {
@@ -390,13 +392,13 @@ export default class UniAI extends Service {
             res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
             res.data = result
         } else if (provider === ContentAuditEnum.AI) {
-            model = model || (await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL'))
-            subModel = subModel || (await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL'))
-            content = (await this.getConfig('AUDITOR_AI_PROMPT')) + content
-            const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content }]
+            const model = await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL')
+            const subModel = await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL')
+            const prompt = await this.getConfig('AUDITOR_AI_PROMPT')
+            const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {
-                const result = await this.ctx.service.uniAI.chat(message, false, model, subModel, 1, 0.1)
+                const result = await ctx.service.uniAI.chat(message, false, model, subModel, 1, 0.1)
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
@@ -410,8 +412,9 @@ export default class UniAI extends Service {
             res.data = result
         }
 
-        // record audit log
-        await this.ctx.model.AuditLog.create({ provider, content, ...res })
+        // log audit
+        await ctx.model.AuditLog.create({ provider, content, userId: ctx.user?.id, ...res })
+
         return res
     }
 }

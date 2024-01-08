@@ -23,7 +23,5 @@ app/public/docs/*
 app/public/models/*
 !app/public/docs/.gitkeep
 !app/public/models/.gitkeep
-docker/milvus/*
-!docker/milvus/docker-compose.yml
-docker/pgvector/*
-!docker/pgvector/docker-compose.yml
+
+docker/**/data

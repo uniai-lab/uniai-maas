@@ -123,8 +123,6 @@ export interface ResourcePage {
 export interface AuditRequest {
     content: string
     provider: ContentAuditEnum
-    model: ChatModelEnum
-    subModel: ChatSubModelEnum
 }
 
 export interface AuditResponse {

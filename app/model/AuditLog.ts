@@ -16,16 +16,6 @@ export class AuditLog extends Model {
     userId: number
 
     @AllowNull(false)
-    @Default('')
-    @Column(DataType.STRING)
-    source: 'chat' | 'resource' | 'user' | ''
-
-    @AllowNull(false)
-    @Default(0)
-    @Column(DataType.INTEGER)
-    sourceId: number
-
-    @AllowNull(false)
     @Column(DataType.TEXT)
     content: string
 
@@ -35,7 +25,7 @@ export class AuditLog extends Model {
     flag: boolean
 
     @Column(DataType.JSON)
-    data: string | null
+    data: object | null
 
     @AllowNull(false)
     @Column(DataType.STRING)
