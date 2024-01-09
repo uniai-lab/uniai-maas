@@ -19,7 +19,8 @@ import {
     ConfigTask,
     TabResponse,
     UploadAvatarResponse,
-    UpdateUserRequest
+    UpdateUserRequest,
+    DialogRequest
 } from '@interface/controller/WeChat'
 import { basename, extname } from 'path'
 import auth from '@middleware/authC'
@@ -348,11 +349,11 @@ export default class WeChat {
     }
 
     @Middleware(auth(), log())
-    @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
-    async listDialogResource(@Context() ctx: UserContext, @HTTPQuery() lastId: string, @HTTPQuery() pageSize: string) {
+    @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.POST })
+    async listDialogResource(@Context() ctx: UserContext, @HTTPBody() params: DialogRequest) {
         const user = ctx.user!
 
-        const res = await ctx.service.weChat.listDialog(user.id, parseInt(lastId), parseInt(pageSize))
+        const res = await ctx.service.weChat.listDialog(user.id, params.lastId, params.pageSize)
 
         const data: DialogResponse[] = []
         for (const { id, resource } of res) {

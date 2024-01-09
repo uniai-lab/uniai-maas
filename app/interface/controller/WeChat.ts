@@ -77,6 +77,11 @@ export interface ResourceResponse {
     pages: string[]
 }
 
+export interface DialogRequest {
+    pageSize?: number
+    lastId?: number
+}
+
 export interface DialogResponse {
     dialogId: number
     resourceId: number | null

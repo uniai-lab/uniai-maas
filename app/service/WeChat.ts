@@ -273,8 +273,6 @@ export default class WeChat extends Service {
     // list all dialogs
     async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
         const { ctx } = this
-        console.log(lastId)
-        console.log(pageSize)
 
         return await ctx.model.Dialog.findAll({
             where: {
