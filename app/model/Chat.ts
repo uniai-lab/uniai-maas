@@ -15,8 +15,10 @@ import {
 import { Dialog } from './Dialog'
 import { Resource } from './Resource'
 import { ChatModelEnum, ChatRoleEnum } from '../interface/Enum'
+import { IndexesOptions } from 'sequelize'
 
-@Table({ modelName: 'chat' })
+const indexes: IndexesOptions[] = [{ fields: ['role'] }, { fields: ['model'] }, { fields: ['sub_model'] }]
+@Table({ modelName: 'chat', indexes })
 export class Chat extends Model {
     @PrimaryKey
     @AutoIncrement

@@ -16,8 +16,11 @@ import {
 import { Chat } from './Chat'
 import { Resource } from './Resource'
 import { User } from './User'
+import { IndexesOptions } from 'sequelize'
 
-@Table({ modelName: 'dialog' })
+const indexes: IndexesOptions[] = [{ fields: ['user_id', 'resource_id'] }]
+
+@Table({ modelName: 'dialog', indexes })
 export class Dialog extends Model {
     @PrimaryKey
     @AutoIncrement

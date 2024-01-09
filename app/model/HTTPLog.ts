@@ -1,8 +1,18 @@
 /** @format */
 
+import { IndexesOptions } from 'sequelize'
 import { Table, Column, AutoIncrement, PrimaryKey, Model, DataType, AllowNull, Default } from 'sequelize-typescript'
 
-@Table({ modelName: 'http_log' })
+const indexes: IndexesOptions[] = [
+    { fields: ['user_id'] },
+    { fields: ['ip'] },
+    { fields: ['method'] },
+    { fields: ['status'] },
+    { fields: ['controller'] },
+    { fields: ['action'] }
+]
+
+@Table({ modelName: 'http_log', indexes })
 export class HTTPLog extends Model {
     @PrimaryKey
     @AutoIncrement

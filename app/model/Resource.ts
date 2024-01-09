@@ -20,10 +20,18 @@ import { Chat } from './Chat'
 import { Embedding1 } from './Embedding1'
 import { Embedding2 } from './Embedding2'
 import { UserResourceTab } from './UserResourceTab'
+import { IndexesOptions } from 'sequelize'
 
 const EMBED_DIM = 1024
 
-@Table({ modelName: 'resource' })
+const indexes: IndexesOptions[] = [
+    { fields: ['type_id'] },
+    { fields: ['tab_id'] },
+    { fields: ['file_ext'] },
+    { fields: ['user_id'] }
+]
+
+@Table({ modelName: 'resource', indexes })
 export class Resource extends Model {
     @PrimaryKey
     @AutoIncrement

@@ -2,8 +2,11 @@
 
 import { Table, Column, AutoIncrement, PrimaryKey, Model, DataType, AllowNull, Default } from 'sequelize-typescript'
 import { ContentAuditEnum } from '@interface/Enum'
+import { IndexesOptions } from 'sequelize'
 
-@Table({ modelName: 'audit_log' })
+const indexes: IndexesOptions[] = [{ fields: ['user_id'] }, { fields: ['flag'] }, { fields: ['provider'] }]
+
+@Table({ modelName: 'audit_log', indexes })
 export class AuditLog extends Model {
     @PrimaryKey
     @AutoIncrement

@@ -387,21 +387,19 @@ export default {
     file2base64(file: string) {
         return readFileSync(file).toString('base64')
     },
-    /**
-     * Converts a base64 encoded string back to a file.
-     *
-     * @param base64str - The base64 encoded string.
-     * @param outputPath - (Optional) The path where the output file will be saved. Defaults to system temp directory.
-     * @param fileExtension - (Optional) The file extension if known.
-     * @returns The path where the file was saved.
-     */
-    base64toFile(base64str: string, outputPath?: string, fileExtension?: string): string {
-        const buffer: Buffer = Buffer.from(base64str, 'base64')
-        const finalOutputPath: string =
-            outputPath || join(tmpdir(), `${randomUUID()}${fileExtension ? '.' + fileExtension : ''}`)
 
-        writeFileSync(finalOutputPath, buffer)
-        return finalOutputPath
+    /**
+     * Decodes a base64 encoded string and saves it as a file.
+     *
+     * @param base64str - A string encoded in base64 format.
+     * @param ext - (Optional) The extension of the file to be saved. If not provided, the file is saved without an extension.
+     * @returns A string representing the file path where the decoded content is saved. By default, the file is saved in the system's temporary directory.
+     */
+    base64toFile(base64str: string, ext?: string): string {
+        const buffer = Buffer.from(base64str, 'base64')
+        const output = join(tmpdir(), `${randomUUID()}${ext ? '.' + ext : ''}`)
+        writeFileSync(output, buffer)
+        return output
     },
 
     /**

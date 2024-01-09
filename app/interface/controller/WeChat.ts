@@ -22,6 +22,8 @@ export interface ChatResponse {
 
 export interface ChatListRequest {
     dialogId?: number
+    lastId?: number
+    pageSize?: number
 }
 
 export interface SignInRequest {

@@ -37,8 +37,10 @@ import FormData from 'form-data'
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
-const CHAT_BACKTRACK = 10
-const DIALOG_LIMIT = 10
+const CHAT_PAGE_SIZE = 10
+const CHAT_PAGE_LIMIT = 20
+const DIALOG_PAGE_SIZE = 10
+const DIALOG_PAGE_LIMIT = 20
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
 const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
 
@@ -269,14 +271,22 @@ export default class WeChat extends Service {
     }
 
     // list all dialogs
-    async listDialog(userId: number) {
+    async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
         const { ctx } = this
+        console.log(lastId)
+        console.log(pageSize)
 
         return await ctx.model.Dialog.findAll({
-            where: { userId, resourceId: { [Op.ne]: null }, isEffect: true, isDel: false },
+            where: {
+                id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Dialog.max('id') },
+                resourceId: { [Op.ne]: null },
+                userId,
+                isEffect: true,
+                isDel: false
+            },
             attributes: ['id'],
-            order: [['updatedAt', 'DESC']],
-            limit: DIALOG_LIMIT,
+            order: [['id', 'DESC']],
+            limit: pageSize > DIALOG_PAGE_LIMIT ? DIALOG_PAGE_LIMIT : pageSize,
             include: {
                 model: ctx.model.Resource,
                 attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'isEffect', 'isDel'],
@@ -326,13 +336,17 @@ export default class WeChat extends Service {
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId: number = 0, limit: number = CHAT_BACKTRACK) {
+    async listChat(userId: number, dialogId?: number, lastId?: number, pageSize: number = CHAT_PAGE_SIZE) {
         const { ctx } = this
         const include: IncludeOptions = {
             model: ctx.model.Chat,
-            limit,
-            order: [['createdAt', 'DESC']],
-            where: { isDel: false, isEffect: true }
+            limit: pageSize > CHAT_PAGE_LIMIT ? CHAT_PAGE_LIMIT : pageSize,
+            order: [['id', 'DESC']],
+            where: {
+                id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
+                isDel: false,
+                isEffect: true
+            }
         }
         const dialog = dialogId
             ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
@@ -362,7 +376,7 @@ export default class WeChat extends Service {
                 : { resourceId: null, userId, isEffect: true, isDel: false },
             include: {
                 model: ctx.model.Chat,
-                limit: CHAT_BACKTRACK,
+                limit: CHAT_PAGE_SIZE,
                 order: [['updatedAt', 'desc']],
                 where: { isEffect: true, isDel: false }
             }
@@ -610,12 +624,15 @@ export default class WeChat extends Service {
 
     // use WX API to check content
     // image content should be base64
-    async contentCheck(content: string, user?: UserCache) {
+    async contentCheck(content: string, openid: string = '') {
         const token = await this.getAccessToken()
-        const openid = user?.wxOpenId || ''
         if ($.isBase64(content)) {
             const form = new FormData()
             form.append('media', Buffer.from(content, 'base64'), { filename: 'test.png' })
+            form.append('media_type', 2)
+            form.append('openid', openid)
+            openid ? form.append('version', 2) : form.append('version', 1)
+            form.append('scene', 1)
             const url = `${WX_MEDIA_CHECK_URL}?access_token=${token}`
             const res = await $.post<FormData, WXMsgCheckResponse>(url, form)
             if (res.errcode === 40001) await this.delAccessToken()

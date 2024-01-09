@@ -38,8 +38,8 @@ export default class WeChat {
 
     // app tabs
     @HTTPMethod({ path: '/tab', method: HTTPMethodEnum.GET })
-    async tab(@Context() ctx: UserContext, @HTTPQuery() pid?: number) {
-        const res = await ctx.service.weChat.getTab(pid)
+    async tab(@Context() ctx: UserContext, @HTTPQuery() pid: string) {
+        const res = await ctx.service.weChat.getTab(parseInt(pid))
 
         const data: TabResponse[] = []
         for (const { id, name, desc, pid } of res) {
@@ -53,7 +53,7 @@ export default class WeChat {
 
     @Middleware(log())
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name?: string) {
+    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         if (!path) throw new Error('Path is null')
         name = name || basename(path)
 
@@ -236,8 +236,9 @@ export default class WeChat {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
         const user = ctx.user!
+        const { dialogId, lastId, pageSize } = params
 
-        const res = await ctx.service.weChat.listChat(user.id, params.dialogId)
+        const res = await ctx.service.weChat.listChat(user.id, dialogId, lastId, pageSize)
         const data: ChatResponse[] = []
         for (const item of res.chats)
             data.push({
@@ -348,10 +349,10 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.GET })
-    async listDialogResource(@Context() ctx: UserContext) {
+    async listDialogResource(@Context() ctx: UserContext, @HTTPQuery() lastId: string, @HTTPQuery() pageSize: string) {
         const user = ctx.user!
 
-        const res = await ctx.service.weChat.listDialog(user.id)
+        const res = await ctx.service.weChat.listDialog(user.id, parseInt(lastId), parseInt(pageSize))
 
         const data: DialogResponse[] = []
         for (const { id, resource } of res) {

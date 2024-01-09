@@ -375,16 +375,15 @@ export default class UniAI extends Service {
     // check content by iFlyTek, WeChat or mint-filter
     // content is text or image, image should be base64 string
     async audit(content: string, provider?: ContentAuditEnum) {
-        if (!content.trim()) throw new Error('Audit content is empty')
-        content = content.replace(/\r\n|\n/g, ' ')
+        content = content.replace(/\r\n|\n/g, ' ').trim()
+        if (!content) throw new Error('Audit content is empty')
 
         const res: AuditResponse = { flag: true, data: null }
         const ctx = this.ctx as UserContext
 
         provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
-        console.log(content)
         if (provider === ContentAuditEnum.WX) {
-            const result = await ctx.service.weChat.contentCheck(content, ctx.user)
+            const result = await ctx.service.weChat.contentCheck(content, ctx.user?.wxOpenId || '')
             res.flag = result.result ? result.result.suggest === 'pass' : result.errcode === 0
             res.data = result
         } else if (provider === ContentAuditEnum.FLY) {

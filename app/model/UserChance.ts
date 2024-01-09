@@ -14,8 +14,11 @@ import {
     Unique
 } from 'sequelize-typescript'
 import { User } from './User'
+import { IndexesOptions } from 'sequelize'
 
-@Table({ modelName: 'user_chance' })
+const indexes: IndexesOptions[] = [{ fields: ['level'] }]
+
+@Table({ modelName: 'user_chance', indexes })
 export class UserChance extends Model {
     @PrimaryKey
     @AutoIncrement
