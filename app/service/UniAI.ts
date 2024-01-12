@@ -229,7 +229,8 @@ export default class UniAI extends Service {
         fileExt?: string,
         fileSize?: number,
         userId: number = 0,
-        typeId: number = 1
+        typeId: number = DEFAULT_RESOURCE_TYPE,
+        tabId: number = DEFAULT_RESOURCE_TAB
     ) {
         const { ctx } = this
         let resource: Resource | null = null
@@ -298,6 +299,7 @@ export default class UniAI extends Service {
                 page: pages.length,
                 content,
                 typeId,
+                tabId,
                 userId,
                 fileName,
                 filePath,

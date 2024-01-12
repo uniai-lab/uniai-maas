@@ -241,16 +241,16 @@ export default class WeChat {
 
         const res = await ctx.service.weChat.listChat(user.id, dialogId, lastId, pageSize)
         const data: ChatResponse[] = []
-        for (const item of res.chats)
+        for (const { id, role, content, resourceId, model } of res.chats)
             data.push({
-                chatId: item.id,
-                role: item.role,
-                type: item.role === ChatRoleEnum.USER,
-                content: item.isEffect ? item.content : ctx.__('not compliant'),
-                resourceId: item.resourceId,
-                model: item.model,
+                chatId: id,
+                role,
+                type: role === ChatRoleEnum.USER,
+                content,
+                resourceId,
+                model,
                 avatar:
-                    item.role === ChatRoleEnum.USER
+                    role === ChatRoleEnum.USER
                         ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
                         : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
                 dialogId: res.id,

@@ -412,6 +412,8 @@ export default class WeChat extends Service {
             (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
             // (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
             true
+        // save user prompt
+        const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
 
         // choose model according to config
         const model = resourceId
@@ -436,7 +438,7 @@ export default class WeChat extends Service {
             time: Date.now(),
             isEffect
         }
-        await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+        if (isEffect) await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
 
         const parser = createParser(e => {
             if (e.type === 'event') {
@@ -444,14 +446,19 @@ export default class WeChat extends Service {
                 if (obj) {
                     cache.content += obj.content
                     cache.subModel = obj.model
-                    app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                    if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
                 }
             }
         })
 
         // add listen stream
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-        stream.on('error', async e => (cache.content = e.message))
+        stream.on('error', e => {
+            cache.content += e.message
+            cache.isEffect = false
+            chat.isEffect = false
+            chat.save()
+        })
         stream.on('end', async () => {
             if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
             else await user.decrement({ chatChance: 1 })
@@ -459,37 +466,30 @@ export default class WeChat extends Service {
         })
         stream.on('close', async () => {
             parser.reset()
-            const { dialogId, resourceId, content, model, subModel } = cache
             // save assistant response
-            if (content) {
+            if (cache.content) {
                 const chat = await ctx.model.Chat.create({
-                    dialogId,
-                    resourceId,
+                    dialogId: cache.dialogId,
+                    resourceId: cache.resourceId,
                     role: ASSISTANT,
-                    content,
-                    model,
-                    subModel,
-                    isEffect
+                    content: cache.content,
+                    model: cache.model,
+                    subModel: cache.subModel,
+                    isEffect: cache.isEffect
                 })
                 cache.chatId = chat.id
-                app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
             } else app.redis.del(`chat_${userId}`)
         })
-
-        // save user prompt
-        return await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
+        return chat
     }
 
     // get current chat stream by userId
     async getChat(userId: number) {
         const { app } = this
-        const str = await app.redis.get(`chat_${userId}`)
-        const res = $.json<ChatStreamCache>(str)
+        const res = $.json<ChatStreamCache>(await app.redis.get(`chat_${userId}`))
         // expire, remove chat cache
-        if (res && Date.now() - res.time > CHAT_STREAM_EXPIRE) {
-            await app.redis.del(`chat_${userId}`)
-            return null
-        }
+        if (res) if (Date.now() - res.time > CHAT_STREAM_EXPIRE || res.chatId) app.redis.del(`chat_${userId}`)
         return res
     }
 
