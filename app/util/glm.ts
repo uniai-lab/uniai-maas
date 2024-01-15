@@ -8,6 +8,9 @@
 import { PassThrough, Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import jwt from 'jsonwebtoken'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 
 import {
     GLMChatRequest,
@@ -17,16 +20,16 @@ import {
     GLMChatMessage,
     GLMTurboChatRequest,
     GLMChatStreamResponse,
-    GLMTurboChatResponse
+    GLMTurboChatResponse,
+    TokenCache
 } from '@interface/GLM'
-import { GLMChatRoleEnum, GLMSubModel } from '@interface/Enum'
+import { GLMChatRoleEnum, GLMChatModel, TextVecEmbedModel } from '@interface/Enum'
 import { ChatResponse } from '@interface/controller/UniAI'
 import $ from '@util/util'
 
 const { GLM_LOCAL_API, GLM_REMOTE_API_KEY } = process.env
-const EXPIRE_IN = 10 * 1000
-const EMBED_MODEL = 'text2vec-large-chinese' // 'text2vec-base-chinese-paraphrase'
 const GLM_REMOTE_API = 'https://open.bigmodel.cn'
+const EXPIRE_IN = 7 * 24 * 60 * 60 * 1000
 
 export default {
     /**
@@ -38,7 +41,7 @@ export default {
     async embedding(prompt: string[]) {
         return await $.post<GLMEmbeddingRequest, GLMEmbeddingResponse>(`${GLM_LOCAL_API}/embedding`, {
             prompt,
-            model: EMBED_MODEL
+            model: TextVecEmbedModel.LARGE_CHN
         })
     },
 
@@ -54,7 +57,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
-        model: GLMSubModel = GLMSubModel.TURBO,
+        model: GLMChatModel = GLMChatModel.LOCAL,
         messages: GLMChatMessage[],
         stream: boolean = false,
         top?: number,
@@ -63,13 +66,13 @@ export default {
     ) {
         const data: ChatResponse = {
             content: '',
-            model: '',
+            model,
             object: '',
             promptTokens: 0,
             completionTokens: 0,
             totalTokens: 0
         }
-        if (model === GLMSubModel.LOCAL) {
+        if (model === GLMChatModel.LOCAL) {
             const res = await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_LOCAL_API}/chat`,
                 { messages, stream, temperature, top_p: top, max_tokens: maxLength },
@@ -82,7 +85,6 @@ export default {
                         const obj = $.json<GLMChatStreamResponse>(e.data)
                         if (obj?.choices[0].delta?.content) {
                             data.content = obj.choices[0].delta.content
-                            data.model = obj.model
                             data.object = obj.object
                             output.write(`data: ${JSON.stringify(data)}\n\n`)
                         }
@@ -95,34 +97,19 @@ export default {
                 return output as Readable
             } else {
                 data.content = res.choices[0].message.content || ''
-                data.model = res.model
                 data.object = res.object
                 data.promptTokens = res.usage?.prompt_tokens || 0
                 data.completionTokens = res.usage?.completion_tokens || 0
                 data.totalTokens = res.usage?.total_tokens || 0
                 return data
             }
-        } else if (model === GLMSubModel.TURBO) {
-            // Recreate prompt for chatglm-turbo
-            const prompt: GLMChatMessage[] = []
-            let input = ''
-            const { SYSTEM, USER, ASSISTANT } = GLMChatRoleEnum
-            for (const { role, content } of messages) {
-                if (role === USER || role === SYSTEM) input += `\n${content}`
-                else {
-                    prompt.push({ role: USER, content: input.trim() })
-                    prompt.push({ role: ASSISTANT, content })
-                    input = ''
-                }
-            }
-            prompt.push({ role: USER, content: input.trim() })
-
+        } else if (model === GLMChatModel.TURBO) {
             const invoke = stream ? 'sse-invoke' : 'invoke'
             const url = `${GLM_REMOTE_API}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
             const token = generateToken(GLM_REMOTE_API_KEY, EXPIRE_IN)
             const res = await $.post<GLMTurboChatRequest, Readable | GLMTurboChatResponse>(
                 url,
-                { prompt, temperature, top_p: top },
+                { prompt: formatMessage(messages), temperature, top_p: top },
                 {
                     headers: { 'Content-Type': 'application/json', Authorization: token },
                     responseType: stream ? 'stream' : 'json'
@@ -135,7 +122,6 @@ export default {
                     if (e.type === 'event') {
                         if (e.data) {
                             data.content = e.data
-                            data.model = 'chatglm-turbo'
                             data.object = 'chat.completion.chunk'
                             output.write(`data: ${JSON.stringify(data)}\n\n`)
                         }
@@ -152,14 +138,13 @@ export default {
                 if (!res.data) throw new Error('Empty chat data response')
 
                 data.content = res.data.choices[0].content.replace(/^"|"$/g, '').trim()
-                data.model = 'chatglm-turbo'
                 data.object = 'chat.completion'
                 data.promptTokens = res.data.usage.prompt_tokens
                 data.completionTokens = res.data.usage.completion_tokens
                 data.totalTokens = res.data.usage.total_tokens
                 return data
             }
-        } else throw new Error('GLM sub model not found')
+        } else throw new Error('GLM chat model not found')
     }
 }
 
@@ -172,10 +157,33 @@ export default {
  */
 function generateToken(key: string, expire: number) {
     const [id, secret] = key.split('.')
-    const timestamp = Date.now()
+    const filepath = join(tmpdir(), 'glm_access_token.json')
+    const now = Date.now()
+    if (existsSync(filepath)) {
+        const cache = $.json<TokenCache>(readFileSync(filepath, 'utf8'))
+        if (cache && cache.expire > now) return cache.token
+    }
     // @ts-ignore
-    const token: string = jwt.sign({ api_key: id, timestamp, exp: timestamp + expire }, secret, {
+    const token: string = jwt.sign({ api_key: id, now, exp: now + expire }, secret, {
         header: { alg: 'HS256', sign_type: 'SIGN' }
     })
+    writeFileSync(filepath, JSON.stringify({ token, expire: now + expire } as TokenCache))
     return token
+}
+
+function formatMessage(messages: GLMChatMessage[]) {
+    // Recreate prompt for chatglm-turbo
+    const prompt: GLMChatMessage[] = []
+    let input = ''
+    const { USER, ASSISTANT } = GLMChatRoleEnum
+    for (const { role, content } of messages) {
+        if (role !== ASSISTANT) input += `\n${content}`
+        else {
+            prompt.push({ role: USER, content: input.trim() || 'None' })
+            prompt.push({ role: ASSISTANT, content })
+            input = ''
+        }
+    }
+    prompt.push({ role: USER, content: input.trim() || 'None' })
+    return prompt
 }

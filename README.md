@@ -69,6 +69,10 @@ FLY_APP_ID=
 FLY_API_KEY=
 FLY_API_SECRET=
 
+# baidu wenxin workshop
+BAIDU_API_KEY=
+BAIDU_SECRET_KEY=
+
 # PostgreSQL Database Configuration
 DB_DIALECT=postgres
 POSTGRES_HOST=localhost # PostgreSQL host URL

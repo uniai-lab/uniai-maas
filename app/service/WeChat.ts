@@ -9,14 +9,7 @@ import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import md5 from 'md5'
-import {
-    ChatModelEnum,
-    ChatRoleEnum,
-    ChatSubModelEnum,
-    ContentAuditEnum,
-    EmbedModelEnum,
-    OSSEnum
-} from '@interface/Enum'
+import { ModelEnum, ChatRoleEnum, ContentAuditEnum, EmbedModelEnum, OSSEnum, FlyChatModel } from '@interface/Enum'
 import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
 import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
@@ -395,7 +388,7 @@ export default class WeChat extends Service {
             let content = ctx.__('document content start')
             // query resource
             const query = [{ role: USER, content: input }]
-            const embedModel = await this.getConfig<EmbedModelEnum>('WX_EMBED_MODEL')
+            const embedModel = EmbedModelEnum.TextVec
             const pages = await ctx.service.uniAI.queryResource(query, resourceId, embedModel, PAGE_LIMIT)
             // add resource to prompt
             for (const item of pages) content += `\n${item.content}`
@@ -407,21 +400,11 @@ export default class WeChat extends Service {
         console.log(prompts)
 
         // WeChat require to audit input content
-        const isEffect =
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.MINT)).flag &&
-            (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag &&
-            // (await ctx.service.uniAI.audit(input, ContentAuditEnum.AI)).flag &&
-            true
+        const isEffect = (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag
         // save user prompt
         const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
-
-        // choose model according to config
-        const model = resourceId
-            ? await this.getConfig<ChatModelEnum>('WX_RESOURCE_MODEL')
-            : await this.getConfig<ChatModelEnum>('WX_CHAT_MODEL')
-        const subModel = resourceId
-            ? await this.getConfig<ChatSubModelEnum>('WX_RESOURCE_SUB_MODEL')
-            : await this.getConfig<ChatSubModelEnum>('WX_CHAT_SUB_MODEL')
+        const model = ModelEnum.IFlyTek
+        const subModel = FlyChatModel.V3
 
         // start chat stream
         const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
@@ -556,7 +539,7 @@ export default class WeChat extends Service {
         resource.isEffect = flag
 
         // embed resource content
-        await ctx.service.uniAI.embedding(await this.getConfig<EmbedModelEnum>('WX_EMBED_MODEL'), resource.id)
+        await ctx.service.uniAI.embedding(EmbedModelEnum.TextVec, resource.id)
 
         // split pages as images
         await this.resource(resource.id)

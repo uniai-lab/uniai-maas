@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum, ImgModelEnum, ChatSubModelEnum, EmbedModelEnum, ContentAuditEnum } from '@interface/Enum'
+import { ModelEnum, ImgModelEnum, EmbedModelEnum, ContentAuditEnum, ChatModelEnum } from '@interface/Enum'
 import { GLMChatMessage } from '@interface/GLM'
 import { GPTChatMessage } from '@interface/OpenAI'
 import { SPKChatMessage } from '@interface/Spark'
@@ -9,8 +9,8 @@ export type ChatMessage = GPTChatMessage | GLMChatMessage | SPKChatMessage
 
 export interface ChatRequest {
     prompts: ChatMessage[]
-    model?: ChatModelEnum
-    subModel?: ChatSubModelEnum
+    model?: ModelEnum
+    subModel?: ChatModelEnum
     stream?: boolean
     top?: number
     temperature?: number
@@ -22,7 +22,6 @@ export interface QueryResourceRequest {
     model?: EmbedModelEnum
     resourceId?: number
     maxPage?: number
-    maxToken?: number
 }
 
 export interface EmbeddingRequest {
@@ -79,7 +78,7 @@ export interface ChatResponse {
     promptTokens: number
     completionTokens: number
     totalTokens: number
-    model: string
+    model: ChatModelEnum | string
     object: string
 }
 

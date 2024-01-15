@@ -1,7 +1,5 @@
 /** @format */
 
-import { ChatModelEnum, GLMSubModel, GPTSubModel, OSSEnum, SPKSubModel } from '@interface/Enum'
-
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
@@ -20,6 +18,10 @@ declare global {
             FLY_API_KEY: string
             FLY_API_SECRET: string
             FLY_APP_ID: string
+
+            // Baidu
+            BAIDU_API_KEY: string
+            BAIDU_SECRET_KEY: string
 
             // select a database
             DB_DIALECT: string

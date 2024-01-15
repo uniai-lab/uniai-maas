@@ -312,39 +312,9 @@ export default [
         description: '默认上传限制（Byte）'
     },
     {
-        key: 'GPT_DEFAULT_SUB_MODEL',
-        value: 'gpt-3.5-turbo',
-        description: 'GPT 默认模型'
-    },
-    {
-        key: 'GLM_DEFAULT_SUB_MODEL',
-        value: 'chatglm3-6b-32k',
-        description: 'GLM 默认模型'
-    },
-    {
-        key: 'SPK_DEFAULT_SUB_MODEL',
-        value: 'v3.1',
-        description: '星火默认模型'
-    },
-    {
         key: 'INIT_RESOURCE_ID',
         value: INIT_RESOURCE_ID,
         description: '初始化文档ID'
-    },
-    {
-        key: 'CONTENT_AUDITOR',
-        value: 'AI', // WeChat | mint-filter | iFlyTek | AI
-        description: '内容审核器'
-    },
-    {
-        key: 'AUDITOR_AI_MODEL',
-        value: 'GLM',
-        description: 'AI审核模型'
-    },
-    {
-        key: 'AUDITOR_AI_SUB_MODEL',
-        value: 'chatglm3-6b-32k',
-        description: 'AI审核子模型'
     },
     {
         key: 'AUDITOR_AI_PROMPT',
@@ -355,31 +325,6 @@ export default [
         key: 'WX_REVIEW_FILE',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/file_review.pdf',
         description: '文件审核通知'
-    },
-    {
-        key: 'WX_EMBED_MODEL',
-        value: 'GLM',
-        description: '小程序embed模型'
-    },
-    {
-        key: 'WX_CHAT_MODEL',
-        value: 'SPARK',
-        description: '小程序chat模型'
-    },
-    {
-        key: 'WX_CHAT_SUB_MODEL',
-        value: 'v3.1',
-        description: '小程序chat子模型'
-    },
-    {
-        key: 'WX_RESOURCE_MODEL',
-        value: 'SPARK',
-        description: '小程序resource模型'
-    },
-    {
-        key: 'WX_RESOURCE_SUB_MODEL',
-        value: 'v3.1',
-        description: '小程序resource子模型'
     },
     // v1.0
     {

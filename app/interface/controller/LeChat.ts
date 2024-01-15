@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum } from '@interface/Enum'
+import { ModelEnum } from '@interface/Enum'
 import { ChatMessage } from '@interface/controller/UniAI'
 
 export interface SignInRequest {
@@ -24,7 +24,7 @@ export interface ChatRequest {
     maxLength?: number
     top?: number
     temperature?: number
-    model?: ChatModelEnum
+    model?: ModelEnum
     subModel?: string
     chunk?: boolean
 }

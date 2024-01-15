@@ -1,37 +1,72 @@
 /** @format */
 
-export enum ChatModelEnum {
-    GPT = 'GPT',
-    GLM = 'GLM',
-    SPARK = 'SPARK'
+// model organizations
+export enum ModelEnum {
+    OpenAI = 'openai',
+    IFlyTek = 'iflytek',
+    Baidu = 'baidu',
+    GLM = 'glm'
 }
+
 export enum EmbedModelEnum {
-    GPT = 'GPT', // text-embedding-ada-002
-    GLM = 'GLM' // text2vec-large-chinese
+    OpenAI = 'openai',
+    TextVec = 'text2vec'
 }
+
+// embed models
+export enum OpenAIEmbedModel {
+    ADA1 = 'text-embedding-ada-001',
+    ADA2 = 'text-embedding-ada-002'
+}
+export enum TextVecEmbedModel {
+    BASE_CHN = 'text2vec-base-chinese',
+    LARGE_CHN = 'text2vec-large-chinese',
+    BGE_LARGE_CHN = 'text2vec-bge-large-chinese',
+    BASE_CHN_PARA = 'text2vec-base-chinese-paraphrase'
+}
+
+// chat models
+export enum OpenAIChatModel {
+    GPT3 = 'gpt-3.5-turbo',
+    GPT3_16K = 'gpt-3.5-turbo-16k',
+    GPT3_INSTRUCT = 'gpt-3.5-turbo-instruct',
+    GPT4 = 'gpt-4',
+    GPT4_32K = 'gpt-4-32k',
+    GPT4_TURBO = 'gpt-4-1106-preview',
+    GPT4_VISION = 'gpt-4-vision-preview'
+}
+export enum GLMChatModel {
+    LOCAL = 'chatglm3-6b-32k',
+    TURBO = 'chatglm-turbo'
+}
+// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/clntwmv7t
+export enum BaiduChatModel {
+    ERNIE = 'completions', // ERNIE-Bot
+    ERNIE4 = 'completions_pro', // ERNIE-Bot 4.0
+    ERNIE_8K = 'ernie_bot_8k', // ERNIE-Bot-8K
+    ERNIE_TURBO = 'eb-instant' // ERNIE-Bot-turbo
+}
+export enum FlyChatModel {
+    V1 = 'v1.1',
+    V2 = 'v2.1',
+    V3 = 'v3.1'
+}
+export const FlyChatDomain = {
+    [FlyChatModel.V1]: 'general',
+    [FlyChatModel.V2]: 'generalv2',
+    [FlyChatModel.V3]: 'generalv3'
+}
+
+// All chat models
+export const ChatModelEnum = { ...OpenAIChatModel, ...BaiduChatModel, ...GLMChatModel, ...FlyChatModel }
+export type ChatModelEnum = OpenAIChatModel | BaiduChatModel | GLMChatModel | FlyChatModel
+
 export enum ImgModelEnum {
     SD = 'SD',
     DALLE = 'DALLE',
     MJ = 'MJ'
 }
-export enum GPTSubModel {
-    GPT3 = 'gpt-3.5-turbo',
-    GPT4 = 'gpt-4'
-}
-export enum GLMSubModel {
-    LOCAL = 'chatglm3-6b-32k',
-    TURBO = 'chatglm-turbo'
-}
-export enum SPKSubModel {
-    V1 = 'v1.1',
-    V2 = 'v2.1',
-    V3 = 'v3.1'
-}
-export const SPKSubModelDomain = {
-    [SPKSubModel.V1]: 'general',
-    [SPKSubModel.V2]: 'generalv2',
-    [SPKSubModel.V3]: 'generalv3'
-}
+
 export enum FLYAuditType {
     TEXT = 'syncText',
     IMAGE = 'image',
@@ -45,12 +80,6 @@ export enum ContentAuditEnum {
     FLY = 'iFlyTek', // 科大讯飞NLP合规性接口
     AI = 'AI' // use LLM AI model
 }
-
-export const AIModelEnum = { ...ChatModelEnum, ...ImgModelEnum, ...EmbedModelEnum }
-export type AIModelEnum = ChatModelEnum | ImgModelEnum | EmbedModelEnum
-
-export const ChatSubModelEnum = { ...GPTSubModel, ...GLMSubModel, ...SPKSubModel }
-export type ChatSubModelEnum = GPTSubModel | GLMSubModel | SPKSubModel
 
 export enum MJTaskEnum {
     IMAGINE = 'IMAGINE',

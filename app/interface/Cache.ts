@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum } from '@interface/Enum'
+import { ChatModelEnum, ModelEnum } from '@interface/Enum'
 
 export interface ChatStreamCache {
     chatId: number
@@ -8,8 +8,8 @@ export interface ChatStreamCache {
     content: string
     time: number
     resourceId: number | null
-    model: ChatModelEnum | null
-    subModel: string | null
+    model: ModelEnum | null
+    subModel: ChatModelEnum | string | null
     isEffect: boolean
 }
 

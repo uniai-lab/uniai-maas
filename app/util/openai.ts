@@ -19,14 +19,13 @@ import {
     GPTImagineSize,
     GPTChatStreamResponse
 } from '@interface/OpenAI'
-import { GPTSubModel } from '@interface/Enum'
+import { OpenAIChatModel, OpenAIEmbedModel } from '@interface/Enum'
 import { createParser } from 'eventsource-parser'
 import { ChatResponse } from '@interface/controller/UniAI'
 
 // Destructure environment variables
 const { OPENAI_API, OPENAI_KEY } = process.env
-const OPENAI_API_VERSION = 'v1'
-const EMBED_MODEL = 'text-embedding-ada-002'
+const API_VERSION = 'v1'
 
 export default {
     /**
@@ -36,10 +35,10 @@ export default {
      * @param model - The model to use for embeddings (default: text-embedding-ada-002).
      * @returns A promise resolving to the embedding response.
      */
-    async embedding(input: string[]) {
+    async embedding(input: string[], model: OpenAIEmbedModel = OpenAIEmbedModel.ADA2) {
         return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
-            `${OPENAI_API}/${OPENAI_API_VERSION}/embeddings`,
-            { model: EMBED_MODEL, input },
+            `${OPENAI_API}/${API_VERSION}/embeddings`,
+            { model, input },
             { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: 'json' }
         )
     },
@@ -56,7 +55,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
-        model: GPTSubModel = GPTSubModel.GPT3,
+        model: OpenAIChatModel = OpenAIChatModel.GPT3,
         messages: GPTChatMessage[],
         stream: boolean = false,
         top?: number,
@@ -64,13 +63,13 @@ export default {
         maxLength?: number
     ) {
         const res = await $.post<GPTChatRequest | GPTChatStreamRequest, Readable | GPTChatResponse>(
-            `${OPENAI_API}/${OPENAI_API_VERSION}/chat/completions`,
+            `${OPENAI_API}/${API_VERSION}/chat/completions`,
             { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
             { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: stream ? 'stream' : 'json' }
         )
         const data: ChatResponse = {
             content: '',
-            model: '',
+            model,
             object: '',
             promptTokens: 0,
             completionTokens: 0,
@@ -117,7 +116,7 @@ export default {
      */
     async imagine(prompt: string, nPrompt: string = '', width: number = 1024, height: number = 1024, n: number = 1) {
         return await $.post<GPTImagineRequest, GPTImagineResponse>(
-            `${OPENAI_API}/${OPENAI_API_VERSION}/images/generations`,
+            `${OPENAI_API}/${API_VERSION}/images/generations`,
             {
                 prompt: `Positive prompt: ${prompt}\nNegative prompt: ${nPrompt}`,
                 n,

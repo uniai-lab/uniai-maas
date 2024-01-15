@@ -201,6 +201,7 @@ export default class WeChat {
             dialogId: res.dialogId,
             resourceId: res.resourceId,
             model: res.model,
+            subModel: res.subModel,
             avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
             isEffect: res.isEffect
         }
@@ -227,6 +228,7 @@ export default class WeChat {
             dialogId: res.dialogId,
             resourceId: res.resourceId,
             model: res.model,
+            subModel: res.subModel,
             avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
             isEffect: res.isEffect
         }
@@ -241,7 +243,7 @@ export default class WeChat {
 
         const res = await ctx.service.weChat.listChat(user.id, dialogId, lastId, pageSize)
         const data: ChatResponse[] = []
-        for (const { id, role, content, resourceId, model } of res.chats)
+        for (const { id, role, content, resourceId, model, subModel } of res.chats)
             data.push({
                 chatId: id,
                 role,
@@ -249,6 +251,7 @@ export default class WeChat {
                 content,
                 resourceId,
                 model,
+                subModel,
                 avatar:
                     role === ChatRoleEnum.USER
                         ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))

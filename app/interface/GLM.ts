@@ -72,3 +72,8 @@ interface Usage {
     completion_tokens: number // 模型输出的 tokens 数量
     total_tokens: number // 总 tokens 数量
 }
+
+export interface TokenCache {
+    token: string
+    expire: number
+}

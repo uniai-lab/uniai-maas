@@ -2,7 +2,7 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { Readable } from 'stream'
-import { ChatModelEnum, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
+import { ModelEnum, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -33,7 +33,7 @@ export default class UniAI {
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         const { top, temperature, maxLength, prompts, stream, subModel } = params
-        const model = params.model || ChatModelEnum.GLM
+        const model = params.model || ModelEnum.GLM
         if (!prompts[0] || !prompts[0].content) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, stream, model, subModel, top, temperature, maxLength)
@@ -44,7 +44,7 @@ export default class UniAI {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         const { prompts, top, temperature, maxLength, subModel } = params
-        const model = params.model || ChatModelEnum.GLM
+        const model = params.model || ModelEnum.GLM
         if (!prompts[0] || !prompts[0].content) throw new Error('Empty prompts')
 
         const res = await ctx.service.uniAI.chat(prompts, true, model, subModel, top, temperature, maxLength)
@@ -54,10 +54,10 @@ export default class UniAI {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
     async queryResource(@Context() ctx: EggContext, @HTTPBody() params: QueryResourceRequest) {
-        const { prompts, resourceId, maxPage, maxToken, model } = params
+        const { prompts, resourceId, maxPage, model } = params
         if (!prompts.length) throw new Error('Empty prompts')
 
-        const data = await ctx.service.uniAI.queryResource(prompts, resourceId, model, maxPage, maxToken)
+        const data = await ctx.service.uniAI.queryResource(prompts, resourceId, model, maxPage)
         ctx.service.res.success('Success to find resources', data as QueryResourceResponse[])
     }
 
@@ -77,17 +77,10 @@ export default class UniAI {
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         const { resourceId, content, fileName, filePath, fileExt, fileSize } = params
-        const model = params.model || EmbedModelEnum.GLM
+        const model = params.model || EmbedModelEnum.TextVec // default: text2vec
 
-        const { id, tokens, page } = await ctx.service.uniAI.embedding(
-            model,
-            resourceId,
-            content,
-            fileName,
-            filePath,
-            fileExt,
-            fileSize
-        )
+        const res = await ctx.service.uniAI.embedding(model, resourceId, content, fileName, filePath, fileExt, fileSize)
+        const { id, tokens, page } = res
         const data: EmbeddingResponse = { id, tokens, page, model }
         ctx.service.res.success('Success to embed text', data)
     }

@@ -19,7 +19,7 @@ import {
     SPKChatRequest,
     SPKChatResponse
 } from '@interface/Spark'
-import { FLYAuditType, SPKChatRoleEnum, SPKSubModel, SPKSubModelDomain } from '@interface/Enum'
+import { FLYAuditType, SPKChatRoleEnum, FlyChatModel, FlyChatDomain } from '@interface/Enum'
 import { ChatResponse } from '@interface/controller/UniAI'
 import $ from '@util/util'
 
@@ -41,7 +41,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     chat(
-        model: SPKSubModel = SPKSubModel.V3,
+        model: FlyChatModel = FlyChatModel.V3,
         messages: SPKChatMessage[],
         stream: boolean = false,
         top?: number,
@@ -63,7 +63,7 @@ export default {
         }
         const input: SPKChatRequest = {
             header: { app_id: FLY_APP_ID },
-            parameter: { chat: { domain: SPKSubModelDomain[model], temperature, max_tokens: maxLength, top_k: top } },
+            parameter: { chat: { domain: FlyChatDomain[model], temperature, max_tokens: maxLength, top_k: top } },
             payload: { message: { text: messages } }
         }
 
@@ -144,7 +144,7 @@ export default {
  * @param version - The Spark model version.
  * @returns The WebSocket URL.
  */
-function getSparkURL(version: SPKSubModel) {
+function getSparkURL(version: FlyChatModel) {
     const host = hostname()
     const date = new Date().toUTCString()
     const algorithm = 'hmac-sha256'

@@ -10,33 +10,36 @@ import { GPTChatMessage } from '@interface/OpenAI'
 import { GLMChatMessage } from '@interface/GLM'
 import { SPKChatMessage } from '@interface/Spark'
 import {
-    ChatModelEnum,
+    BaiduChatModel,
+    ModelEnum,
     ChatRoleEnum,
-    ChatSubModelEnum,
     ContentAuditEnum,
     EmbedModelEnum,
-    GLMSubModel,
-    GPTSubModel,
     ImgModelEnum,
     MJTaskEnum,
-    SPKSubModel
+    ChatModelEnum,
+    OpenAIChatModel,
+    GLMChatModel,
+    FlyChatModel
 } from '@interface/Enum'
 import resourceType from '@data/resourceType'
 import userResourceTab from '@data/userResourceTab'
 
 import { Resource } from '@model/Resource'
+import { PassThrough, Readable } from 'stream'
+import { createParser } from 'eventsource-parser'
+import { UserContext } from '@interface/Context'
+import { BaiduChatMessage } from '@interface/Baidu'
+
 import glm from '@util/glm'
 import gpt from '@util/openai'
 import fly from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
+import baidu from '@util/baidu'
 import $ from '@util/util'
-import { PassThrough, Readable } from 'stream'
-import { createParser } from 'eventsource-parser'
-import { UserContext } from '@interface/Context'
 
-const MAX_PAGE = 6
-const MAX_TOKEN = 8192
+const MAX_PAGE = 10
 const SAME_DISTANCE = 0.01
 const TOKEN_PAGE_FIRST = 768
 const TOKEN_PAGE_SPLIT_L1 = 2048
@@ -71,9 +74,8 @@ export default class UniAI extends Service {
     async queryResource(
         prompts: ChatMessage[],
         resourceId?: number,
-        model: EmbedModelEnum = EmbedModelEnum.GLM,
-        maxPage: number = MAX_PAGE,
-        maxToken: number = MAX_TOKEN
+        model: EmbedModelEnum = EmbedModelEnum.TextVec,
+        maxPage: number = MAX_PAGE
     ) {
         const { ctx } = this
 
@@ -87,8 +89,8 @@ export default class UniAI extends Service {
 
             // check embeddings exist
             let count = 0
-            if (model === EmbedModelEnum.GPT) count = await ctx.model.Embedding1.count({ where })
-            else if (model === EmbedModelEnum.GLM) count = await ctx.model.Embedding2.count({ where })
+            if (model === EmbedModelEnum.OpenAI) count = await ctx.model.Embedding1.count({ where })
+            else if (model === EmbedModelEnum.TextVec) count = await ctx.model.Embedding2.count({ where })
 
             // embedding not exist, create embeddings
             if (!count) await this.embedding(model, resourceId)
@@ -99,11 +101,10 @@ export default class UniAI extends Service {
         for (const { content } of prompts) {
             if (!content || typeof content !== 'string') continue
             const query = content.trim()
-            if (model === EmbedModelEnum.GPT) {
+            if (model === EmbedModelEnum.OpenAI) {
                 const embed = await gpt.embedding([query])
                 const embedding = embed.data[0].embedding
                 const res = await ctx.model.Embedding1.similarFindAll(embedding, maxPage, where)
-                while (res.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) res.pop()
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
                         id: item.id,
@@ -112,11 +113,10 @@ export default class UniAI extends Service {
                         content: item.content,
                         similar: $.cosine(embedding, item.embedding || [])
                     })
-            } else if (model === EmbedModelEnum.GLM) {
+            } else if (model === EmbedModelEnum.TextVec) {
                 const embed = await glm.embedding([query])
                 const embedding = embed.data[0]
                 const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
-                while (res.reduce((n, p) => n + $.countTokens(p.content), 0) > maxToken) res.pop()
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
                         id: item.id,
@@ -135,21 +135,24 @@ export default class UniAI extends Service {
     async chat(
         prompts: ChatMessage[],
         stream: boolean = false,
-        model: ChatModelEnum = ChatModelEnum.SPARK,
-        subModel?: ChatSubModelEnum,
+        model: ModelEnum = ModelEnum.GLM,
+        subModel?: ChatModelEnum,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        if (model === ChatModelEnum.GPT) {
-            subModel = (subModel as GPTSubModel) || (await this.getConfig<GPTSubModel>('GPT_DEFAULT_SUB_MODEL'))
+        if (model === ModelEnum.OpenAI) {
+            subModel = (subModel as OpenAIChatModel) || OpenAIChatModel.GPT3
             return await gpt.chat(subModel, prompts as GPTChatMessage[], stream, top, temperature, maxLength)
-        } else if (model === ChatModelEnum.GLM) {
-            subModel = (subModel as GLMSubModel) || (await this.getConfig<GLMSubModel>('GLM_DEFAULT_SUB_MODEL'))
+        } else if (model === ModelEnum.GLM) {
+            subModel = (subModel as GLMChatModel) || GLMChatModel.LOCAL
             return await glm.chat(subModel, prompts as GLMChatMessage[], stream, top, temperature, maxLength)
-        } else if (model === ChatModelEnum.SPARK) {
-            subModel = (subModel as SPKSubModel) || (await this.getConfig<SPKSubModel>('SPK_DEFAULT_SUB_MODEL'))
+        } else if (model === ModelEnum.IFlyTek) {
+            subModel = (subModel as FlyChatModel) || FlyChatModel.V3
             return await fly.chat(subModel, prompts as SPKChatMessage[], stream, top, temperature, maxLength)
+        } else if (model === ModelEnum.Baidu) {
+            subModel = (subModel as BaiduChatModel) || BaiduChatModel.ERNIE4
+            return await baidu.chat(subModel, prompts as BaiduChatMessage[], stream, top, temperature, maxLength)
         } else throw new Error('Chat model not found')
     }
 
@@ -221,7 +224,7 @@ export default class UniAI extends Service {
 
     // create embedding
     async embedding(
-        model: EmbedModelEnum = EmbedModelEnum.GLM,
+        model: EmbedModelEnum = EmbedModelEnum.TextVec,
         resourceId?: number,
         content?: string,
         fileName?: string,
@@ -313,7 +316,7 @@ export default class UniAI extends Service {
         resourceId = resource.id
 
         // embedding resource
-        if (model === EmbedModelEnum.GPT) {
+        if (model === EmbedModelEnum.OpenAI) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             const res = await gpt.embedding(pages)
             const embeddings = res.data.map(({ embedding }, i) => ({
@@ -324,7 +327,7 @@ export default class UniAI extends Service {
                 tokens: $.countTokens(pages[i])
             }))
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(embeddings)
-        } else if (model === EmbedModelEnum.GLM) {
+        } else if (model === EmbedModelEnum.TextVec) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
             const res = await glm.embedding(pages)
             const embeddings = res.data.map((embedding, i) => ({
@@ -376,14 +379,13 @@ export default class UniAI extends Service {
 
     // check content by iFlyTek, WeChat or mint-filter
     // content is text or image, image should be base64 string
-    async audit(content: string, provider?: ContentAuditEnum) {
+    async audit(content: string, provider: ContentAuditEnum = ContentAuditEnum.MINT) {
         content = content.replace(/\r\n|\n/g, ' ').trim()
         if (!content) throw new Error('Audit content is empty')
 
         const res: AuditResponse = { flag: true, data: null }
         const ctx = this.ctx as UserContext
 
-        provider = provider || (await this.getConfig<ContentAuditEnum>('CONTENT_AUDITOR'))
         if (provider === ContentAuditEnum.WX) {
             const result = await ctx.service.weChat.contentCheck(content, ctx.user?.wxOpenId || '')
             res.flag = result.result ? result.result.suggest === 'pass' : result.errcode === 0
@@ -393,13 +395,11 @@ export default class UniAI extends Service {
             res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
             res.data = result
         } else if (provider === ContentAuditEnum.AI) {
-            const model = await this.getConfig<ChatModelEnum>('AUDITOR_AI_MODEL')
-            const subModel = await this.getConfig<ChatSubModelEnum>('AUDITOR_AI_SUB_MODEL')
             const prompt = await this.getConfig('AUDITOR_AI_PROMPT')
             const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {
-                const result = await ctx.service.uniAI.chat(message, false, model, subModel, 1, 0.1)
+                const result = await this.chat(message, false, ModelEnum.GLM, GLMChatModel.LOCAL, 1, 0.1)
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
