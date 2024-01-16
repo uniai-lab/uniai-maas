@@ -1,7 +1,7 @@
 /** @format */
 
 import { Table, Column, AutoIncrement, PrimaryKey, Model, DataType, AllowNull, Default } from 'sequelize-typescript'
-import { ContentAuditEnum } from '@interface/Enum'
+import { AuditProvider } from '@interface/Enum'
 import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['user_id'] }, { fields: ['flag'] }, { fields: ['provider'] }]
@@ -32,7 +32,7 @@ export class AuditLog extends Model {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    provider: ContentAuditEnum
+    provider: AuditProvider
 }
 
 export default () => AuditLog

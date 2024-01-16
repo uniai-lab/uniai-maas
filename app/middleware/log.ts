@@ -5,7 +5,9 @@ import { UserContext } from '@interface/Context'
 // handle and format user http request and response
 export default function log() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
-        const { ip, method, header, body, query, files, url } = ctx.request
+        const { method, header, body, query, files, url } = ctx.request
+        const ip = ctx.request.headers['x-forwarded-for'] || ctx.request.headers['x-real-ip'] || ctx.request.ip
+
         const [controller, action] = url.split(/[\/?]/).filter(item => item.trim() !== '')
         const userId = ctx.user?.id
         const res: StandardResponse = { status: 1, msg: '', data: null }

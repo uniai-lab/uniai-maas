@@ -1,16 +1,6 @@
 /** @format */
 
-import {
-    Table,
-    Column,
-    Model,
-    DataType,
-    Unique,
-    PrimaryKey,
-    AutoIncrement,
-    AllowNull,
-    Default
-} from 'sequelize-typescript'
+import { Table, Column, Model, DataType, Unique, PrimaryKey, AutoIncrement, AllowNull } from 'sequelize-typescript'
 
 @Table({ modelName: 'config' })
 export class Config extends Model {

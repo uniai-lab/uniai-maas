@@ -7,6 +7,7 @@ import ExportIndex from '../../../app/controller/Index';
 import ExportLeChat from '../../../app/controller/LeChat';
 import ExportUniAI from '../../../app/controller/UniAI';
 import ExportWeChat from '../../../app/controller/WeChat';
+import ExportWeb from '../../../app/controller/Web';
 
 declare module 'egg' {
   interface IController {
@@ -14,5 +15,6 @@ declare module 'egg' {
     leChat: ExportLeChat;
     uniAI: ExportUniAI;
     weChat: ExportWeChat;
+    web: ExportWeb;
   }
 }

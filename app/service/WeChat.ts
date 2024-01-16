@@ -3,13 +3,12 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
-import { IncludeOptions, Op, WhereOptions } from 'sequelize'
+import { Op, WhereOptions } from 'sequelize'
 import { Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
-import md5 from 'md5'
-import { ModelEnum, ChatRoleEnum, ContentAuditEnum, EmbedModelEnum, OSSEnum, FlyChatModel } from '@interface/Enum'
+import { ModelProvider, ChatRoleEnum, AuditProvider, EmbedModelEnum, OSSEnum, FlyChatModel } from '@interface/Enum'
 import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
 import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
@@ -28,7 +27,6 @@ import {
 import $ from '@util/util'
 import FormData from 'form-data'
 
-const WEEK = 7 * 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
 const CHAT_PAGE_SIZE = 10
 const CHAT_PAGE_LIMIT = 20
@@ -102,90 +100,22 @@ export default class WeChat extends Service {
 
     // use WeChat to login, get code, return new user
     async login(code: string, fid?: number) {
-        const { ctx, app } = this
+        const { ctx } = this
 
         // get access_token, openid, unionid from WeChat API
-        const { openid, session_key } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_AUTH_URL, {
+        const { openid } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_AUTH_URL, {
             grant_type: 'authorization_code',
             appid: WX_APP_ID,
             secret: WX_APP_SECRET,
             js_code: code
         })
-        if (!openid || !session_key) throw new Error('Fail to get WeChat openid or session key')
+        if (!openid) throw new Error('Fail to get WeChat openid or session key')
 
-        // try to create new user or find user
-        const now = new Date()
-        let user = await ctx.model.User.findOne({ where: { wxOpenId: openid }, include: ctx.model.UserChance })
-        if (!user) {
-            // create a new user
-            user = await ctx.model.User.create({
-                wxOpenId: openid,
-                avatar: await this.getConfig('DEFAULT_AVATAR_USER')
-            })
-            user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
-            user.chance = await ctx.model.UserChance.create({
-                userId: user.id,
-                chatChanceFree: parseInt(await this.getConfig('WEEK_FREE_CHAT_CHANCE')),
-                chatChanceFreeUpdateAt: now,
-                uploadChanceFree: parseInt(await this.getConfig('WEEK_FREE_UPLOAD_CHANCE')),
-                uploadChanceFreeUpdateAt: now,
-                uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
-            })
-
-            // give share reward
-            if (fid) await this.shareReward(fid)
-        }
-
-        // add free chat dialog
-        if (!(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: null } })))
-            await this.addDialog(user.id)
-
-        // add default resource dialog
-        const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
-        if (
-            id &&
-            (await ctx.model.Resource.count({ where: { id } })) &&
-            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: id } }))
-        )
-            await this.addDialog(user.id, id)
-
-        // check banned or invalid user
-        if (user.isDel || !user.isEffect) throw new Error('User is invalid')
-
-        // set login token
-        user.token = md5(`${openid}${now.getTime()}${code}`)
-        user.tokenTime = now
-        user.wxSessionKey = session_key
-
-        // reset week free chat and upload
-        if (now.getTime() - user.chance.chatChanceFreeUpdateAt.getTime() > WEEK) {
-            user.chance.chatChanceFree = parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE'))
-            user.chance.chatChanceFreeUpdateAt = now
-            await user.chance.save()
-        }
-        if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() > WEEK) {
-            user.chance.uploadChanceFree = parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE'))
-            user.chance.uploadChanceFreeUpdateAt = now
-            await user.chance.save()
-        }
-        await user.save()
-
-        // refresh cache
-        const cache: UserCache = {
-            ...user.dataValues,
-            tokenTime: user.tokenTime.getTime(),
-            chance: {
-                ...user.chance.dataValues,
-                chatChanceUpdateAt: user.chance.chatChanceUpdateAt.getTime(),
-                uploadChanceUpdateAt: user.chance.uploadChanceUpdateAt.getTime(),
-                chatChanceFreeUpdateAt: user.chance.chatChanceFreeUpdateAt.getTime(),
-                uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
-            }
-        }
-        await app.redis.set(`user_${cache.id}`, JSON.stringify(cache))
-
-        // save to user table and return
-        return cache
+        // find user and sign in
+        const { id } =
+            (await ctx.model.User.findOne({ where: { wxOpenId: openid }, attributes: ['id'] })) ||
+            (await ctx.service.user.create(null, openid, fid))
+        return await ctx.service.user.signIn(id)
     }
 
     // decrypt WX data
@@ -233,19 +163,6 @@ export default class WeChat extends Service {
         return await user.save()
     }
     */
-
-    // user share and another one sign up, add reward
-    async shareReward(userId: number) {
-        const { ctx } = this
-        const chance = await ctx.model.UserChance.findOne({ where: { userId } })
-        if (!chance) throw Error('Fail to reward')
-
-        chance.uploadChance += parseInt(await this.getConfig('SHARE_REWARD_UPLOAD_CHANCE'))
-        chance.chatChance += parseInt(await this.getConfig('SHARE_REWARD_CHAT_CHANCE'))
-        chance.uploadChanceUpdateAt = new Date()
-        chance.chatChanceUpdateAt = new Date()
-        return await chance.save()
-    }
 
     // user follow WeChat public account, add reward
     async followReward(unionId: string, openId: string) {
@@ -329,22 +246,24 @@ export default class WeChat extends Service {
     // list all the chats from a user and dialog
     async listChat(userId: number, dialogId?: number, lastId?: number, pageSize: number = CHAT_PAGE_SIZE) {
         const { ctx } = this
-        const include: IncludeOptions = {
-            model: ctx.model.Chat,
+        const dialog = await ctx.model.Dialog.findOne({
+            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            attributes: ['id']
+        })
+        if (!dialog) throw new Error('Can not find dialog')
+
+        const res = await ctx.model.Chat.findAll({
             limit: pageSize > CHAT_PAGE_LIMIT ? CHAT_PAGE_LIMIT : pageSize,
             order: [['id', 'DESC']],
             where: {
+                dialogId: dialog.id,
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isDel: false,
                 isEffect: true
             }
-        }
-        const dialog = dialogId
-            ? await ctx.model.Dialog.findOne({ where: { id: dialogId, userId }, include })
-            : await ctx.model.Dialog.findOne({ where: { resourceId: null, userId }, include })
-        if (!dialog) throw new Error('Can not find dialog')
-        dialog.chats.reverse()
-        return dialog
+        })
+
+        return res.reverse()
     }
 
     // chat
@@ -400,10 +319,10 @@ export default class WeChat extends Service {
         console.log(prompts)
 
         // WeChat require to audit input content
-        const isEffect = (await ctx.service.uniAI.audit(input, ContentAuditEnum.WX)).flag
+        const isEffect = (await ctx.service.uniAI.audit(input, AuditProvider.WX)).flag
         // save user prompt
         const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
-        const model = ModelEnum.IFlyTek
+        const model = ModelProvider.IFlyTek
         const subModel = FlyChatModel.V3
 
         // start chat stream

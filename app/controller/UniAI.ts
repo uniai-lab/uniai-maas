@@ -2,7 +2,7 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { Readable } from 'stream'
-import { ModelEnum, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
+import { ModelProvider, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -32,22 +32,22 @@ export default class UniAI {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
-        const { top, temperature, maxLength, prompts, stream, subModel } = params
-        const model = params.model || ModelEnum.GLM
+        const { top, temperature, maxLength, prompts, stream, model } = params
+        const provider = params.provider || ModelProvider.GLM
         if (!prompts[0] || !prompts[0].content) throw new Error('Empty prompts')
 
-        const res = await ctx.service.uniAI.chat(prompts, stream, model, subModel, top, temperature, maxLength)
+        const res = await ctx.service.uniAI.chat(prompts, stream, provider, model, top, temperature, maxLength)
         ctx.service.res.success(`Success to chat to ${model}`, res)
     }
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chatStream(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
-        const { prompts, top, temperature, maxLength, subModel } = params
-        const model = params.model || ModelEnum.GLM
+        const { top, temperature, maxLength, prompts, model } = params
+        const provider = params.provider || ModelProvider.GLM
         if (!prompts[0] || !prompts[0].content) throw new Error('Empty prompts')
 
-        const res = await ctx.service.uniAI.chat(prompts, true, model, subModel, top, temperature, maxLength)
+        const res = await ctx.service.uniAI.chat(prompts, true, provider, model, top, temperature, maxLength)
         ctx.service.res.success(`Success to chat to ${model}`, ctx.service.uniAI.concatChunk(res as Readable))
     }
 

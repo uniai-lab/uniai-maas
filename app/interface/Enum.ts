@@ -1,7 +1,7 @@
 /** @format */
 
 // model organizations
-export enum ModelEnum {
+export enum ModelProvider {
     OpenAI = 'openai',
     IFlyTek = 'iflytek',
     Baidu = 'baidu',
@@ -74,11 +74,11 @@ export enum FLYAuditType {
     VIDEO = 'video'
 }
 
-export enum ContentAuditEnum {
+export enum AuditProvider {
     MINT = 'mint-filter', // a local json dict filter
-    WX = 'WeChat', // WeChat message check
-    FLY = 'iFlyTek', // 科大讯飞NLP合规性接口
-    AI = 'AI' // use LLM AI model
+    WX = 'wechat', // WeChat message check
+    FLY = 'iflytek', // 科大讯飞NLP合规性接口
+    AI = 'chatglm' // use LLM AI model
 }
 
 export enum MJTaskEnum {

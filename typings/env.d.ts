@@ -62,6 +62,10 @@ declare global {
             // mid journey
             MID_JOURNEY_API: string
             MID_JOURNEY_TOKEN: string
+
+            // gee test
+            GEE_TEST_ID: string
+            GEE_TEST_KEY: string
         }
     }
 }

@@ -11,6 +11,7 @@ import ExportAdmin from '../../../app/service/Admin';
 import ExportLeChat from '../../../app/service/LeChat';
 import ExportRes from '../../../app/service/Res';
 import ExportUniAI from '../../../app/service/UniAI';
+import ExportUser from '../../../app/service/User';
 import ExportWeChat from '../../../app/service/WeChat';
 
 declare module 'egg' {
@@ -19,6 +20,7 @@ declare module 'egg' {
     leChat: AutoInstanceType<typeof ExportLeChat>;
     res: AutoInstanceType<typeof ExportRes>;
     uniAI: AutoInstanceType<typeof ExportUniAI>;
+    user: AutoInstanceType<typeof ExportUser>;
     weChat: AutoInstanceType<typeof ExportWeChat>;
   }
 }

@@ -14,7 +14,7 @@ import {
 } from 'sequelize-typescript'
 import { Dialog } from './Dialog'
 import { Resource } from './Resource'
-import { ModelEnum, ChatRoleEnum } from '../interface/Enum'
+import { ModelProvider, ChatRoleEnum } from '@interface/Enum'
 import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['role'] }, { fields: ['model'] }, { fields: ['sub_model'] }]
@@ -43,7 +43,7 @@ export class Chat extends Model {
     resourceId: number | null
 
     @Column(DataType.STRING)
-    model: ModelEnum | null
+    model: ModelProvider | null
 
     @Column(DataType.STRING)
     subModel: string | null

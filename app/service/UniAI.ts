@@ -11,9 +11,9 @@ import { GLMChatMessage } from '@interface/GLM'
 import { SPKChatMessage } from '@interface/Spark'
 import {
     BaiduChatModel,
-    ModelEnum,
+    ModelProvider,
     ChatRoleEnum,
-    ContentAuditEnum,
+    AuditProvider,
     EmbedModelEnum,
     ImgModelEnum,
     MJTaskEnum,
@@ -135,22 +135,22 @@ export default class UniAI extends Service {
     async chat(
         prompts: ChatMessage[],
         stream: boolean = false,
-        model: ModelEnum = ModelEnum.GLM,
+        model: ModelProvider = ModelProvider.GLM,
         subModel?: ChatModelEnum,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        if (model === ModelEnum.OpenAI) {
+        if (model === ModelProvider.OpenAI) {
             subModel = (subModel as OpenAIChatModel) || OpenAIChatModel.GPT3
             return await gpt.chat(subModel, prompts as GPTChatMessage[], stream, top, temperature, maxLength)
-        } else if (model === ModelEnum.GLM) {
+        } else if (model === ModelProvider.GLM) {
             subModel = (subModel as GLMChatModel) || GLMChatModel.LOCAL
             return await glm.chat(subModel, prompts as GLMChatMessage[], stream, top, temperature, maxLength)
-        } else if (model === ModelEnum.IFlyTek) {
+        } else if (model === ModelProvider.IFlyTek) {
             subModel = (subModel as FlyChatModel) || FlyChatModel.V3
             return await fly.chat(subModel, prompts as SPKChatMessage[], stream, top, temperature, maxLength)
-        } else if (model === ModelEnum.Baidu) {
+        } else if (model === ModelProvider.Baidu) {
             subModel = (subModel as BaiduChatModel) || BaiduChatModel.ERNIE4
             return await baidu.chat(subModel, prompts as BaiduChatMessage[], stream, top, temperature, maxLength)
         } else throw new Error('Chat model not found')
@@ -194,13 +194,9 @@ export default class UniAI extends Service {
         const { content, page } = await $.convertText(file.filepath)
         if (!content) throw new Error('Fail to extract content text')
 
-        // split and embedding first page
-        const firstPage = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
-        if (!firstPage) throw new Error('Fail to split first page')
-        const embedding = (await glm.embedding([firstPage])).data[0]
-        if (!embedding) throw new Error('Fail to embed first page')
-
-        // try to find the similar resource
+        // split and embed first page
+        const embedding = await this.embedFirstPage(content)
+        // find the similar resource
         const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
 
         // find or create resource
@@ -250,10 +246,8 @@ export default class UniAI extends Service {
             fileSize = resource.fileSize
             fileExt = resource.fileExt
 
-            // split and embedding first page
-            const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
-            if (!firstPage) throw new Error('Fail to split first page')
-            embedding = (await glm.embedding([firstPage])).data[0]
+            // embed first page
+            embedding = await this.embedFirstPage(content)
 
             resource.embedding = embedding
         }
@@ -268,10 +262,8 @@ export default class UniAI extends Service {
             if (!fileExt) throw new Error('Can not detect file extension')
             content = $.tinyText(content)
 
-            // embedding first page
-            const firstPage: string = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
-            if (!firstPage) throw new Error('First page can not be split')
-            embedding = (await glm.embedding([firstPage])).data[0]
+            // embed first page
+            embedding = await this.embedFirstPage(content)
 
             // find resource by embedding
             const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
@@ -319,25 +311,27 @@ export default class UniAI extends Service {
         if (model === EmbedModelEnum.OpenAI) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             const res = await gpt.embedding(pages)
-            const embeddings = res.data.map(({ embedding }, i) => ({
-                resourceId,
-                page: i + 1,
-                embedding,
-                content: pages[i],
-                tokens: $.countTokens(pages[i])
-            }))
-            resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(embeddings)
+            resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
+                res.data.map(({ embedding }, i) => ({
+                    resourceId,
+                    page: i + 1,
+                    embedding,
+                    content: pages[i],
+                    tokens: $.countTokens(pages[i])
+                }))
+            )
         } else if (model === EmbedModelEnum.TextVec) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
             const res = await glm.embedding(pages)
-            const embeddings = res.data.map((embedding, i) => ({
-                resourceId,
-                page: i + 1,
-                embedding,
-                content: pages[i],
-                tokens: $.countTokens(pages[i])
-            }))
-            resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(embeddings)
+            resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(
+                res.data.map((embedding, i) => ({
+                    resourceId,
+                    page: i + 1,
+                    embedding,
+                    content: pages[i],
+                    tokens: $.countTokens(pages[i])
+                }))
+            )
         } else throw new Error('Embedding model not found')
 
         return await resource.save()
@@ -379,27 +373,27 @@ export default class UniAI extends Service {
 
     // check content by iFlyTek, WeChat or mint-filter
     // content is text or image, image should be base64 string
-    async audit(content: string, provider: ContentAuditEnum = ContentAuditEnum.MINT) {
+    async audit(content: string, provider: AuditProvider = AuditProvider.MINT) {
         content = content.replace(/\r\n|\n/g, ' ').trim()
         if (!content) throw new Error('Audit content is empty')
 
         const res: AuditResponse = { flag: true, data: null }
         const ctx = this.ctx as UserContext
 
-        if (provider === ContentAuditEnum.WX) {
+        if (provider === AuditProvider.WX) {
             const result = await ctx.service.weChat.contentCheck(content, ctx.user?.wxOpenId || '')
             res.flag = result.result ? result.result.suggest === 'pass' : result.errcode === 0
             res.data = result
-        } else if (provider === ContentAuditEnum.FLY) {
+        } else if (provider === AuditProvider.FLY) {
             const result = await fly.audit(content)
             res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
             res.data = result
-        } else if (provider === ContentAuditEnum.AI) {
+        } else if (provider === AuditProvider.AI) {
             const prompt = await this.getConfig('AUDITOR_AI_PROMPT')
             const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {
-                const result = await this.chat(message, false, ModelEnum.GLM, GLMChatModel.LOCAL, 1, 0.1)
+                const result = await this.chat(message, false, ModelProvider.GLM, GLMChatModel.LOCAL, 1, 0.1)
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
@@ -417,5 +411,12 @@ export default class UniAI extends Service {
         await ctx.model.AuditLog.create({ provider, content, userId: ctx.user?.id, ...res })
 
         return res
+    }
+    async embedFirstPage(content: string) {
+        const firstPage = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
+        if (!firstPage) throw new Error('Fail to split first page')
+        const embedding = (await glm.embedding([firstPage])).data[0]
+        if (!embedding) throw new Error('Fail to embed first page')
+        return embedding
     }
 }

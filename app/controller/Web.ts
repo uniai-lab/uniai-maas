@@ -4,7 +4,6 @@ import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middlewa
 import { ChatRoleEnum } from '@interface/Enum'
 import { UserContext } from '@interface/Context'
 import {
-    SignInRequest,
     UploadResponse,
     UserinfoResponse,
     ChatListRequest,
@@ -27,9 +26,11 @@ import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import $ from '@util/util'
+import validate from '@middleware/geetest'
+import { SMSCodeRequest, SMSCodeResponse, LoginRequest } from '@interface/controller/Web'
 
-@HTTPController({ path: '/wechat' })
-export default class WeChat {
+@HTTPController({ path: '/web' })
+export default class Web {
     // app configs
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
     async config(@Context() ctx: UserContext) {
@@ -79,82 +80,24 @@ export default class WeChat {
         ctx.service.res.success('Successfully list announcements', data)
     }
 
-    // WeChat login
-    @Middleware(log(), transaction())
-    @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
-    async login(@Context() ctx: UserContext, @HTTPBody() params: SignInRequest) {
-        const { code, fid } = params
-        if (!code.trim()) throw new Error('Code is null')
-
-        const user = await ctx.service.weChat.login(code, fid)
-
-        const data: UserinfoResponse = {
-            id: user.id,
-            tokenTime: user.tokenTime,
-            name: user.name,
-            avatar: user.avatar,
-            username: user.username,
-            token: user.token,
-            wxOpenId: user.wxOpenId,
-            chance: {
-                level: user.chance.level,
-                uploadSize: user.chance.uploadSize,
-                totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
-            },
-            task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
-        }
+    @Middleware(log(), validate())
+    @HTTPMethod({ path: '/get-sms-code', method: HTTPMethodEnum.POST })
+    async getSMSCode(@Context() ctx: UserContext, @HTTPBody() params: SMSCodeRequest) {
+        const { id, phone } = await ctx.service.user.sendSMSCode(params.phone)
+        const data: SMSCodeResponse = { id, phone }
         ctx.service.res.success('Success to WeChat login', data)
     }
 
-    /* wechat register, get phone number
-    @HTTPMethod({ path: '/register', method: HTTPMethodEnum.POST })
-    async register(@Context() ctx: UserContext, @HTTPBody() params: SignUpRequest) {
-        try {
-            const { code, openid, iv, encryptedData, fid } = params
-            if (!code) throw new Error('Code can not be null')
-            if (!openid) throw new Error('OpenID can not be null')
-            if (!iv) throw new Error('IV can not be null')
-            if (!encryptedData) throw new Error('EncryptedData can not be null')
+    // WeChat login
+    @Middleware(log(), transaction())
+    @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
+    async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {
+        const { phone, code } = params
 
-            const { id, username, name, phone, countryCode, avatar, token, tokenTime, wxOpenId, wxUnionId, chance } =
-                await ctx.service.weChat.signUp(code, openid, iv, encryptedData, fid)
+        const user = await ctx.service.user.login(phone, code)
 
-            const data: UserinfoResponse = {
-                id,
-                username,
-                name,
-                phone,
-                countryCode,
-                avatar,
-                token,
-                tokenTime,
-                wxOpenId,
-                wxUnionId,
-                chance: {
-                    level: chance.level,
-                    uploadSize: chance.uploadSize,
-                    uploadChance: chance.uploadChance,
-                    uploadChanceFree: chance.uploadChanceFree,
-                    uploadChanceFreeUpdateAt: chance.uploadChanceFreeUpdateAt,
-                    uploadChanceUpdateAt: chance.uploadChanceUpdateAt,
-                    chatChance: chance.chatChance,
-                    chatChanceFree: chance.chatChanceFree,
-                    chatChanceFreeUpdateAt: chance.chatChanceFreeUpdateAt,
-                    chatChanceUpdateAt: chance.chatChanceUpdateAt,
-                    totalChatChance: chance.chatChance + chance.chatChanceFree,
-                    totalUploadChance: chance.uploadChance + chance.uploadChanceFree
-                },
-                task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK')
-            }
-            ctx.service.res.success('Success to WeChat register', data)
-        } catch (e) {
-            this.logger.error(e)
-            ctx.service.res.error(e as Error)
-        }
+        ctx.service.res.success('Success to WeChat login', { user })
     }
-    */
 
     // get user info
     @Middleware(auth())
@@ -239,20 +182,20 @@ export default class WeChat {
 
         const res = await ctx.service.weChat.listChat(user.id, dialogId, lastId, pageSize)
         const data: ChatResponse[] = []
-        for (const { id, dialogId, role, content, resourceId, model, subModel, isEffect } of res)
+        for (const { id, role, content, resourceId, model, subModel, dialogId, isEffect } of res)
             data.push({
                 chatId: id,
-                dialogId,
-                avatar:
-                    role === ChatRoleEnum.USER
-                        ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
-                        : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
                 role,
                 content,
                 resourceId,
                 model,
                 subModel,
-                isEffect
+                avatar:
+                    role === ChatRoleEnum.USER
+                        ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
+                        : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+                dialogId,
+                isEffect: isEffect
             })
         ctx.service.res.success('Success to list chat history', data)
     }
