@@ -11,6 +11,7 @@ const WEEK_FREE_CHAT_CHANCE = 99
 const WEEK_FREE_UPLOAD_CHANCE = 10
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
+const { ADMIN_TOKEN } = process.env
 
 const menus: ConfigMenu[] = [
     {
@@ -223,7 +224,7 @@ export default [
     },
     {
         key: 'ADMIN_TOKEN',
-        value: process.env.ADMIN_TOKEN,
+        value: ADMIN_TOKEN,
         description: '超级管理员密码'
     },
     {

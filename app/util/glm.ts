@@ -48,7 +48,7 @@ export default {
     /**
      * Sends messages to the GLM chat model.
      *
-     * @param model - The submodel to use for chat (default: GLM_DEFAULT_CHAT_MODEL).
+     * @param model - The submodel to use for chat (default: LOCAL chatglm3-6b-32k).
      * @param messages - An array of chat messages.
      * @param stream - Whether to use stream response (default: false).
      * @param top - Top probability to sample (optional).
