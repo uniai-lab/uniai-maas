@@ -18,6 +18,7 @@ export default class User extends Service {
 
     // create user by phone, wx openid
     async create(phone: string | null = null, wxOpenId: string | null = null, fid: number = 0) {
+        if (!phone && !wxOpenId) throw new Error('need one of phone, openid')
         const { ctx } = this
         const avatar = await this.getConfig('DEFAULT_AVATAR_USER')
         const user = await ctx.model.User.create({ wxOpenId, phone, avatar })
@@ -36,7 +37,6 @@ export default class User extends Service {
 
     async signIn(userId: number) {
         const { ctx, app } = this
-        const { weChat } = ctx.service
 
         const user = await ctx.model.User.findByPk(userId, { include: ctx.model.UserChance })
         // check banned or invalid user
@@ -45,15 +45,15 @@ export default class User extends Service {
 
         // add free chat dialog
         if (!(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: null } })))
-            await weChat.addDialog(user.id)
+            await ctx.service.weChat.addDialog(user.id)
 
         // add default resource dialog
-        const id = parseInt(await weChat.getConfig('INIT_RESOURCE_ID'))
+        const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
         if (
             !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: id } })) &&
             (await ctx.model.Resource.count({ where: { id } }))
         )
-            await weChat.addDialog(user.id, id)
+            await ctx.service.weChat.addDialog(user.id, id)
 
         const now = new Date()
         // set login token
@@ -62,12 +62,12 @@ export default class User extends Service {
 
         // reset week free chat and upload
         if (now.getTime() - user.chance.chatChanceFreeUpdateAt.getTime() > WEEK) {
-            user.chance.chatChanceFree = parseInt(await weChat.getConfig('DEFAULT_FREE_CHAT_CHANCE'))
+            user.chance.chatChanceFree = parseInt(await this.getConfig('DEFAULT_FREE_CHAT_CHANCE'))
             user.chance.chatChanceFreeUpdateAt = now
             await user.chance.save()
         }
         if (now.getTime() - user.chance.uploadChanceFreeUpdateAt.getTime() > WEEK) {
-            user.chance.uploadChanceFree = parseInt(await weChat.getConfig('DEFAULT_FREE_UPLOAD_CHANCE'))
+            user.chance.uploadChanceFree = parseInt(await this.getConfig('DEFAULT_FREE_UPLOAD_CHANCE'))
             user.chance.uploadChanceFreeUpdateAt = now
             await user.chance.save()
         }

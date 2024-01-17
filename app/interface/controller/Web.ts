@@ -13,6 +13,7 @@ export interface SMSCodeResponse {
 export interface LoginRequest {
     phone: string
     code: string
+    fid?: number
 }
 
 export interface UserinfoResponse {

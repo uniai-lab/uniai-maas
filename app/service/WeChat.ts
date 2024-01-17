@@ -9,7 +9,7 @@ import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import { ModelProvider, ChatRoleEnum, AuditProvider, EmbedModelEnum, OSSEnum, FlyChatModel } from '@interface/Enum'
-import { ChatStreamCache, UserCache, WXAccessTokenCache } from '@interface/Cache'
+import { ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
 import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
     ConfigMenu,
@@ -75,10 +75,8 @@ export default class WeChat extends Service {
     }
 
     // get all tabs of index page
-    async getTab(pid?: number) {
-        const where: WhereOptions = { isEffect: true, isDel: false }
-        if (pid) where.pid = pid
-        return await this.ctx.model.UserResourceTab.findAll({ where })
+    async getTab(pid: number) {
+        return await this.ctx.model.UserResourceTab.findAll({ where: { pid: pid || 0, isEffect: true, isDel: false } })
     }
 
     // get announcements
@@ -97,7 +95,7 @@ export default class WeChat extends Service {
             secret: WX_APP_SECRET,
             js_code: code
         })
-        if (!openid) throw new Error('Fail to get WeChat openid or session key')
+        if (!openid) throw new Error('Fail to get WeChat openid')
 
         // find user and sign in
         const { id } =

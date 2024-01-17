@@ -13,7 +13,8 @@ import {
     UserinfoResponse,
     ConfigResponse
 } from '@interface/controller/Web'
-import { AnnounceResponse } from '@interface/controller/WeChat'
+import { AnnounceResponse, DialogRequest, DialogResponse, TabResponse } from '@interface/controller/WeChat'
+import $ from '@util/util'
 
 @HTTPController({ path: '/web' })
 export default class Web {
@@ -22,6 +23,21 @@ export default class Web {
     async config(@Context() ctx: UserContext) {
         const data: ConfigResponse = await ctx.service.web.getUserConfig()
         ctx.service.res.success('Success to list config', data)
+    }
+
+    // app tabs
+    @HTTPMethod({ path: '/tab', method: HTTPMethodEnum.GET })
+    async tab(@Context() ctx: UserContext, @HTTPQuery() pid: string) {
+        const res = await ctx.service.weChat.getTab(parseInt(pid))
+
+        const data: TabResponse[] = []
+        for (const { id, name, desc, pid } of res) {
+            const child = res
+                .filter(({ pid }) => pid === id)
+                .map(({ id, name, desc, pid }) => ({ id, name, desc, pid }))
+            data.push({ id, name, desc, pid, child })
+        }
+        ctx.service.res.success('Success to list tab', data)
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
@@ -43,7 +59,6 @@ export default class Web {
             content,
             closeable
         }))
-
         ctx.service.res.success('Successfully list announcements', data)
     }
 
@@ -59,9 +74,9 @@ export default class Web {
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {
-        const { phone, code } = params
+        const { phone, code, fid } = params
 
-        const user = await ctx.service.web.login(phone, code)
+        const user = await ctx.service.web.login(phone, code, fid)
         const data: UserinfoResponse = {
             id: user.id,
             name: user.name,
@@ -78,7 +93,6 @@ export default class Web {
             },
             benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
         }
-
         ctx.service.res.success('Success to WeChat login', data)
     }
 
@@ -105,5 +119,33 @@ export default class Web {
             benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
         }
         ctx.service.res.success('User information', data)
+    }
+
+    @Middleware(auth(), log())
+    @HTTPMethod({ path: '/list-dialog', method: HTTPMethodEnum.POST })
+    async listDialogResource(@Context() ctx: UserContext, @HTTPBody() params: DialogRequest) {
+        const user = ctx.user!
+
+        const res = await ctx.service.weChat.listDialog(user.id, params.lastId, params.pageSize)
+
+        const data: DialogResponse[] = []
+        for (const { id, resource } of res) {
+            if (!resource.isEffect) resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
+            // filter file name
+            resource.fileName = $.contentFilter(resource.fileName).text
+            data.push({
+                dialogId: id,
+                resourceId: resource.id,
+                page: resource.page,
+                fileName: resource.fileName,
+                fileSize: resource.fileSize,
+                filePath: ctx.service.weChat.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
+                updatedAt: resource.updatedAt,
+                typeId: resource.type.id,
+                type: resource.type.type,
+                description: resource.type.description
+            })
+        }
+        ctx.service.res.success('Success to list resources', data)
     }
 }
