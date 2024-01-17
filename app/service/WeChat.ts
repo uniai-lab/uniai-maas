@@ -77,7 +77,7 @@ export default class WeChat extends Service {
     // get all tabs of index page
     async getTab(pid?: number) {
         const where: WhereOptions = { isEffect: true, isDel: false }
-        if (pid !== undefined) where.pid = pid
+        if (pid) where.pid = pid
         return await this.ctx.model.UserResourceTab.findAll({ where })
     }
 

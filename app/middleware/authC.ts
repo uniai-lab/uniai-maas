@@ -14,7 +14,7 @@ export default function auth() {
     return async (ctx: UserContext, next: () => Promise<any>) => {
         const id = parseInt(ctx.get('id'))
         const token = ctx.get('token')
-        const appType = ctx.get('app_type')
+        const appType = ctx.get('app-type')
         const expire = appType === 'web' ? EXPIRE_7 : EXPIRE_1
 
         const now = Date.now()
