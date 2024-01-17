@@ -94,7 +94,7 @@ export interface DialogResponse {
     description: string | null
 }
 
-export type UserinfoResponse = {
+export interface UserinfoResponse {
     id: number
     tokenTime: number
     token: string | null

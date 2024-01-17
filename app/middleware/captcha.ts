@@ -6,7 +6,7 @@ import { GeeTest } from 'gt4-node-sdk'
 const { GEE_TEST_ID, GEE_TEST_KEY } = process.env
 
 // check company auth
-export default function validate() {
+export default function captcha() {
     const gt = new GeeTest({
         captchaId: GEE_TEST_ID,
         captchaKey: GEE_TEST_KEY

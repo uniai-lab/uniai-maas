@@ -4,7 +4,7 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
-import { extname } from 'path'
+import { basename, extname } from 'path'
 import { AIAuditResponse, AuditResponse, ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
 import { GPTChatMessage } from '@interface/OpenAI'
 import { GLMChatMessage } from '@interface/GLM'
@@ -175,6 +175,14 @@ export default class UniAI extends Service {
         stream.on('end', () => output.end())
         stream.on('close', () => parser.reset())
         return output as Readable
+    }
+
+    // get file stream from path or url
+    async file(path: string, name?: string) {
+        name = name || basename(path)
+        this.ctx.response.type = extname(name)
+        this.ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`) // 强制浏览器下载，设置下载的文件名
+        return await $.getFileStream(path)
     }
 
     // upload file

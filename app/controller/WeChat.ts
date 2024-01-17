@@ -22,7 +22,6 @@ import {
     UpdateUserRequest,
     DialogRequest
 } from '@interface/controller/WeChat'
-import { basename, extname } from 'path'
 import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
@@ -56,12 +55,9 @@ export default class WeChat {
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
     async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         if (!path) throw new Error('Path is null')
-        name = name || basename(path)
 
-        ctx.response.type = extname(name)
-        ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`) // 强制浏览器下载，设置下载的文件名
-
-        ctx.body = await ctx.service.weChat.file(path)
+        // file stream
+        ctx.body = await ctx.service.uniAI.file(path, name)
     }
 
     // announcement
@@ -103,7 +99,7 @@ export default class WeChat {
                 totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
         }
         ctx.service.res.success('Success to WeChat login', data)
     }
@@ -177,7 +173,7 @@ export default class WeChat {
                 totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
         }
         ctx.service.res.success('User information', data)
     }
@@ -318,7 +314,7 @@ export default class WeChat {
                 totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.weChat.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
         }
         ctx.service.res.success('Success to update user information', data)
     }

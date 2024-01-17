@@ -74,18 +74,6 @@ export default class WeChat extends Service {
         }
     }
 
-    // get user's level benefit
-    async getLevelBenefit(level: number) {
-        const { ctx } = this
-        const vips = await ctx.service.weChat.getConfig<ConfigVIP[]>('USER_VIP')
-        const images = await ctx.service.weChat.getConfig<string[]>('USER_MENU_VIP_ICON')
-        if (!vips[level]) throw new Error('User level is invalid')
-        return vips[level].benefits.map((v, i) => {
-            v.image = images[i]
-            return v
-        })
-    }
-
     // get all tabs of index page
     async getTab(pid?: number) {
         const where: WhereOptions = { isEffect: true, isDel: false }
@@ -364,7 +352,7 @@ export default class WeChat extends Service {
         stream.on('end', async () => {
             if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
             else await user.decrement({ chatChance: 1 })
-            this.updateUserCache(user.userId)
+            ctx.service.user.updateUserCache(user.userId)
         })
         stream.on('close', async () => {
             parser.reset()
@@ -404,7 +392,7 @@ export default class WeChat extends Service {
         // update user database
         await this.ctx.model.User.update({ avatar }, { where: { id: userId } })
         // update cache
-        await this.updateUserCache(userId)
+        await this.ctx.service.user.updateUserCache(userId)
 
         return avatar
     }
@@ -412,31 +400,7 @@ export default class WeChat extends Service {
     async updateUser(id: number, name?: string) {
         if (name) await this.ctx.model.User.update({ name }, { where: { id } })
         // update cache
-        const cache = await this.updateUserCache(id)
-        return cache
-    }
-
-    // update user cache in redis
-    async updateUserCache(id: number) {
-        const { ctx } = this
-        const user = await ctx.model.User.findOne({
-            where: { id, isDel: false, isEffect: true },
-            include: { model: ctx.model.UserChance }
-        })
-        if (!user) throw new Error('User is not found')
-
-        const cache: UserCache = {
-            ...user.dataValues,
-            tokenTime: user.tokenTime.getTime(),
-            chance: {
-                ...user.chance.dataValues,
-                chatChanceUpdateAt: user.chance.chatChanceUpdateAt.getTime(),
-                uploadChanceUpdateAt: user.chance.uploadChanceUpdateAt.getTime(),
-                chatChanceFreeUpdateAt: user.chance.chatChanceFreeUpdateAt.getTime(),
-                uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
-            }
-        }
-        await ctx.app.redis.set(`user_${id}`, JSON.stringify(cache))
+        const cache = await this.ctx.service.user.updateUserCache(id)
         return cache
     }
 
@@ -467,7 +431,7 @@ export default class WeChat extends Service {
         if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
         else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
         else throw new Error('Fail to reduce upload chance')
-        await this.updateUserCache(chance.userId)
+        await ctx.service.user.updateUserCache(chance.userId)
 
         return await resource.save()
     }
@@ -515,11 +479,6 @@ export default class WeChat extends Service {
         const { host, protocol } = this.ctx.request
         const http = $.isTLS(protocol) || $.isDomain(host) ? 'https' : 'http'
         return `${http}://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
-    }
-
-    // get file stream from path or url
-    async file(path: string) {
-        return await $.getFileStream(path)
     }
 
     // use WX API to check content
@@ -586,6 +545,6 @@ export default class WeChat extends Service {
         chance.chatChanceUpdateAt = new Date()
 
         await chance.save()
-        await this.updateUserCache(userId)
+        await this.ctx.service.user.updateUserCache(userId)
     }
 }

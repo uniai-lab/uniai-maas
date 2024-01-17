@@ -2,12 +2,11 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { UserCache } from '@interface/Cache'
+import { ConfigVIP } from '@interface/controller/WeChat'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
 
-const LIMIT_SMS_COUNT = 5
-const LIMIT_SMS_EXPIRE = 5 * 60
 const WEEK = 7 * 24 * 60 * 60 * 1000
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -20,17 +19,13 @@ export default class User extends Service {
     // create user by phone, wx openid
     async create(phone: string | null = null, wxOpenId: string | null = null, fid: number = 0) {
         const { ctx } = this
-        const now = new Date()
-        // create a new user
         const avatar = await this.getConfig('DEFAULT_AVATAR_USER')
         const user = await ctx.model.User.create({ wxOpenId, phone, avatar })
         user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
         user.chance = await ctx.model.UserChance.create({
             userId: user.id,
             chatChanceFree: parseInt(await this.getConfig('WEEK_FREE_CHAT_CHANCE')),
-            chatChanceFreeUpdateAt: now,
             uploadChanceFree: parseInt(await this.getConfig('WEEK_FREE_UPLOAD_CHANCE')),
-            uploadChanceFreeUpdateAt: now,
             uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
         })
 
@@ -107,31 +102,37 @@ export default class User extends Service {
         return await chance.save()
     }
 
-    // send SMS code
-    async sendSMSCode(phone: string) {
-        return await this.ctx.model.PhoneCode.create({
-            phone,
-            code: '888888',
-            expire: Math.floor(Date.now() / 1000 + LIMIT_SMS_EXPIRE)
+    // get user's benefit by level
+    async getLevelBenefit(level: number) {
+        const vips = await this.getConfig<ConfigVIP[]>('USER_VIP')
+        const images = await this.getConfig<string[]>('USER_MENU_VIP_ICON')
+        if (!vips[level]) throw new Error('User level is invalid')
+        return vips[level].benefits.map((v, i) => {
+            v.image = images[i]
+            return v
         })
     }
-
-    // login
-    async login(phone: string, code: string, fid?: number) {
+    // update user cache in redis
+    async updateUserCache(id: number) {
         const { ctx } = this
-        const res = await ctx.model.PhoneCode.findOne({ where: { phone }, order: [['id', 'DESC']] })
-        if (!res) throw new Error('Can not find the phone number')
+        const user = await ctx.model.User.findOne({
+            where: { id, isDel: false, isEffect: true },
+            include: { model: ctx.model.UserChance }
+        })
+        if (!user) throw new Error('User is not found')
 
-        // validate code
-        await res.increment('count')
-        if (res.count > LIMIT_SMS_COUNT) throw new Error('Code try too many times')
-        if (Date.now() / 1000 > res.expire) throw new Error('Code is expired 5 mins')
-        if (res.code !== code) throw new Error('Code is invalid')
-
-        // find user and sign in
-        const { id } =
-            (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
-            (await this.create(phone, null, fid))
-        return await this.signIn(id)
+        const cache: UserCache = {
+            ...user.dataValues,
+            tokenTime: user.tokenTime.getTime(),
+            chance: {
+                ...user.chance.dataValues,
+                chatChanceUpdateAt: user.chance.chatChanceUpdateAt.getTime(),
+                uploadChanceUpdateAt: user.chance.uploadChanceUpdateAt.getTime(),
+                chatChanceFreeUpdateAt: user.chance.chatChanceFreeUpdateAt.getTime(),
+                uploadChanceFreeUpdateAt: user.chance.uploadChanceFreeUpdateAt.getTime()
+            }
+        }
+        await ctx.app.redis.set(`user_${id}`, JSON.stringify(cache))
+        return cache
     }
 }
