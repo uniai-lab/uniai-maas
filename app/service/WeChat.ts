@@ -3,13 +3,13 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
-import { Op, WhereOptions } from 'sequelize'
+import { Op } from 'sequelize'
 import { Readable } from 'stream'
 import { createParser } from 'eventsource-parser'
 import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import { ModelProvider, ChatRoleEnum, AuditProvider, EmbedModelEnum, OSSEnum, FlyChatModel } from '@interface/Enum'
-import { ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
+import { AdvCache, ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
 import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
     ConfigMenu,
@@ -27,6 +27,7 @@ import {
 import $ from '@util/util'
 import FormData from 'form-data'
 
+const ONE_DAY = 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
 const CHAT_PAGE_SIZE = 10
 const CHAT_PAGE_LIMIT = 20
@@ -533,6 +534,12 @@ export default class WeChat extends Service {
 
     // watch adv reward
     async watchAdv(userId: number) {
+        const { app, ctx } = this
+        const res = $.json<AdvCache>(await app.redis.get(`adv_${userId}`))
+        const now = Date.now()
+        const limit = parseInt(await this.getConfig('ADV_REWARD_LIMIT_COUNT'))
+        if (res && now - res.time <= ONE_DAY && res.count >= limit) throw new Error('Adv too many times one day')
+
         const chance = await this.ctx.model.UserChance.findOne({
             where: { userId },
             attributes: ['id', 'userId', 'chatChance', 'chatChanceUpdateAt']
@@ -543,6 +550,13 @@ export default class WeChat extends Service {
         chance.chatChanceUpdateAt = new Date()
 
         await chance.save()
-        await this.ctx.service.user.updateUserCache(userId)
+        await ctx.service.user.updateUserCache(userId)
+
+        const cache: AdvCache = {
+            count: (res?.count || 0) + 1,
+            time: now - (res?.time || 0) > ONE_DAY ? now : res!.time
+        }
+        await app.redis.set(`adv_${userId}`, JSON.stringify(cache))
+        return cache
     }
 }

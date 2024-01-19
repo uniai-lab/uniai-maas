@@ -54,3 +54,8 @@ export interface WXAccessTokenCache {
     token: string
     expire: number
 }
+
+export interface AdvCache {
+    count: number
+    time: number
+}

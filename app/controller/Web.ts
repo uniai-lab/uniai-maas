@@ -13,8 +13,17 @@ import {
     UserinfoResponse,
     ConfigResponse
 } from '@interface/controller/Web'
-import { AnnounceResponse, DialogRequest, DialogResponse, TabResponse } from '@interface/controller/WeChat'
+import {
+    AnnounceResponse,
+    ChatListRequest,
+    ChatRequest,
+    ChatResponse,
+    DialogRequest,
+    DialogResponse,
+    TabResponse
+} from '@interface/controller/WeChat'
 import $ from '@util/util'
+import { ChatRoleEnum } from '@interface/Enum'
 
 @HTTPController({ path: '/web' })
 export default class Web {
@@ -147,5 +156,80 @@ export default class Web {
             })
         }
         ctx.service.res.success('Success to list resources', data)
+    }
+
+    @Middleware(auth(), log())
+    @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
+    async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
+        const user = ctx.user!
+        const { dialogId, lastId, pageSize } = params
+
+        const res = await ctx.service.weChat.listChat(user.id, dialogId, lastId, pageSize)
+        const data: ChatResponse[] = []
+        for (const { id, dialogId, role, content, resourceId, model, subModel, isEffect } of res)
+            data.push({
+                chatId: id,
+                dialogId,
+                avatar:
+                    role === ChatRoleEnum.USER
+                        ? user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER'))
+                        : await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+                role,
+                content,
+                resourceId,
+                model,
+                subModel,
+                isEffect
+            })
+        ctx.service.res.success('Success to list chat history', data)
+    }
+
+    // send chat message and set stream
+    @Middleware(auth(), log())
+    @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
+    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
+        const user = ctx.user!
+        const { input, dialogId } = params
+        if (!input) throw new Error('Input nothing')
+
+        const res = await ctx.service.weChat.chat(input, user.id, dialogId)
+
+        const data: ChatResponse = {
+            chatId: res.id,
+            role: res.role,
+            content: res.isEffect ? res.content : ctx.__('not compliant'),
+            dialogId: res.dialogId,
+            resourceId: res.resourceId,
+            model: res.model,
+            subModel: res.subModel,
+            avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+            isEffect: res.isEffect
+        }
+
+        ctx.service.res.success('Success start chat stream', data)
+    }
+
+    // get chat stream
+    @Middleware(auth())
+    @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
+    async getChat(@Context() ctx: UserContext) {
+        const user = ctx.user!
+
+        const res = await ctx.service.weChat.getChat(user.id)
+        if (!res) return ctx.service.res.success('No chat stream', null)
+
+        // filter sensitive
+        const data: ChatResponse = {
+            chatId: res.chatId,
+            role: ChatRoleEnum.ASSISTANT,
+            content: res.isEffect ? res.content : ctx.__('not compliant'),
+            dialogId: res.dialogId,
+            resourceId: res.resourceId,
+            model: res.model,
+            subModel: res.subModel,
+            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+            isEffect: res.isEffect
+        }
+        ctx.service.res.success('Success to get chat stream', data)
     }
 }

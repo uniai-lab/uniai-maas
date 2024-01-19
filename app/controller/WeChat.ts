@@ -381,7 +381,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/watch-adv', method: HTTPMethodEnum.GET })
     async watchAdv(@Context() ctx: UserContext) {
         const user = ctx.user!
-        await ctx.service.weChat.watchAdv(user.id)
-        ctx.service.res.success('Success to get advertisement reward')
+        const res = await ctx.service.weChat.watchAdv(user.id)
+        ctx.service.res.success('Success to get advertisement reward', res)
     }
 }

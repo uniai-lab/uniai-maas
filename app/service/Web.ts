@@ -3,9 +3,11 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
 import { Service } from 'egg'
+import { Op } from 'sequelize'
 
+const LIMIT_SMS_WAIT = 1 * 60 * 1000
+const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
 const LIMIT_SMS_COUNT = 5
-const LIMIT_SMS_EXPIRE = 5 * 60
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -33,7 +35,13 @@ export default class Web extends Service {
 
     // send SMS code
     async sendSMSCode(phone: string) {
-        return await this.ctx.model.PhoneCode.create({
+        const { ctx } = this
+        const count = await ctx.model.PhoneCode.count({
+            where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_WAIT) } }
+        })
+        if (count) throw new Error('Too many times request SMS code')
+
+        return await ctx.model.PhoneCode.create({
             phone,
             code: '888888',
             expire: Math.floor(Date.now() / 1000 + LIMIT_SMS_EXPIRE)
@@ -43,13 +51,15 @@ export default class Web extends Service {
     // login
     async login(phone: string, code: string, fid?: number) {
         const { ctx } = this
-        const res = await ctx.model.PhoneCode.findOne({ where: { phone }, order: [['id', 'DESC']] })
+        const res = await ctx.model.PhoneCode.findOne({
+            where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_EXPIRE) } },
+            order: [['id', 'DESC']]
+        })
         if (!res) throw new Error('Can not find the phone number')
+        await res.increment('count')
 
         // validate code
-        await res.increment('count')
-        if (res.count > LIMIT_SMS_COUNT) throw new Error('Code try too many times')
-        if (Date.now() / 1000 > res.expire) throw new Error('Code is expired 5 mins')
+        if (res.count >= LIMIT_SMS_COUNT) throw new Error('Try too many times')
         if (res.code !== code) throw new Error('Code is invalid')
 
         // find user and sign in

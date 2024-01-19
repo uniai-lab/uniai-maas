@@ -113,6 +113,10 @@ STABLE_DIFFUSION_API=http://10.144.1.7:3400
 MID_JOURNEY_API= # Visit https://github.com/novicezk/midjourney-proxy
 MID_JOURNEY_TOKEN= # MidJourney proxy token
 
+# GeeTest
+GEE_TEST_ID=
+GEE_TEST_KEY=
+
 ```
 
 ### Installation Steps

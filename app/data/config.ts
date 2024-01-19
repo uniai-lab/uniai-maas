@@ -4,10 +4,11 @@ import ROOT_PATH from 'app-root-path'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
 import { readFileSync } from 'fs'
 
+const ADV_REWARD_LIMIT_COUNT = 10
 const ADV_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_UPLOAD_CHANCE = 5
-const WEEK_FREE_CHAT_CHANCE = 99
+const WEEK_FREE_CHAT_CHANCE = 70
 const WEEK_FREE_UPLOAD_CHANCE = 10
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
@@ -296,6 +297,11 @@ export default [
         key: 'ADV_REWARD_CHAT_CHANCE',
         value: ADV_REWARD_CHAT_CHANCE,
         description: '广告增加聊天次数'
+    },
+    {
+        key: 'ADV_REWARD_LIMIT_COUNT',
+        value: ADV_REWARD_LIMIT_COUNT,
+        description: '24小时广告奖励上限'
     },
     {
         key: 'ADV_REWARD_UPLOAD_CHANCE',

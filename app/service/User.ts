@@ -55,6 +55,7 @@ export default class User extends Service {
         )
             await ctx.service.weChat.addDialog(user.id, id)
 
+        if (!user.name) user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`
         const now = new Date()
         // set login token
         user.token = md5(`${now.getTime()}${randomUUID()}`)
