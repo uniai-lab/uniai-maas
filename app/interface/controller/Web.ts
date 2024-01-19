@@ -1,5 +1,6 @@
 /** @format */
 
+import { ChatModelEnum, ModelProvider } from '@interface/Enum'
 import { Benefit, ConfigMenuV2, ConfigVIP } from './WeChat'
 
 export interface SMSCodeRequest {
@@ -45,4 +46,12 @@ export interface ConfigResponse {
     menuShare: ConfigMenuV2
     menuFocus: ConfigMenuV2
     menuAdv: ConfigMenuV2
+}
+
+export interface ChatRequest {
+    input: string
+    dialogId?: number
+    sse?: boolean
+    provider?: ModelProvider
+    model?: ChatModelEnum
 }

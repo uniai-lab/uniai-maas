@@ -20,7 +20,6 @@ import {
     WXAccessTokenResponse,
     WXAuthCodeRequest,
     WXAuthCodeResponse,
-    WXDecodedData,
     WXMsgCheckRequest,
     WXMsgCheckResponse
 } from '@interface/controller/WeChat'
@@ -105,6 +104,7 @@ export default class WeChat extends Service {
         return await ctx.service.user.signIn(id)
     }
 
+    /* user sign phone number
     // decrypt WX data
     decryptData(encryptedData: string, iv: string, sessionKey: string, appid: string) {
         const decoded = $.decode(
@@ -119,7 +119,6 @@ export default class WeChat extends Service {
         return decodedData
     }
 
-    /* user sign phone number
     async signUp(code: string, openid: string, iv: string, encryptedData: string, fid?: number) {
         const { ctx, app } = this
 

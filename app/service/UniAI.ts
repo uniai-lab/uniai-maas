@@ -141,19 +141,43 @@ export default class UniAI extends Service {
         temperature?: number,
         maxLength?: number
     ) {
-        if (provider === ModelProvider.OpenAI) {
-            model = (model as OpenAIChatModel) || OpenAIChatModel.GPT3
-            return await gpt.chat(model, prompts as GPTChatMessage[], stream, top, temperature, maxLength)
-        } else if (provider === ModelProvider.GLM) {
-            model = (model as GLMChatModel) || GLMChatModel.LOCAL
-            return await glm.chat(model, prompts as GLMChatMessage[], stream, top, temperature, maxLength)
-        } else if (provider === ModelProvider.IFlyTek) {
-            model = (model as FlyChatModel) || FlyChatModel.V3
-            return await fly.chat(model, prompts as SPKChatMessage[], stream, top, temperature, maxLength)
-        } else if (provider === ModelProvider.Baidu) {
-            model = (model as BaiduChatModel) || BaiduChatModel.ERNIE4
-            return await baidu.chat(model, prompts as BaiduChatMessage[], stream, top, temperature, maxLength)
-        } else throw new Error('Chat model not found')
+        if (provider === ModelProvider.OpenAI)
+            return await gpt.chat(
+                model as OpenAIChatModel,
+                prompts as GPTChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength
+            )
+        else if (provider === ModelProvider.GLM)
+            return await glm.chat(
+                model as GLMChatModel,
+                prompts as GLMChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength
+            )
+        else if (provider === ModelProvider.IFlyTek)
+            return await fly.chat(
+                model as FlyChatModel,
+                prompts as SPKChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength
+            )
+        else if (provider === ModelProvider.Baidu)
+            return await baidu.chat(
+                model as BaiduChatModel,
+                prompts as BaiduChatMessage[],
+                stream,
+                top,
+                temperature,
+                maxLength
+            )
+        else throw new Error('Chat model not found')
     }
 
     // concat chat stream chunk

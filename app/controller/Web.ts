@@ -11,12 +11,12 @@ import {
     SMSCodeResponse,
     LoginRequest,
     UserinfoResponse,
-    ConfigResponse
+    ConfigResponse,
+    ChatRequest
 } from '@interface/controller/Web'
 import {
     AnnounceResponse,
     ChatListRequest,
-    ChatRequest,
     ChatResponse,
     DialogRequest,
     DialogResponse,
@@ -24,6 +24,7 @@ import {
 } from '@interface/controller/WeChat'
 import $ from '@util/util'
 import { ChatRoleEnum } from '@interface/Enum'
+import { Readable } from 'stream'
 
 @HTTPController({ path: '/web' })
 export default class Web {
@@ -189,24 +190,29 @@ export default class Web {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         const user = ctx.user!
-        const { input, dialogId } = params
+        const { input, dialogId, sse, provider, model } = params
         if (!input) throw new Error('Input nothing')
 
-        const res = await ctx.service.weChat.chat(input, user.id, dialogId)
+        const res = sse
+            ? await ctx.service.web.chat(input, user.id, dialogId, provider, model)
+            : await ctx.service.weChat.chat(input, user.id, dialogId)
 
-        const data: ChatResponse = {
-            chatId: res.id,
-            role: res.role,
-            content: res.isEffect ? res.content : ctx.__('not compliant'),
-            dialogId: res.dialogId,
-            resourceId: res.resourceId,
-            model: res.model,
-            subModel: res.subModel,
-            avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
-            isEffect: res.isEffect
+        if (res instanceof Readable) ctx.body = res
+        else {
+            const data: ChatResponse = {
+                chatId: res.id,
+                role: res.role,
+                content: res.isEffect ? res.content : ctx.__('not compliant'),
+                dialogId: res.dialogId,
+                resourceId: res.resourceId,
+                model: res.model,
+                subModel: res.subModel,
+                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+                isEffect: res.isEffect
+            }
+
+            ctx.service.res.success('Success start chat stream', data)
         }
-
-        ctx.service.res.success('Success start chat stream', data)
     }
 
     // get chat stream

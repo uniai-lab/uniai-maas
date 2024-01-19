@@ -1,13 +1,20 @@
 /** @format */
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
+import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, FlyChatModel, ModelProvider } from '@interface/Enum'
+import { ChatMessage } from '@interface/controller/UniAI'
+import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
 import { Service } from 'egg'
+import { createParser } from 'eventsource-parser'
 import { Op } from 'sequelize'
+import { PassThrough, Readable } from 'stream'
+import $ from '@util/util'
 
 const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
 const LIMIT_SMS_COUNT = 5
+const CHAT_PAGE_SIZE = 10
+const PAGE_LIMIT = 6
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -67,5 +74,122 @@ export default class Web extends Service {
             (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
             (await ctx.service.user.create(phone, null, fid))
         return await ctx.service.user.signIn(id)
+    }
+
+    // sse chat
+    async chat(
+        input: string,
+        userId: number,
+        dialogId: number = 0,
+        model: ModelProvider = ModelProvider.IFlyTek,
+        subModel?: ChatModelEnum
+    ) {
+        const { ctx } = this
+
+        // check user chat chance
+        const user = await ctx.model.UserChance.findOne({ where: { userId } })
+        if (!user) throw new Error('Fail to find user')
+        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chance of chat not enough')
+
+        // dialogId ? dialog chat : free chat
+        const dialog = await ctx.model.Dialog.findOne({
+            where: dialogId
+                ? { id: dialogId, userId, isEffect: true, isDel: false }
+                : { resourceId: null, userId, isEffect: true, isDel: false },
+            include: {
+                model: ctx.model.Chat,
+                limit: CHAT_PAGE_SIZE,
+                order: [['id', 'desc']],
+                where: { isEffect: true, isDel: false }
+            }
+        })
+        if (!dialog) throw new Error('Dialog is not available')
+        dialog.chats.reverse()
+        dialogId = dialog.id
+
+        const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
+        const prompts: ChatMessage[] = []
+
+        // add user chat history
+        for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
+
+        // add related resource
+        const resourceId = dialog.resourceId
+        if (resourceId) {
+            let content = ctx.__('document content start')
+            // query resource
+            const pages = await ctx.service.uniAI.queryResource(
+                [{ role: USER, content: input }],
+                resourceId,
+                EmbedModelEnum.TextVec,
+                PAGE_LIMIT
+            )
+            // add resource to prompt
+            for (const item of pages) content += `\n${item.content}`
+            content += `\n${ctx.__('document content end')}\n${ctx.__('answer according to')}`
+            prompts.push({ role: SYSTEM, content })
+        }
+
+        prompts.push({ role: USER, content: input })
+        console.log(prompts)
+
+        // save user prompt
+        await ctx.model.Chat.create({ dialogId, role: USER, content: input })
+
+        // start chat stream
+        const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
+        if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
+
+        // filter sensitive
+        const data: ChatResponse = {
+            chatId: 0,
+            role: ChatRoleEnum.ASSISTANT,
+            content: '',
+            dialogId,
+            resourceId,
+            model,
+            subModel: subModel || null,
+            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+            isEffect: true
+        }
+        const output = new PassThrough()
+
+        const parser = createParser(e => {
+            if (e.type === 'event') {
+                const obj = $.json<ChatResponse>(e.data)
+                if (obj && obj.content) {
+                    data.content += obj.content
+                    data.subModel = obj.model
+                    output.write(`data: ${JSON.stringify(data)}\n\n`)
+                }
+            }
+        })
+
+        // add listen stream
+        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
+        stream.on('error', e => output.destroy(e))
+        stream.on('end', async () => {
+            if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
+            else await user.decrement({ chatChance: 1 })
+            ctx.service.user.updateUserCache(user.userId)
+        })
+        stream.on('close', async () => {
+            parser.reset()
+            // save assistant response
+            if (data.content) {
+                const chat = await ctx.model.Chat.create({
+                    dialogId: data.dialogId,
+                    resourceId: data.resourceId,
+                    role: ASSISTANT,
+                    content: data.content,
+                    model: data.model,
+                    subModel: data.subModel,
+                    isEffect: data.isEffect
+                })
+                data.chatId = chat.id
+            }
+            output.end(`data: ${JSON.stringify(data)}\n\n`)
+        })
+        return output as Readable
     }
 }
