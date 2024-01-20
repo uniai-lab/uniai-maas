@@ -13,7 +13,7 @@ import {
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
 
-@Table({ modelName: 'resource_type' })
+@Table
 export class ResourceType extends Model {
     @PrimaryKey
     @AutoIncrement
@@ -22,14 +22,11 @@ export class ResourceType extends Model {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    type: string
+    name: string
 
     @AllowNull(false)
     @Column(DataType.STRING)
     description: string
-
-    @HasMany(() => Resource)
-    resources: Resource[]
 
     @AllowNull(false)
     @Default(false)
@@ -40,6 +37,9 @@ export class ResourceType extends Model {
     @Default(true)
     @Column(DataType.BOOLEAN)
     isEffect: boolean
+
+    @HasMany(() => Resource)
+    resources: Resource[]
 }
 
 export default () => ResourceType

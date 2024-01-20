@@ -25,6 +25,7 @@ import {
 import $ from '@util/util'
 import { ChatRoleEnum } from '@interface/Enum'
 import { Readable } from 'stream'
+import { basename } from 'path'
 
 @HTTPController({ path: '/web' })
 export default class Web {
@@ -55,7 +56,8 @@ export default class Web {
         if (!path) throw new Error('Path is null')
 
         // file stream
-        ctx.body = await ctx.service.uniAI.file(path, name)
+        const data = await ctx.service.uniAI.fileStream(path)
+        ctx.service.res.file(data, name || basename(path))
     }
 
     // announcement
@@ -152,7 +154,7 @@ export default class Web {
                 filePath: ctx.service.weChat.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
                 updatedAt: resource.updatedAt,
                 typeId: resource.type.id,
-                type: resource.type.type,
+                type: resource.type.name,
                 description: resource.type.description
             })
         }
@@ -197,9 +199,9 @@ export default class Web {
             ? await ctx.service.web.chat(input, user.id, dialogId, provider, model)
             : await ctx.service.weChat.chat(input, user.id, dialogId)
 
-        if (res instanceof Readable) ctx.body = res
-        else {
-            const data: ChatResponse = {
+        if (res instanceof Readable) ctx.service.res.success('Success to sse chat', res)
+        else
+            ctx.service.res.success('Success start chat', {
                 chatId: res.id,
                 role: res.role,
                 content: res.isEffect ? res.content : ctx.__('not compliant'),
@@ -209,10 +211,7 @@ export default class Web {
                 subModel: res.subModel,
                 avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
                 isEffect: res.isEffect
-            }
-
-            ctx.service.res.success('Success start chat stream', data)
-        }
+            } as ChatResponse)
     }
 
     // get chat stream

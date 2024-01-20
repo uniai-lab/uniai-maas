@@ -4,15 +4,16 @@
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { PassThrough, Readable } from 'stream'
-import $ from '@util/util'
 import { createParser } from 'eventsource-parser'
+import $ from '@util/util'
+import { basename, extname } from 'path'
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Res extends Service {
     // success response format
     success(msg: string, data: string | object | Readable | null = null) {
         const { ctx } = this
-        const res: StandardResponse = { status: 1, msg: ctx.__(msg), data: null }
+        const res: StandardResponse = { status: 1, msg: ctx.__(msg), data }
         if (data instanceof Readable) {
             ctx.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
             // parse stream
@@ -36,17 +37,20 @@ export default class Res extends Service {
             data.on('close', () => parser.reset())
 
             ctx.body = stream
-        } else {
-            res.data = data
-            ctx.body = res
-        }
+        } else ctx.body = res
+    }
+    file(data: Readable, name: string) {
+        const { ctx } = this
+        ctx.response.type = extname(name)
+        ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`) // 强制浏览器下载，设置下载的文件名
+        ctx.body = data
     }
     // error response
     error(e: Error) {
-        this.ctx.body = { status: 0, msg: this.ctx.__(e.message), data: null }
+        this.ctx.body = { status: 0, msg: this.ctx.__(e.message), data: null } as StandardResponse
     }
     // error response because of no auth
     noAuth() {
-        this.ctx.body = { status: -1, msg: this.ctx.__('No auth to access'), data: null }
+        this.ctx.body = { status: -1, msg: this.ctx.__('No auth to access'), data: null } as StandardResponse
     }
 }

@@ -26,7 +26,6 @@ export interface UserCache {
     wxOpenId: string | null
     wxPublicOpenId: string | null
     wxUnionId: string | null
-    wxSessionKey: string | null
     tokenTime: number
     isEffect: boolean
     isDel: boolean

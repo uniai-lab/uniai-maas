@@ -26,6 +26,7 @@ import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import $ from '@util/util'
+import { basename } from 'path'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -57,7 +58,8 @@ export default class WeChat {
         if (!path) throw new Error('Path is null')
 
         // file stream
-        ctx.body = await ctx.service.uniAI.file(path, name)
+        const data = await ctx.service.uniAI.fileStream(path)
+        ctx.service.res.file(data, name || basename(path))
     }
 
     // announcement
@@ -362,7 +364,7 @@ export default class WeChat {
                 filePath: ctx.service.weChat.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
                 updatedAt: resource.updatedAt,
                 typeId: resource.type.id,
-                type: resource.type.type,
+                type: resource.type.name,
                 description: resource.type.description
             })
         }

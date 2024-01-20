@@ -1,10 +1,11 @@
 /** @format */
 // Run as app starts
 
+import { Application } from 'egg'
 import config from '@data/config'
 import resourceType from '@data/resourceType'
+import promptType from '@data/promptType'
 import userResourceTab from '@data/userResourceTab'
-import { Application } from 'egg'
 
 export default (app: Application) => {
     app.ready(async () => {
@@ -15,15 +16,17 @@ export default (app: Application) => {
             await app.model.query('CREATE EXTENSION if not exists vector')
             await app.model.sync({ force: false, alter: true })
 
+            // add initial data
             console.log('====================SYNC DATA========================')
             await app.model.Config.bulkCreate(config, { updateOnDuplicate: ['value', 'description'] })
-            await app.model.ResourceType.bulkCreate(resourceType, { updateOnDuplicate: ['type', 'description'] })
+            await app.model.ResourceType.bulkCreate(resourceType, { updateOnDuplicate: ['name', 'description'] })
+            await app.model.PromptType.bulkCreate(promptType, { updateOnDuplicate: ['name', 'description'] })
             await app.model.UserResourceTab.bulkCreate(userResourceTab, {
                 updateOnDuplicate: ['name', 'desc', 'pid']
             })
 
-            console.log('================SYNC REDIS CACHE=====================')
             // update redis cache, set config
+            console.log('================SYNC REDIS CACHE=====================')
             const configs = await app.model.Config.findAll({ attributes: ['key', 'value'] })
             for (const item of configs) await app.redis.set(item.key, item.value)
         }

@@ -38,7 +38,7 @@ export default class LeChat {
 
         const res = await ctx.service.uniAI.chat(prompts, true, model, undefined, top, temperature, maxLength)
 
-        ctx.body = res as Readable
+        ctx.service.res.success('Success to chat', res)
     }
 
     @HTTPMethod({ path: '/sign-in', method: HTTPMethodEnum.POST })

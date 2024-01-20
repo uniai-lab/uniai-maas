@@ -1,9 +1,20 @@
 /** @format */
 
-import { Table, Column, AutoIncrement, PrimaryKey, Model, DataType, AllowNull, Default } from 'sequelize-typescript'
+import {
+    Table,
+    Column,
+    AutoIncrement,
+    PrimaryKey,
+    Model,
+    DataType,
+    HasMany,
+    AllowNull,
+    Default
+} from 'sequelize-typescript'
+import { Prompt } from './Prompt'
 
 @Table
-export class UserResourceTab extends Model {
+export class PromptType extends Model {
     @PrimaryKey
     @AutoIncrement
     @Column(DataType.INTEGER)
@@ -15,12 +26,7 @@ export class UserResourceTab extends Model {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    desc: string
-
-    @AllowNull(false)
-    @Default(0)
-    @Column(DataType.INTEGER)
-    pid: number
+    description: string
 
     @AllowNull(false)
     @Default(false)
@@ -31,6 +37,9 @@ export class UserResourceTab extends Model {
     @Default(true)
     @Column(DataType.BOOLEAN)
     isEffect: boolean
+
+    @HasMany(() => Prompt)
+    prompts: Prompt[]
 }
 
-export default () => UserResourceTab
+export default () => PromptType

@@ -2,7 +2,7 @@
 
 import { Table, Column, AutoIncrement, PrimaryKey, Model, DataType, AllowNull, Default } from 'sequelize-typescript'
 
-@Table({ modelName: 'announcement' })
+@Table
 export class Announce extends Model {
     @PrimaryKey
     @AutoIncrement

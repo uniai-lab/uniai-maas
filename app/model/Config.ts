@@ -2,7 +2,7 @@
 
 import { Table, Column, Model, DataType, Unique, PrimaryKey, AutoIncrement, AllowNull } from 'sequelize-typescript'
 
-@Table({ modelName: 'config' })
+@Table
 export class Config extends Model {
     @PrimaryKey
     @AutoIncrement

@@ -18,7 +18,7 @@ import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['level'] }]
 
-@Table({ modelName: 'user_chance', indexes })
+@Table({ indexes })
 export class UserChance extends Model {
     @PrimaryKey
     @AutoIncrement

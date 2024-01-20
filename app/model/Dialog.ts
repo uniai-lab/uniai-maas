@@ -20,7 +20,7 @@ import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['user_id', 'resource_id'] }]
 
-@Table({ modelName: 'dialog', indexes })
+@Table({ indexes })
 export class Dialog extends Model {
     @PrimaryKey
     @AutoIncrement

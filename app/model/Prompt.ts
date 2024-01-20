@@ -12,29 +12,28 @@ import {
     AllowNull,
     Default
 } from 'sequelize-typescript'
-import { Resource } from './Resource'
+import { IndexesOptions } from 'sequelize'
+import { PromptType } from './PromptType'
+import { ChatRoleEnum } from '@interface/Enum'
 
-@Table
-export class Page extends Model {
+const indexes: IndexesOptions[] = [{ fields: ['type_id'] }]
+
+@Table({ indexes })
+export class Prompt extends Model {
     @PrimaryKey
     @AutoIncrement
     @Column(DataType.INTEGER)
     id: number
 
     @AllowNull(false)
-    @Default(0)
+    @ForeignKey(() => PromptType)
     @Column(DataType.INTEGER)
-    page: number
+    typeId: number
 
     @AllowNull(false)
-    @ForeignKey(() => Resource)
-    @Column(DataType.INTEGER)
-    resourceId: number
-
-    @AllowNull(false)
-    @Default('')
+    @Default(ChatRoleEnum.SYSTEM)
     @Column(DataType.STRING)
-    filePath: string
+    role: ChatRoleEnum
 
     @AllowNull(false)
     @Default('')
@@ -47,17 +46,22 @@ export class Page extends Model {
     tokens: number
 
     @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    userId: number
+
     @Default(false)
+    @AllowNull(false)
     @Column(DataType.BOOLEAN)
     isDel: boolean
 
-    @AllowNull(false)
     @Default(true)
+    @AllowNull(false)
     @Column(DataType.BOOLEAN)
     isEffect: boolean
 
-    @BelongsTo(() => Resource)
-    resource: Resource
+    @BelongsTo(() => PromptType)
+    type: PromptType
 }
 
-export default () => Page
+export default () => Prompt

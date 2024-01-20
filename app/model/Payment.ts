@@ -14,7 +14,7 @@ import {
 } from 'sequelize-typescript'
 import { User } from './User'
 
-@Table({ modelName: 'payment' })
+@Table
 export class Payment extends Model {
     @PrimaryKey
     @AutoIncrement

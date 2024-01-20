@@ -3,27 +3,27 @@
 export default [
     {
         id: 1,
-        type: 'document',
+        name: 'document',
         description: '文档'
     },
     {
         id: 2,
-        type: 'image',
+        name: 'image',
         description: '图片'
     },
     {
         id: 3,
-        type: 'audio',
+        name: 'audio',
         description: '语音'
     },
     {
         id: 4,
-        type: 'video',
+        name: 'video',
         description: '视频'
     },
     {
         id: 5,
-        type: 'code',
+        name: 'code',
         description: '代码'
     }
 ]

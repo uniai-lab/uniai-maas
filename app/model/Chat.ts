@@ -18,7 +18,7 @@ import { ModelProvider, ChatRoleEnum } from '@interface/Enum'
 import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['role'] }, { fields: ['model'] }, { fields: ['sub_model'] }]
-@Table({ modelName: 'chat', indexes })
+@Table({ indexes })
 export class Chat extends Model {
     @PrimaryKey
     @AutoIncrement

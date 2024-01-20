@@ -184,7 +184,7 @@ export default class WeChat extends Service {
             include: {
                 model: ctx.model.Resource,
                 attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'isEffect', 'isDel'],
-                include: [{ model: ctx.model.ResourceType, attributes: ['id', 'type', 'description'] }]
+                include: [{ model: ctx.model.ResourceType, attributes: ['id', 'name', 'description'] }]
             }
         })
     }

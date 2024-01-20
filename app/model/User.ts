@@ -16,7 +16,7 @@ import {
 import { Dialog } from './Dialog'
 import { UserChance } from './UserChance'
 
-@Table({ modelName: 'user' })
+@Table
 export class User extends Model {
     @PrimaryKey
     @AutoIncrement
@@ -62,10 +62,6 @@ export class User extends Model {
     @Unique
     @Column(DataType.STRING)
     wxUnionId: string | null
-
-    @Unique
-    @Column(DataType.STRING)
-    wxSessionKey: string | null
 
     @AllowNull(false)
     @Default(DataType.NOW)

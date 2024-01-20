@@ -6,7 +6,7 @@ import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['user_id'] }, { fields: ['flag'] }, { fields: ['provider'] }]
 
-@Table({ modelName: 'audit_log', indexes })
+@Table({ indexes })
 export class AuditLog extends Model {
     @PrimaryKey
     @AutoIncrement

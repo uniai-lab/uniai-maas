@@ -5,7 +5,7 @@ import { AutoIncrement, Column, DataType, PrimaryKey, Table, Model, AllowNull, D
 
 const indexes: IndexesOptions[] = [{ fields: ['phone'] }]
 
-@Table({ modelName: 'phone_code', indexes })
+@Table({ indexes })
 export class PhoneCode extends Model {
     @PrimaryKey
     @AutoIncrement

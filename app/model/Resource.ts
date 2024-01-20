@@ -28,10 +28,11 @@ const indexes: IndexesOptions[] = [
     { fields: ['type_id'] },
     { fields: ['tab_id'] },
     { fields: ['file_ext'] },
+    { fields: ['file_name'] },
     { fields: ['user_id'] }
 ]
 
-@Table({ modelName: 'resource', indexes })
+@Table({ indexes })
 export class Resource extends Model {
     @PrimaryKey
     @AutoIncrement
