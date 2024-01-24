@@ -117,7 +117,7 @@ export default class Web extends Service {
         prompt = prompt || (await this.getConfig('SYSTEM_PROMPT'))
         prompts.push({
             role: SYSTEM,
-            content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}\n${ctx.__('Language')}`
+            content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}}`
         })
 
         // add user chat history
