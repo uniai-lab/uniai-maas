@@ -49,7 +49,7 @@ export default {
         maxLength?: number
     ) {
         // only user and assistant role supported
-        for (const i in messages) if (!SPKChatRoleEnum[messages[i].role]) messages[i].role = SPKChatRoleEnum.USER
+        messages = formatMessage(messages)
 
         // get specific generated URL
         const url = getSparkURL(model)
@@ -188,4 +188,23 @@ function getAuditURL(type: FLYAuditType) {
 
     // 3. 构造最终的 URL
     return `${AUDIT_API}/audit/v2/${type}?${baseString}&signature=${encodeURIComponent(signature)}`
+}
+
+function formatMessage(messages: SPKChatMessage[]) {
+    const prompt: SPKChatMessage[] = []
+    let input = ''
+    const { USER, ASSISTANT } = SPKChatRoleEnum
+    for (const { role, content } of messages) {
+        if (!content) continue
+        if (role !== ASSISTANT) input += `\n${content}`
+        else {
+            prompt.push({ role: USER, content: input.trim() || ' ' })
+            prompt.push({ role: ASSISTANT, content })
+            input = ''
+        }
+    }
+    if (!input.trim()) throw new Error('User input nothing')
+    prompt.push({ role: USER, content: input.trim() })
+    console.log(prompt)
+    return prompt
 }

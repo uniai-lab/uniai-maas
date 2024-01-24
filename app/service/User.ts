@@ -143,41 +143,19 @@ export default class User extends Service {
     async getModelList(id: number) {
         console.log(id)
         const disable = false
-        const models: Option[] = Object.keys(ModelProvider).map(v => ({
-            value: ModelProvider[v] as string,
-            label: v,
+        const models = {
+            [ModelProvider.OpenAI]: OpenAIChatModel,
+            [ModelProvider.Baidu]: BaiduChatModel,
+            [ModelProvider.IFlyTek]: FlyChatModel,
+            [ModelProvider.GLM]: GLMChatModel
+        }
+
+        const options: Option[] = Object.keys(ModelProvider).map(label => ({
+            value: ModelProvider[label],
+            label,
             disable,
-            children: (() => {
-                switch (ModelProvider[v]) {
-                    case ModelProvider.OpenAI:
-                        return Object.keys(OpenAIChatModel).map(label => ({
-                            disable,
-                            value: OpenAIChatModel[label],
-                            label: OpenAIChatModel[label]
-                        }))
-                    case ModelProvider.Baidu:
-                        return Object.keys(BaiduChatModel).map(label => ({
-                            disable,
-                            value: BaiduChatModel[label],
-                            label: BaiduChatModel[label]
-                        }))
-                    case ModelProvider.IFlyTek:
-                        return Object.keys(FlyChatModel).map(label => ({
-                            disable,
-                            value: FlyChatModel[label],
-                            label: FlyChatModel[label]
-                        }))
-                    case ModelProvider.GLM:
-                        return Object.keys(GLMChatModel).map(label => ({
-                            disable,
-                            value: GLMChatModel[label],
-                            label: GLMChatModel[label]
-                        }))
-                    default:
-                        return undefined
-                }
-            })()
+            children: Object.values<string>(models[ModelProvider[label]]).map(v => ({ disable, value: v, label: v }))
         }))
-        return models
+        return options
     }
 }

@@ -27,9 +27,10 @@ export enum TextVecEmbedModel {
 
 // chat models
 export enum OpenAIChatModel {
+    GPT3_1106 = 'gpt-3.5-turbo-1106',
     GPT3 = 'gpt-3.5-turbo',
     GPT3_16K = 'gpt-3.5-turbo-16k',
-    GPT3_INSTRUCT = 'gpt-3.5-turbo-instruct',
+    // GPT3_INSTRUCT = 'gpt-3.5-turbo-instruct',
     GPT4 = 'gpt-4',
     GPT4_32K = 'gpt-4-32k',
     GPT4_TURBO = 'gpt-4-1106-preview',

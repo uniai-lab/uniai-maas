@@ -72,6 +72,7 @@ export default {
             completionTokens: 0,
             totalTokens: 0
         }
+        messages = formatMessage(messages)
         if (model === GLMChatModel.LOCAL) {
             const res = await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_LOCAL_API}/chat`,
@@ -109,7 +110,7 @@ export default {
             const token = generateToken(GLM_REMOTE_API_KEY, EXPIRE_IN)
             const res = await $.post<GLMTurboChatRequest, Readable | GLMTurboChatResponse>(
                 url,
-                { prompt: formatMessage(messages), temperature, top_p: top },
+                { prompt: messages, temperature, top_p: top },
                 {
                     headers: { 'Content-Type': 'application/json', Authorization: token },
                     responseType: stream ? 'stream' : 'json'
@@ -172,18 +173,19 @@ function generateToken(key: string, expire: number) {
 }
 
 function formatMessage(messages: GLMChatMessage[]) {
-    // Recreate prompt for chatglm-turbo
     const prompt: GLMChatMessage[] = []
     let input = ''
     const { USER, ASSISTANT } = GLMChatRoleEnum
     for (const { role, content } of messages) {
+        if (!content) continue
         if (role !== ASSISTANT) input += `\n${content}`
         else {
-            prompt.push({ role: USER, content: input.trim() || 'None' })
+            prompt.push({ role: USER, content: input.trim() || ' ' })
             prompt.push({ role: ASSISTANT, content })
             input = ''
         }
     }
-    prompt.push({ role: USER, content: input.trim() || 'None' })
+    if (!input.trim()) throw new Error('User input nothing')
+    prompt.push({ role: USER, content: input.trim() })
     return prompt
 }

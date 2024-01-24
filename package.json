@@ -23,7 +23,6 @@
     },
     "dependencies": {
         "@alicloud/dysmsapi20170525": "^2.0.24",
-        "@alicloud/dysmsapi20180501": "^1.0.4",
         "@cyber2024/pdf-parse-fixed": "^1.2.5",
         "@eggjs/tegg": "^3.25.1",
         "@eggjs/tegg-aop-plugin": "^3.25.1",

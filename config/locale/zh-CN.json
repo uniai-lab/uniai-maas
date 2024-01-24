@@ -41,7 +41,8 @@
     "prompt: document outline markdown": "要求：以markdown输出文档大纲，内容留空，每一节标题前增加数字序号，最多嵌套3层章节",
     "prompt: markdown to json": "将markdown转为json格式，以章节的标题为key，value为子章节标题，内容为空字符串",
     "You have another processing chat": "您还有未完成的对话正在处理",
-    "Role": "扮演角色: %s",
-    "Prompt": "场景定义和要求: %s",
-    "Language": "请使用与用户输入相同的语言进行回复"
+    "Role": "扮演角色: 你是%s",
+    "Prompt": "场景要求和约束: %s",
+    "Language": "请使用与用户输入相同的语言进行回复",
+    "Start Topic": "=============================="
 }

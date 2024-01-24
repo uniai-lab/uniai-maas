@@ -133,3 +133,8 @@ export interface AIAuditResponse {
     safe?: boolean
     description?: string
 }
+
+export interface ProviderItem {
+    provider: ModelProvider
+    models: ChatModelEnum[]
+}

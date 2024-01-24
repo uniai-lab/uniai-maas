@@ -5,7 +5,14 @@ import { Service } from 'egg'
 import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
 import { extname } from 'path'
-import { AIAuditResponse, AuditResponse, ChatMessage, ChatResponse, ResourcePage } from '@interface/controller/UniAI'
+import {
+    AIAuditResponse,
+    AuditResponse,
+    ChatMessage,
+    ChatResponse,
+    ProviderItem,
+    ResourcePage
+} from '@interface/controller/UniAI'
 import { GPTChatMessage } from '@interface/OpenAI'
 import { GLMChatMessage } from '@interface/GLM'
 import { SPKChatMessage } from '@interface/Spark'
@@ -68,6 +75,21 @@ export default class UniAI extends Service {
             } else throw new Error(`Config: ${key} not found`)
         }
         return $.json<T>(value) || (value as T)
+    }
+
+    async getModels() {
+        const models = {
+            [ModelProvider.OpenAI]: OpenAIChatModel,
+            [ModelProvider.Baidu]: BaiduChatModel,
+            [ModelProvider.IFlyTek]: FlyChatModel,
+            [ModelProvider.GLM]: GLMChatModel
+        }
+
+        const providers: ProviderItem[] = Object.values(ModelProvider).map(provider => ({
+            provider,
+            models: Object.values(models[provider]) as ChatModelEnum[]
+        }))
+        return providers
     }
 
     // query resource

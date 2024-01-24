@@ -128,13 +128,15 @@ function formatMessage(messages: BaiduChatMessage[]) {
     let input = ''
     const { USER, ASSISTANT } = ChatRoleEnum
     for (const { role, content } of messages) {
+        if (!content) continue
         if (role !== ASSISTANT) input += `\n${content}`
         else {
-            prompt.push({ role: USER, content: input.trim() || 'None' })
+            prompt.push({ role: USER, content: input.trim() || ' ' })
             prompt.push({ role: ASSISTANT, content })
             input = ''
         }
     }
-    prompt.push({ role: USER, content: input.trim() || 'None' })
+    if (!input.trim()) throw new Error('User input nothing')
+    prompt.push({ role: USER, content: input.trim() })
     return prompt
 }

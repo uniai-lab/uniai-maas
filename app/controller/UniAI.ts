@@ -29,6 +29,13 @@ import $ from '@util/util'
 
 @HTTPController({ path: '/ai' })
 export default class UniAI {
+    @Middleware()
+    @HTTPMethod({ path: '/models', method: HTTPMethodEnum.GET })
+    async models(@Context() ctx: EggContext) {
+        const data = await ctx.service.uniAI.getModels()
+        ctx.service.res.success(`Success to list models`, data)
+    }
+
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {

@@ -1,7 +1,7 @@
 /** @format */
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, ModelProvider } from '@interface/Enum'
+import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, FlyChatModel, ModelProvider } from '@interface/Enum'
 import { ChatMessage } from '@interface/controller/UniAI'
 import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
 import { Service } from 'egg'
@@ -85,7 +85,7 @@ export default class Web extends Service {
         prompt: string = '',
         dialogId: number = 0,
         model: ModelProvider = ModelProvider.IFlyTek,
-        subModel?: ChatModelEnum
+        subModel: ChatModelEnum = FlyChatModel.V3
     ) {
         const { ctx } = this
 
@@ -115,10 +115,7 @@ export default class Web extends Service {
 
         role = role || (await this.getConfig('SYSTEM_NAME'))
         prompt = prompt || (await this.getConfig('SYSTEM_PROMPT'))
-        prompts.push({
-            role: SYSTEM,
-            content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}}`
-        })
+        prompts.push({ role: SYSTEM, content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}}\n` })
 
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
@@ -143,9 +140,6 @@ export default class Web extends Service {
         prompts.push({ role: USER, content: input })
         console.log(prompts)
 
-        // save user prompt
-        await ctx.model.Chat.create({ dialogId, role: USER, content: input })
-
         // start chat stream
         const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
         if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
@@ -158,7 +152,7 @@ export default class Web extends Service {
             dialogId,
             resourceId,
             model,
-            subModel: subModel || null,
+            subModel,
             avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
             isEffect: true
         }
@@ -179,12 +173,8 @@ export default class Web extends Service {
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
         stream.on('error', e => output.destroy(e))
         stream.on('end', async () => {
-            if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
-            else await user.decrement({ chatChance: 1 })
-            ctx.service.user.updateUserCache(user.userId)
-        })
-        stream.on('close', async () => {
-            parser.reset()
+            // save user prompt
+            if (input) await ctx.model.Chat.create({ dialogId, role: USER, content: input })
             // save assistant response
             if (data.content) {
                 const chat = await ctx.model.Chat.create({
@@ -199,7 +189,12 @@ export default class Web extends Service {
                 data.chatId = chat.id
             }
             output.end(`data: ${JSON.stringify(data)}\n\n`)
+
+            if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
+            else await user.decrement({ chatChance: 1 })
+            ctx.service.user.updateUserCache(user.userId)
         })
+        stream.on('close', parser.reset)
         return output as Readable
     }
 }
