@@ -32,6 +32,7 @@ export interface UserinfoResponse {
         totalUploadChance: number
     }
     benefit: Benefit[]
+    models: Option[]
 }
 
 export interface ConfigResponse {
@@ -47,11 +48,17 @@ export interface ConfigResponse {
     menuFocus: ConfigMenuV2
     menuAdv: ConfigMenuV2
 }
-
+export interface Option {
+    value: string
+    label: string
+    disable: boolean
+    children?: Option[]
+}
 export interface ChatRequest {
     input: string
+    role?: string
+    prompt?: string
     dialogId?: number
-    sse?: boolean
     provider?: ModelProvider
     model?: ChatModelEnum
 }

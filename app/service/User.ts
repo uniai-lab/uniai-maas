@@ -2,7 +2,9 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { UserCache } from '@interface/Cache'
+import { BaiduChatModel, FlyChatModel, GLMChatModel, ModelProvider, OpenAIChatModel } from '@interface/Enum'
 import { ConfigVIP } from '@interface/controller/WeChat'
+import { Option } from '@interface/controller/Web'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
@@ -135,5 +137,47 @@ export default class User extends Service {
         }
         await ctx.app.redis.set(`user_${id}`, JSON.stringify(cache))
         return cache
+    }
+
+    // get user available models
+    async getModelList(id: number) {
+        console.log(id)
+        const disable = false
+        const models: Option[] = Object.keys(ModelProvider).map(v => ({
+            value: ModelProvider[v] as string,
+            label: v,
+            disable,
+            children: (() => {
+                switch (ModelProvider[v]) {
+                    case ModelProvider.OpenAI:
+                        return Object.keys(OpenAIChatModel).map(label => ({
+                            disable,
+                            value: OpenAIChatModel[label],
+                            label: OpenAIChatModel[label]
+                        }))
+                    case ModelProvider.Baidu:
+                        return Object.keys(BaiduChatModel).map(label => ({
+                            disable,
+                            value: BaiduChatModel[label],
+                            label: BaiduChatModel[label]
+                        }))
+                    case ModelProvider.IFlyTek:
+                        return Object.keys(FlyChatModel).map(label => ({
+                            disable,
+                            value: FlyChatModel[label],
+                            label: FlyChatModel[label]
+                        }))
+                    case ModelProvider.GLM:
+                        return Object.keys(GLMChatModel).map(label => ({
+                            disable,
+                            value: GLMChatModel[label],
+                            label: GLMChatModel[label]
+                        }))
+                    default:
+                        return undefined
+                }
+            })()
+        }))
+        return models
     }
 }

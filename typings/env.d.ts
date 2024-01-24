@@ -66,6 +66,11 @@ declare global {
             // gee test
             GEE_TEST_ID: string
             GEE_TEST_KEY: string
+
+            ALI_KEY_ID: string
+            ALI_KEY_SECRET: string
+            ALI_SMS_TEMPLATE: string
+            ALI_SMS_SIGN: string
         }
     }
 }

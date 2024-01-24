@@ -221,12 +221,10 @@ export default class WeChat extends Service {
         const dialog = await ctx.model.Dialog.findOne({ where: id ? { id, userId } : { userId, resourceId: null } })
         if (!dialog) throw new Error('Can not find the dialog')
 
-        // delete dialog
-        if (id) dialog.isDel = true
-
-        // delete chats
-        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
-        return await dialog.save()
+        if (id) {
+            dialog.isDel = true
+            await dialog.save()
+        } else await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
     }
 
     // list all the chats from a user and dialog

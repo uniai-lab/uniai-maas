@@ -12,6 +12,10 @@ const WEEK_FREE_CHAT_CHANCE = 70
 const WEEK_FREE_UPLOAD_CHANCE = 10
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
+const SYSTEM_NAME = '乐聊 AI （英：LeChat AI）'
+const SYSTEM_PROMPT =
+    'Your task is to answer all questions posed by users or engage in conversations. Please note, avoid answering any politically sensitive or politically related commentary questions.'
+
 const { ADMIN_TOKEN } = process.env
 
 const menus: ConfigMenu[] = [
@@ -212,6 +216,16 @@ export default [
         key: 'APP_VERSION',
         value: 'v2.2.0',
         description: '小程序版本'
+    },
+    {
+        key: 'SYSTEM_NAME',
+        value: SYSTEM_NAME,
+        description: 'AI默认角色名'
+    },
+    {
+        key: 'SYSTEM_PROMPT',
+        value: SYSTEM_PROMPT,
+        description: 'AI默认提示词'
     },
     {
         key: 'SHOW_NEW_APP',

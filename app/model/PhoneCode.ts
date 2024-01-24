@@ -25,6 +25,9 @@ export class PhoneCode extends Model {
     @Column(DataType.INTEGER)
     expire: number
 
+    @Column(DataType.JSON)
+    data: string | null
+
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)

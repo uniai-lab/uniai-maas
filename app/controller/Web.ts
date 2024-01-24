@@ -6,14 +6,7 @@ import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import captcha from '@middleware/captcha'
-import {
-    SMSCodeRequest,
-    SMSCodeResponse,
-    LoginRequest,
-    UserinfoResponse,
-    ConfigResponse,
-    ChatRequest
-} from '@interface/controller/Web'
+import { SMSCodeRequest, SMSCodeResponse, LoginRequest, UserinfoResponse, ChatRequest } from '@interface/controller/Web'
 import {
     AnnounceResponse,
     ChatListRequest,
@@ -32,7 +25,7 @@ export default class Web {
     // app configs
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
     async config(@Context() ctx: UserContext) {
-        const data: ConfigResponse = await ctx.service.web.getUserConfig()
+        const data = await ctx.service.web.getUserConfig()
         ctx.service.res.success('Success to list config', data)
     }
 
@@ -103,7 +96,8 @@ export default class Web {
                 totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                 totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.chance.level),
+            models: await ctx.service.user.getModelList(user.id)
         }
         ctx.service.res.success('Success to WeChat login', data)
     }
@@ -128,7 +122,8 @@ export default class Web {
                 totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
                 totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.chance.level),
+            models: await ctx.service.user.getModelList(user.id)
         }
         ctx.service.res.success('User information', data)
     }
@@ -192,49 +187,20 @@ export default class Web {
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         const user = ctx.user!
-        const { input, dialogId, sse, provider, model } = params
+        const { input, dialogId, provider, model, role, prompt } = params
         if (!input) throw new Error('Input nothing')
 
-        const res = sse
-            ? await ctx.service.web.chat(input, user.id, dialogId, provider, model)
-            : await ctx.service.weChat.chat(input, user.id, dialogId)
+        const res = await ctx.service.web.chat(user.id, input, role, prompt, dialogId, provider, model)
 
-        if (res instanceof Readable) ctx.service.res.success('Success to sse chat', res)
-        else
-            ctx.service.res.success('Success start chat', {
-                chatId: res.id,
-                role: res.role,
-                content: res.isEffect ? res.content : ctx.__('not compliant'),
-                dialogId: res.dialogId,
-                resourceId: res.resourceId,
-                model: res.model,
-                subModel: res.subModel,
-                avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
-                isEffect: res.isEffect
-            } as ChatResponse)
+        if (!(res instanceof Readable)) throw new Error('Response is not readable stream')
+        ctx.service.res.success('Success to sse chat', res)
     }
 
-    // get chat stream
-    @Middleware(auth())
-    @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
-    async getChat(@Context() ctx: UserContext) {
+    @Middleware(auth(), log())
+    @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
+    async delDialog(@Context() ctx: UserContext) {
         const user = ctx.user!
-
-        const res = await ctx.service.weChat.getChat(user.id)
-        if (!res) return ctx.service.res.success('No chat stream', null)
-
-        // filter sensitive
-        const data: ChatResponse = {
-            chatId: res.chatId,
-            role: ChatRoleEnum.ASSISTANT,
-            content: res.isEffect ? res.content : ctx.__('not compliant'),
-            dialogId: res.dialogId,
-            resourceId: res.resourceId,
-            model: res.model,
-            subModel: res.subModel,
-            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
-            isEffect: res.isEffect
-        }
-        ctx.service.res.success('Success to get chat stream', data)
+        await ctx.service.weChat.delDialog(user.id)
+        ctx.service.res.success('Success to delete a dialog')
     }
 }

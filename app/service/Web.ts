@@ -1,7 +1,7 @@
 /** @format */
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, FlyChatModel, ModelProvider } from '@interface/Enum'
+import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, ModelProvider } from '@interface/Enum'
 import { ChatMessage } from '@interface/controller/UniAI'
 import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
 import { Service } from 'egg'
@@ -9,6 +9,7 @@ import { createParser } from 'eventsource-parser'
 import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import $ from '@util/util'
+import ali from '@util/aliyun'
 
 const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
@@ -48,11 +49,11 @@ export default class Web extends Service {
         })
         if (count) throw new Error('Too many times request SMS code')
 
-        return await ctx.model.PhoneCode.create({
-            phone,
-            code: '888888',
-            expire: Math.floor(Date.now() / 1000 + LIMIT_SMS_EXPIRE)
-        })
+        const code = Math.floor(Math.random() * 900000) + 100000
+        const data = await ali.sendCode(phone, code)
+        console.log(data)
+        const expire = Math.floor(Date.now() / 1000 + LIMIT_SMS_EXPIRE)
+        return await ctx.model.PhoneCode.create({ phone, code, data, expire })
     }
 
     // login
@@ -78,8 +79,10 @@ export default class Web extends Service {
 
     // sse chat
     async chat(
-        input: string,
         userId: number,
+        input: string,
+        role: string = '',
+        prompt: string = '',
         dialogId: number = 0,
         model: ModelProvider = ModelProvider.IFlyTek,
         subModel?: ChatModelEnum
@@ -109,6 +112,13 @@ export default class Web extends Service {
 
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
+
+        role = role || (await this.getConfig('SYSTEM_NAME'))
+        prompt = prompt || (await this.getConfig('SYSTEM_PROMPT'))
+        prompts.push({
+            role: SYSTEM,
+            content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}\n${ctx.__('Language')}`
+        })
 
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
