@@ -32,6 +32,12 @@ export default (app: Application) => {
             console.log('================SYNC REDIS CACHE=====================')
             const configs = await app.model.Config.findAll({ attributes: ['key', 'value'] })
             for (const item of configs) await app.redis.set(item.key, item.value)
+
+            // update redis cache, set config
+            console.log('================UPDATE LARGE ROWs=====================')
+            app.model.User.update({ freeChanceUpdateAt: new Date(0) }, { where: { freeChanceUpdateAt: null } }).then(
+                console.log
+            )
         }
 
         // add hook, update redis
