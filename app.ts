@@ -15,6 +15,8 @@ export default (app: Application) => {
         // 只在单进程模式下执行数据库结构的修改
         if (app.config.env === 'local') {
             await syncData(app)
+            // clean redis
+            await app.redis.flushdb()
             await syncConfigCache(app)
             // await updateNewRows(app)
         }
@@ -65,8 +67,8 @@ async function hookUserSave(app: Application) {
         const cache: UserCache = {
             ...value,
             ...user.dataValues,
-            tokenTime: user.tokenTime?.getTime() || value?.tokenTime,
-            freeChanceUpdateAt: user.freeChanceUpdateAt?.getTime() || value?.freeChanceUpdateAt
+            tokenTime: user.tokenTime?.getTime() || value?.tokenTime || 0,
+            freeChanceUpdateAt: user.freeChanceUpdateAt?.getTime() || value?.freeChanceUpdateAt || 0
         }
 
         await app.redis.set(`user_${user.id}`, JSON.stringify(cache))
