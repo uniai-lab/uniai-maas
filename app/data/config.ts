@@ -8,13 +8,13 @@ const ADV_REWARD_LIMIT_COUNT = 10
 const ADV_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_UPLOAD_CHANCE = 5
-const WEEK_FREE_CHAT_CHANCE = 70
-const WEEK_FREE_UPLOAD_CHANCE = 10
+const FREE_CHAT_CHANCE = 19
+const FREE_UPLOAD_CHANCE = 3
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 const SYSTEM_NAME = '乐聊 AI （英：LeChat AI）'
 const SYSTEM_PROMPT =
-    'Your task is to answer all questions posed by users or engage in conversations. Please note, avoid answering any politically sensitive or politically related commentary questions.'
+    'Answer all questions posed by users or engage in conversations.\n Avoid answering any politically sensitive or politically related commentary questions.'
 
 const { ADMIN_TOKEN } = process.env
 
@@ -26,13 +26,13 @@ const menus: ConfigMenu[] = [
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
-        title: `${WEEK_FREE_CHAT_CHANCE} 次`,
-        tip: '每周对话'
+        title: `${FREE_CHAT_CHANCE} 次`,
+        tip: '每日对话'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
-        title: `${WEEK_FREE_UPLOAD_CHANCE} 个`,
-        tip: '每周上传'
+        title: `${FREE_UPLOAD_CHANCE} 个`,
+        tip: '每日上传'
     }
 ]
 
@@ -79,14 +79,14 @@ const vips: ConfigVIP[] = [
             {
                 image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
                 title: '10个',
-                tip: '每周上传',
+                tip: '每日上传',
                 iconShadow: '0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
                 tipColor: '#666666'
             },
             {
                 image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
                 title: '99次',
-                tip: '每周对话',
+                tip: '每日对话',
                 iconShadow: '0rpx 4rpx 6rpx rgba(53, 46, 120, 0.4）',
                 tipColor: '#666666'
             }
@@ -114,14 +114,14 @@ const vips: ConfigVIP[] = [
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367664545-%E5%9B%BE%E6%A0%871.png',
                 title: '20个',
-                tip: '每周上传',
+                tip: '每日上传',
                 iconShadow: '0rpx 4rpx 6rpx rgba(1, 89, 160, 0.5)',
                 tipColor: '#666666'
             },
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367673001-%E5%9B%BE%E6%A0%87%E4%B8%89.png',
                 title: '199次',
-                tip: '每周对话',
+                tip: '每日对话',
                 iconShadow: '0rpx 4rpx 6rpx rgba(1, 89, 160, 0.5)',
                 tipColor: '#666666'
             }
@@ -149,14 +149,14 @@ const vips: ConfigVIP[] = [
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367310633-%E5%9B%BE%E6%A0%872.png',
                 title: '30个',
-                tip: '每周上传',
+                tip: '每日上传',
                 iconShadow: '0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
                 tipColor: '#666666'
             },
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702367320834-%E5%9B%BE%E6%A0%873.png',
                 title: '299次',
-                tip: '每周对话',
+                tip: '每日对话',
                 iconShadow: '0rpx 4rpx 6rpx rgba(74, 0, 113, 0.35)',
                 tipColor: '#666666'
             }
@@ -184,14 +184,14 @@ const vips: ConfigVIP[] = [
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702448783661-%E5%9B%BE%E6%A0%871.png',
                 title: '30个',
-                tip: '每周上传',
+                tip: '每日上传',
                 iconShadow: '0rpx 4rpx 6rpx rgba(0, 0, 0, 0.2）',
                 tipColor: '#dddddd'
             },
             {
                 image: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702448791609-%E5%9B%BE%E6%A0%873.png',
                 title: '399次',
-                tip: '每周对话',
+                tip: '每日对话',
                 iconShadow: '0rpx 4rpx 6rpx rgba(0, 0, 0, 0.2）',
                 tipColor: '#dddddd'
             }
@@ -288,14 +288,14 @@ export default [
         description: '默认用户名'
     },
     {
-        key: 'WEEK_FREE_CHAT_CHANCE',
-        value: WEEK_FREE_CHAT_CHANCE,
-        description: '每周免费对话次数'
+        key: 'FREE_CHAT_CHANCE',
+        value: FREE_CHAT_CHANCE,
+        description: '每日免费对话次数'
     },
     {
-        key: 'WEEK_FREE_UPLOAD_CHANCE',
-        value: WEEK_FREE_UPLOAD_CHANCE,
-        description: '每周免费上传次数'
+        key: 'FREE_UPLOAD_CHANCE',
+        value: FREE_UPLOAD_CHANCE,
+        description: '每日免费上传次数'
     },
     {
         key: 'SHARE_REWARD_CHAT_CHANCE',

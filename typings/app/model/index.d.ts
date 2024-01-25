@@ -19,7 +19,6 @@ import ExportPromptType from '../../../app/model/PromptType';
 import ExportResource from '../../../app/model/Resource';
 import ExportResourceType from '../../../app/model/ResourceType';
 import ExportUser from '../../../app/model/User';
-import ExportUserChance from '../../../app/model/UserChance';
 import ExportUserResourceTab from '../../../app/model/UserResourceTab';
 
 declare module 'egg' {
@@ -40,7 +39,6 @@ declare module 'egg' {
     Resource: ReturnType<typeof ExportResource>;
     ResourceType: ReturnType<typeof ExportResourceType>;
     User: ReturnType<typeof ExportUser>;
-    UserChance: ReturnType<typeof ExportUserChance>;
     UserResourceTab: ReturnType<typeof ExportUserResourceTab>;
   }
 }

@@ -57,7 +57,8 @@ export interface UploadResponse {
     dialogId: number
 }
 export interface UploadAvatarResponse {
-    avatar: string
+    id: number
+    avatar: string | null
 }
 export interface UpdateUserRequest {
     name?: string

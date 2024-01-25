@@ -90,9 +90,9 @@ export default class Web extends Service {
         const { ctx } = this
 
         // check user chat chance
-        const user = await ctx.model.UserChance.findOne({ where: { userId } })
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'uploadChanceFree', 'uploadChance'] })
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chance of chat not enough')
+        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
@@ -171,11 +171,10 @@ export default class Web extends Service {
 
         // add listen stream
         stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-        stream.on('error', e => output.destroy(e))
         stream.on('end', async () => {
-            // save user prompt
+            // save user chat
             if (input) await ctx.model.Chat.create({ dialogId, role: USER, content: input })
-            // save assistant response
+            // save assistant chat
             if (data.content) {
                 const chat = await ctx.model.Chat.create({
                     dialogId: data.dialogId,
@@ -190,10 +189,12 @@ export default class Web extends Service {
             }
             output.end(`data: ${JSON.stringify(data)}\n\n`)
 
-            if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
-            else await user.decrement({ chatChance: 1 })
-            ctx.service.user.updateUserCache(user.userId)
+            // reduce user chat chance
+            if (user.chatChanceFree > 0) user.chatChanceFree--
+            else if (user.chatChance > 0) user.chatChance--
+            user.save()
         })
+        stream.on('error', e => output.destroy(e))
         stream.on('close', parser.reset)
         return output as Readable
     }

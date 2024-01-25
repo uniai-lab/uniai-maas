@@ -88,15 +88,15 @@ export default class Web {
             avatar: user.avatar,
             username: user.username,
             token: user.token,
-            tokenTime: user.tokenTime,
+            tokenTime: user.tokenTime.getTime(),
             phone: user.phone,
             chance: {
-                level: user.chance.level,
-                uploadSize: user.chance.uploadSize,
-                totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                level: user.level,
+                uploadSize: user.uploadSize,
+                totalChatChance: user.chatChance + user.chatChanceFree,
+                totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level),
+            benefit: await ctx.service.user.getLevelBenefit(user.level),
             models: await ctx.service.user.getModelList(user.id)
         }
         ctx.service.res.success('Success to WeChat login', data)
@@ -106,7 +106,11 @@ export default class Web {
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
-        const user = ctx.user!
+        const { id } = ctx.user!
+
+        await ctx.service.user.updateUserChance(id)
+        const user = await ctx.service.user.getUserCache(id)
+        if (!user) throw new Error('Can not find user cache')
 
         const data: UserinfoResponse = {
             id: user.id,
@@ -117,12 +121,12 @@ export default class Web {
             tokenTime: user.tokenTime,
             phone: user.phone,
             chance: {
-                level: user.chance.level,
-                uploadSize: user.chance.uploadSize,
-                totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                level: user.level,
+                uploadSize: user.uploadSize,
+                totalChatChance: user.chatChance + user.chatChanceFree,
+                totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level),
+            benefit: await ctx.service.user.getLevelBenefit(user.level),
             models: await ctx.service.user.getModelList(user.id)
         }
         ctx.service.res.success('User information', data)

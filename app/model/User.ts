@@ -8,13 +8,11 @@ import {
     PrimaryKey,
     AutoIncrement,
     Unique,
-    HasOne,
     HasMany,
     AllowNull,
     Default
 } from 'sequelize-typescript'
 import { Dialog } from './Dialog'
-import { UserChance } from './UserChance'
 
 @Table
 export class User extends Model {
@@ -69,6 +67,41 @@ export class User extends Model {
     tokenTime: Date
 
     @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    level: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    uploadSize: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    chatChance: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    chatChanceFree: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    uploadChance: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    uploadChanceFree: number
+
+    // @AllowNull(false)
+    @Default(DataType.NOW)
+    @Column(DataType.DATE)
+    freeChanceUpdateAt: Date
+
+    @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
     isDel: boolean
@@ -77,9 +110,6 @@ export class User extends Model {
     @Default(true)
     @Column(DataType.BOOLEAN)
     isEffect: boolean
-
-    @HasOne(() => UserChance)
-    chance: UserChance
 
     @HasMany(() => Dialog)
     dialogs: Dialog[]

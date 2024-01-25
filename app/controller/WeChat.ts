@@ -27,6 +27,7 @@ import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import $ from '@util/util'
 import { basename } from 'path'
+import { statSync } from 'fs'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -88,20 +89,20 @@ export default class WeChat {
 
         const data: UserinfoResponse = {
             id: user.id,
-            tokenTime: user.tokenTime,
+            tokenTime: user.tokenTime.getTime(),
             name: user.name,
             avatar: user.avatar,
             username: user.username,
             token: user.token,
             wxOpenId: user.wxOpenId,
             chance: {
-                level: user.chance.level,
-                uploadSize: user.chance.uploadSize,
-                totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                level: user.level,
+                uploadSize: user.uploadSize,
+                totalChatChance: user.chatChance + user.chatChanceFree,
+                totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.level)
         }
         ctx.service.res.success('Success to WeChat login', data)
     }
@@ -158,7 +159,11 @@ export default class WeChat {
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
     async userInfo(@Context() ctx: UserContext) {
-        const user = ctx.user!
+        const { id } = ctx.user!
+
+        await ctx.service.user.updateUserChance(id)
+        const user = await ctx.service.user.getUserCache(id)
+        if (!user) throw new Error('Can not find user cache')
 
         const data: UserinfoResponse = {
             id: user.id,
@@ -169,13 +174,13 @@ export default class WeChat {
             tokenTime: user.tokenTime,
             wxOpenId: user.wxOpenId,
             chance: {
-                level: user.chance.level,
-                uploadSize: user.chance.uploadSize,
-                totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                level: user.level,
+                uploadSize: user.uploadSize,
+                totalChatChance: user.chatChance + user.chatChanceFree,
+                totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.level)
         }
         ctx.service.res.success('User information', data)
     }
@@ -289,9 +294,11 @@ export default class WeChat {
         const user = ctx.user!
         const file = ctx.request.files[0]
         if (!file) throw new Error('No file')
+        if (statSync(file.filepath).size > parseInt(await ctx.service.weChat.getConfig('LIMIT_UPLOAD_SIZE')))
+            throw new Error('File size exceeds limit')
 
-        const avatar = await ctx.service.weChat.uploadAvatar(file.filepath, user.id)
-        const data: UploadAvatarResponse = { avatar }
+        const { id, avatar } = await ctx.service.weChat.updateUser(user.id, { avatar: file.filepath })
+        const data: UploadAvatarResponse = { id, avatar }
         ctx.service.res.success('Success to upload avatar', data)
     }
 
@@ -299,7 +306,7 @@ export default class WeChat {
     @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
     async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
         const { id } = ctx.user!
-        const user = await ctx.service.weChat.updateUser(id, params.name)
+        const user = await ctx.service.weChat.updateUser(id, { name: params.name })
 
         const data: UserinfoResponse = {
             id: user.id,
@@ -307,16 +314,16 @@ export default class WeChat {
             avatar: user.avatar,
             username: user.username,
             token: user.token,
-            tokenTime: user.tokenTime,
+            tokenTime: user.tokenTime.getTime(),
             wxOpenId: user.wxOpenId,
             chance: {
-                level: user.chance.level,
-                uploadSize: user.chance.uploadSize,
-                totalChatChance: user.chance.chatChance + user.chance.chatChanceFree,
-                totalUploadChance: user.chance.uploadChance + user.chance.uploadChanceFree
+                level: user.level,
+                uploadSize: user.uploadSize,
+                totalChatChance: user.chatChance + user.chatChanceFree,
+                totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.user.getLevelBenefit(user.chance.level)
+            benefit: await ctx.service.user.getLevelBenefit(user.level)
         }
         ctx.service.res.success('Success to update user information', data)
     }

@@ -7,7 +7,7 @@ import { UserContext } from '@interface/Context'
 import $ from '@util/util'
 
 const EXPIRE_1 = 1 * 24 * 60 * 60 * 1000
-const EXPIRE_7 = 7 * 24 * 60 * 60 * 1000
+const EXPIRE_7 = 180 * 24 * 60 * 60 * 1000
 
 // check user auth
 export default function auth() {
@@ -18,7 +18,7 @@ export default function auth() {
         const expire = appType === 'web' ? EXPIRE_7 : EXPIRE_1
 
         const now = Date.now()
-        const user = $.json<UserCache>(await ctx.app.redis.get(`user_${id}`))
+        const user = await ctx.service.user.getUserCache(id)
 
         // find user in redis
         if (user && user.token === token && now - user.tokenTime < expire) ctx.user = user

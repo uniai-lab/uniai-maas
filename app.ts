@@ -6,6 +6,9 @@ import config from '@data/config'
 import resourceType from '@data/resourceType'
 import promptType from '@data/promptType'
 import userResourceTab from '@data/userResourceTab'
+import { User } from '@model/User'
+import { UserCache } from '@interface/Cache'
+import $ from '@util/util'
 
 export default (app: Application) => {
     app.ready(async () => {
@@ -30,5 +33,20 @@ export default (app: Application) => {
             const configs = await app.model.Config.findAll({ attributes: ['key', 'value'] })
             for (const item of configs) await app.redis.set(item.key, item.value)
         }
+
+        // add hook, update redis
+        app.model.User.addHook('afterSave', async (user: User) => {
+            const key = `user_${user.id}`
+            const value = $.json<UserCache>(await app.redis.get(key))
+
+            const cache: UserCache = {
+                ...value,
+                ...user.dataValues,
+                tokenTime: user.tokenTime?.getTime() || value?.tokenTime,
+                freeChanceUpdateAt: user.freeChanceUpdateAt?.getTime() || value?.freeChanceUpdateAt
+            }
+
+            await app.redis.set(key, JSON.stringify(cache))
+        })
     })
 }

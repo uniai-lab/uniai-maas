@@ -27,26 +27,15 @@ export interface UserCache {
     wxPublicOpenId: string | null
     wxUnionId: string | null
     tokenTime: number
+    level: number
+    uploadSize: number
+    chatChance: number
+    chatChanceFree: number
+    uploadChance: number
+    uploadChanceFree: number
+    freeChanceUpdateAt: number
     isEffect: boolean
     isDel: boolean
-    updatedAt?: string | Date
-    createdAt?: string | Date
-    chance: {
-        id: number
-        userId: number
-        level: number
-        uploadSize: number
-        chatChance: number
-        chatChanceUpdateAt: number
-        chatChanceFree: number
-        chatChanceFreeUpdateAt: number
-        uploadChance: number
-        uploadChanceUpdateAt: number
-        uploadChanceFree: number
-        uploadChanceFreeUpdateAt: number
-        updatedAt?: string | Date
-        createdAt?: string | Date
-    }
 }
 
 export interface WXAccessTokenCache {

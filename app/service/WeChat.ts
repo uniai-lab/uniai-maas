@@ -150,22 +150,6 @@ export default class WeChat extends Service {
     }
     */
 
-    // user follow WeChat public account, add reward
-    async followReward(unionId: string, openId: string) {
-        const { ctx } = this
-        const user = await ctx.model.User.findOne({
-            where: { wxUnionId: unionId, wxPublicOpenId: null },
-            include: ctx.model.UserChance
-        })
-        if (!user || !user.chance) throw Error('Fail to reward')
-
-        user.chance.chatChance += parseInt(await this.getConfig('FOLLOW_REWARD_CHAT_CHANCE'))
-        user.chance.chatChanceUpdateAt = new Date()
-        user.wxPublicOpenId = openId // public open id
-        await user.chance.save()
-        return await user.save()
-    }
-
     // list all dialogs
     async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
         const { ctx } = this
@@ -259,9 +243,9 @@ export default class WeChat extends Service {
         if (check && !check.chatId) throw new Error('You have another processing chat')
 
         // check user chat chance
-        const user = await ctx.model.UserChance.findOne({ where: { userId } })
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChance', 'chatChanceFree'] })
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chance of chat not enough')
+        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
@@ -346,9 +330,10 @@ export default class WeChat extends Service {
             chat.save()
         })
         stream.on('end', async () => {
-            if (user.chatChanceFree > 0) await user.decrement({ chatChanceFree: 1 })
-            else await user.decrement({ chatChance: 1 })
-            ctx.service.user.updateUserCache(user.userId)
+            // reduce user chat chance
+            if (user.chatChanceFree > 0) user.chatChanceFree--
+            else if (user.chatChance > 0) user.chatChance--
+            user.save()
         })
         stream.on('close', async () => {
             parser.reset()
@@ -379,36 +364,24 @@ export default class WeChat extends Service {
         return res
     }
 
-    // upload user avatar
-    async uploadAvatar(filepath: string, userId: number) {
-        if (statSync(filepath).size > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE')))
-            throw new Error('File size exceeds limit')
+    async updateUser(id: number, params: { name?: string; avatar?: string }) {
+        const { ctx } = this
+        const user = await ctx.model.User.findByPk(id)
+        if (!user) throw new Error('Fail to find')
 
-        const avatar = BASE64_IMG_TYPE + $.file2base64(filepath)
-        // update user database
-        await this.ctx.model.User.update({ avatar }, { where: { id: userId } })
-        // update cache
-        await this.ctx.service.user.updateUserCache(userId)
+        // update user
+        if (params.name) user.name = params.name
+        if (params.avatar) user.avatar = BASE64_IMG_TYPE + $.file2base64(params.avatar)
 
-        return avatar
-    }
-
-    async updateUser(id: number, name?: string) {
-        if (name) await this.ctx.model.User.update({ name }, { where: { id } })
-        // update cache
-        const cache = await this.ctx.service.user.updateUserCache(id)
-        return cache
+        return await user.save()
     }
 
     // add a new resource
     async upload(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this
-        const chance = await ctx.model.UserChance.findOne({
-            where: { userId },
-            attributes: ['id', 'uploadChanceFree', 'uploadChance']
-        })
-        if (!chance) throw new Error('Fail to find user chance')
-        if (chance.uploadChance + chance.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'uploadChanceFree', 'uploadChance'] })
+        if (!user) throw new Error('Fail to find')
+        if (user.uploadChance + user.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
 
         // upload resource to oss
         const resource = await ctx.service.uniAI.upload(file, userId, typeId)
@@ -423,11 +396,11 @@ export default class WeChat extends Service {
         // split pages as images
         await this.resource(resource.id)
 
-        // reduce user chance
-        if (chance.uploadChanceFree > 0) await chance.decrement('uploadChanceFree')
-        else if (chance.uploadChance > 0) await chance.decrement('uploadChance')
+        // reduce user upload chance
+        if (user.uploadChanceFree > 0) user.uploadChanceFree--
+        else if (user.uploadChance > 0) user.uploadChance--
         else throw new Error('Fail to reduce upload chance')
-        await ctx.service.user.updateUserCache(chance.userId)
+        await user.save()
 
         return await resource.save()
     }
@@ -531,23 +504,17 @@ export default class WeChat extends Service {
 
     // watch adv reward
     async watchAdv(userId: number) {
-        const { app, ctx } = this
+        const { ctx, app } = this
         const res = $.json<AdvCache>(await app.redis.get(`adv_${userId}`))
         const now = Date.now()
         const limit = parseInt(await this.getConfig('ADV_REWARD_LIMIT_COUNT'))
         if (res && now - res.time <= ONE_DAY && res.count >= limit) throw new Error('Adv too many times one day')
 
-        const chance = await this.ctx.model.UserChance.findOne({
-            where: { userId },
-            attributes: ['id', 'userId', 'chatChance', 'chatChanceUpdateAt']
-        })
-        if (!chance) throw new Error('Invalid user chance')
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChance', 'chatChanceUpdateAt'] })
+        if (!user) throw new Error('Invalid user')
 
-        chance.chatChance += parseInt(await this.getConfig('ADV_REWARD_CHAT_CHANCE'))
-        chance.chatChanceUpdateAt = new Date()
-
-        await chance.save()
-        await ctx.service.user.updateUserCache(userId)
+        user.chatChance += parseInt(await this.getConfig('ADV_REWARD_CHAT_CHANCE'))
+        await user.save()
 
         const cache: AdvCache = {
             count: (res?.count || 0) + 1,
