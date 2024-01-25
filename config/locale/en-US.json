@@ -46,5 +46,8 @@
     "Role": "Role Play: You are %s",
     "Prompt": "Scenario Requirement: %s",
     "Language": "Use the same language as the user's input",
-    "Start Topic": "===============Instructional Divider, the following is a dialogue between two parties==============="
+    "Start Topic": "===============Instructional Divider, the following is a dialogue between two parties===============",
+    "Invalid user access": "Invalid user access",
+    "Invalid admin access": "Invalid admin access",
+    "Can not find user cache": "User not login"
 }

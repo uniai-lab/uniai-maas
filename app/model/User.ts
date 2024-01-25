@@ -25,6 +25,9 @@ export class User extends Model {
     @Column(DataType.STRING)
     username: string | null
 
+    @Column(DataType.INTEGER)
+    countryCode: number | null
+
     @Unique
     @Column(DataType.STRING)
     phone: string | null
@@ -42,9 +45,6 @@ export class User extends Model {
 
     @Column(DataType.STRING)
     name: string | null
-
-    @Column(DataType.INTEGER)
-    countryCode: number | null
 
     @Column(DataType.TEXT)
     avatar: string | null
@@ -96,7 +96,7 @@ export class User extends Model {
     @Column(DataType.INTEGER)
     uploadChanceFree: number
 
-    // @AllowNull(false)
+    @AllowNull(false)
     @Default(DataType.NOW)
     @Column(DataType.DATE)
     freeChanceUpdateAt: Date

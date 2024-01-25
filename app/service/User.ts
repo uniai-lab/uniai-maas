@@ -115,7 +115,9 @@ export default class User extends Service {
 
     // update user cache in redis
     async getUserCache(id: number) {
-        return $.json<UserCache>(await this.app.redis.get(`user_${id}`))
+        const cache = $.json<UserCache>(await this.app.redis.get(`user_${id}`))
+        if (!cache) throw new Error('Can not find user cache')
+        return cache
     }
 
     async setUserCache(id: number) {

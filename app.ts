@@ -11,16 +11,16 @@ import { UserCache } from '@interface/Cache'
 import $ from '@util/util'
 
 export default (app: Application) => {
-    app.ready(async () => {
+    app.beforeStart(async () => {
         // 只在单进程模式下执行数据库结构的修改
         if (app.config.env === 'local') {
-            // update database (structure), initial data
+            // sync database table structure
             console.log('================SYNC DATA STRUCTURE==================')
             await app.model.query('CREATE EXTENSION if not exists vector')
             await app.model.sync({ force: false, alter: true })
 
-            // add initial data
-            console.log('====================SYNC DATA========================')
+            // add initial table data
+            console.log('==================SYNC INIT DATA=====================')
             await app.model.Config.bulkCreate(config, { updateOnDuplicate: ['value', 'description'] })
             await app.model.ResourceType.bulkCreate(resourceType, { updateOnDuplicate: ['name', 'description'] })
             await app.model.PromptType.bulkCreate(promptType, { updateOnDuplicate: ['name', 'description'] })
@@ -28,22 +28,21 @@ export default (app: Application) => {
                 updateOnDuplicate: ['name', 'desc', 'pid']
             })
 
-            // update redis cache, set config
-            console.log('================SYNC REDIS CACHE=====================')
+            // set config to redis cache
+            console.log('================SYNC CONFIG CACHE====================')
             const configs = await app.model.Config.findAll({ attributes: ['key', 'value'] })
             for (const item of configs) await app.redis.set(item.key, item.value)
 
-            // update redis cache, set config
-            console.log('================UPDATE LARGE ROWs=====================')
-            app.model.User.update({ freeChanceUpdateAt: new Date(0) }, { where: { freeChanceUpdateAt: null } }).then(
-                console.log
-            )
+            // update all new rows
+            // updateNewRows(app)
         }
 
         // add hook, update redis
+        console.log('===============HOOK USER CACHE SYNC===================')
         app.model.User.addHook('afterSave', async (user: User) => {
-            const key = `user_${user.id}`
-            const value = $.json<UserCache>(await app.redis.get(key))
+            if (!user.id) return
+
+            const value = $.json<UserCache>(await app.redis.get(`user_${user.id}`))
 
             const cache: UserCache = {
                 ...value,
@@ -52,7 +51,16 @@ export default (app: Application) => {
                 freeChanceUpdateAt: user.freeChanceUpdateAt?.getTime() || value?.freeChanceUpdateAt
             }
 
-            await app.redis.set(key, JSON.stringify(cache))
+            await app.redis.set('user_${user.id}', JSON.stringify(cache))
         })
     })
+}
+
+async function updateNewRows(app: Application) {
+    console.log('================UPDATE LARGE ROWs=====================')
+    const max: number = await app.model.User.max('id')
+    for (let i = 1; i <= max; i++) {
+        const res = await app.model.User.update({ freeChanceUpdateAt: new Date(0) }, { where: { id: i } })
+        console.log(i, res)
+    }
 }
