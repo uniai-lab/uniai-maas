@@ -50,7 +50,7 @@ export default class Res extends Service {
         this.ctx.body = { status: 0, msg: this.ctx.__(e.message), data: null } as StandardResponse
     }
     // error response because of no auth
-    noAuth(e: Error) {
-        this.ctx.body = { status: -1, msg: this.ctx.__(e.message), data: null } as StandardResponse
+    noAuth() {
+        this.ctx.body = { status: -1, msg: this.ctx.__('Invalid user access'), data: null } as StandardResponse
     }
 }

@@ -110,6 +110,7 @@ export default class Web {
 
         await ctx.service.user.updateUserChance(id)
         const user = await ctx.service.user.getUserCache(id)
+        if (!user) throw new Error('Can not find user cache')
 
         const data: UserinfoResponse = {
             id: user.id,
