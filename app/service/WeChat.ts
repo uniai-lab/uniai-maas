@@ -20,6 +20,8 @@ import {
     WXAccessTokenResponse,
     WXAuthCodeRequest,
     WXAuthCodeResponse,
+    WXGetQRCodeRequest,
+    WXGetQRCodeResponse,
     WXMsgCheckRequest,
     WXMsgCheckResponse
 } from '@interface/controller/WeChat'
@@ -41,6 +43,7 @@ const WX_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
 // const WX_PHONE_URL = 'https://api.weixin.qq.com/wxa/business/getuserphonenumber'
 const WX_MSG_CHECK_URL = 'https://api.weixin.qq.com/wxa/msg_sec_check' // use POST
 const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use POST
+const WX_QR_CODE_URL = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit'
 const { WX_APP_ID, WX_APP_SECRET } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -499,6 +502,24 @@ export default class WeChat extends Service {
                 await this.app.redis.set('WX_ACCESS_TOKEN', JSON.stringify(cache))
                 return res.access_token
             } else throw new Error(`Fail to get wx access token, ${res.errcode}:${res.errmsg}`)
+        }
+    }
+
+    // get WeChat mini app QR Code with scene
+    async getQRCode(page: string, scene: string) {
+        const token = await this.getAccessToken()
+        const base64 = await $.post<WXGetQRCodeRequest, string>(
+            `${WX_QR_CODE_URL}?access_token=${token}`,
+            { scene, page, env_version: 'release', check_path: true },
+            { responseEncoding: 'base64' }
+        )
+        const json = Buffer.from(base64, 'base64').toString('utf-8')
+        const res = $.json<WXGetQRCodeResponse>(json)
+        if (!res) return `${BASE64_IMG_TYPE}${base64}`
+        else {
+            console.log(res)
+            await this.app.redis.del('WX_ACCESS_TOKEN')
+            throw new Error(res.errmsg)
         }
     }
 

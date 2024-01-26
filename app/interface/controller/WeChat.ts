@@ -28,6 +28,7 @@ export interface ChatListRequest {
 export interface SignInRequest {
     code: string
     fid?: number
+    token?: string
 }
 
 export interface SignUpRequest {
@@ -274,4 +275,15 @@ export interface WXMsgCheckResponse {
         suggest: string
         label: number
     }
+}
+
+export interface WXGetQRCodeRequest {
+    page: string
+    scene: string
+    check_path: boolean
+    env_version: string
+}
+export interface WXGetQRCodeResponse {
+    errcode: number
+    errmsg: string
 }

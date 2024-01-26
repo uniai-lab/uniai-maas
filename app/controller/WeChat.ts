@@ -82,10 +82,12 @@ export default class WeChat {
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async login(@Context() ctx: UserContext, @HTTPBody() params: SignInRequest) {
-        const { code, fid } = params
+        const { code, fid, token } = params
         if (!code.trim()) throw new Error('Code is null')
 
         const user = await ctx.service.weChat.login(code, fid)
+        // if QRCode login
+        if (token) await ctx.service.web.setQRCodeToken(token, user.id, user.token!)
 
         const data: UserinfoResponse = {
             id: user.id,

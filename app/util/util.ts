@@ -22,6 +22,7 @@ import { path as ROOT_PATH } from 'app-root-path'
 import Mint from 'mint-filter'
 import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
+import QRCode from 'qrcode'
 import isDomain from 'is-valid-domain'
 import isBase64 from 'is-base64'
 
@@ -431,5 +432,9 @@ export default {
      */
     isBase64(text: string, allowMime: boolean = false) {
         return isBase64(text, { allowMime })
+    },
+
+    async getQRCode(text: string) {
+        return await QRCode.toDataURL(text)
     }
 }

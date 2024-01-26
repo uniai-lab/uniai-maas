@@ -10,12 +10,17 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import $ from '@util/util'
 import ali from '@util/aliyun'
+import md5 from 'md5'
+import { randomUUID } from 'crypto'
+import { WXAppQRCodeCache } from '@interface/Cache'
 
 const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
 const LIMIT_SMS_COUNT = 5
 const CHAT_PAGE_SIZE = 10
 const PAGE_LIMIT = 6
+
+const QRCODE_EXPIRE = 30 // 30 seconds
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -54,6 +59,27 @@ export default class Web extends Service {
         console.log(data)
         const expire = Math.floor(Date.now() / 1000 + LIMIT_SMS_EXPIRE)
         return await ctx.model.PhoneCode.create({ phone, code, data, expire })
+    }
+
+    // generate WeChat mini app QR code
+    async getQRCode() {
+        const token = md5(`${randomUUID()}${Date.now()}`).substring(0, 24)
+        const code = await this.ctx.service.weChat.getQRCode('pages/index/index', `token=${token}`)
+        if (!code) throw new Error('Fail to generate QR Code')
+        await this.app.redis.setex(`wx_app_qrcode_${token}`, QRCODE_EXPIRE, JSON.stringify(null))
+        return { token, code, time: Date.now() }
+    }
+
+    // set QR code token
+    async setQRCodeToken(qrToken: string, id: number, token: string) {
+        const cache: WXAppQRCodeCache = { id, token }
+        await this.app.redis.setex(`wx_app_qrcode_${qrToken}`, QRCODE_EXPIRE, JSON.stringify(cache))
+    }
+
+    // verify QR Code token
+    async verifyQRCode(token: string) {
+        const cache = await this.app.redis.getex(`wx_app_qrcode_${token}`)
+        return $.json<WXAppQRCodeCache>(cache)
     }
 
     // login

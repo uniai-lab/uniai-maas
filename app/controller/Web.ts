@@ -6,7 +6,14 @@ import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import captcha from '@middleware/captcha'
-import { SMSCodeRequest, SMSCodeResponse, LoginRequest, UserinfoResponse, ChatRequest } from '@interface/controller/Web'
+import {
+    SMSCodeRequest,
+    SMSCodeResponse,
+    LoginRequest,
+    UserinfoResponse,
+    ChatRequest,
+    getQRCodeResponse
+} from '@interface/controller/Web'
 import {
     AnnounceResponse,
     ChatListRequest,
@@ -75,7 +82,22 @@ export default class Web {
         ctx.service.res.success('Success to WeChat login', data)
     }
 
-    // WeChat login
+    @Middleware()
+    @HTTPMethod({ path: '/get-qr-code', method: HTTPMethodEnum.GET })
+    async getQRCode(@Context() ctx: UserContext) {
+        const res: getQRCodeResponse = await ctx.service.web.getQRCode()
+        ctx.service.res.success('Success to get QR code', res)
+    }
+
+    // WX QR code login
+    @Middleware()
+    @HTTPMethod({ path: '/verify-qr-code', method: HTTPMethodEnum.GET })
+    async verifyQRCode(@Context() ctx: UserContext, @HTTPQuery() token: string) {
+        const res = await ctx.service.web.verifyQRCode(token)
+        ctx.service.res.success('Success to get QR code', res)
+    }
+
+    // phone code login
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {

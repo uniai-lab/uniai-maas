@@ -47,3 +47,8 @@ export interface AdvCache {
     count: number
     time: number
 }
+
+export interface WXAppQRCodeCache {
+    id: number
+    token: string
+}

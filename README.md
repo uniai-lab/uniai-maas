@@ -117,6 +117,11 @@ MID_JOURNEY_TOKEN= # MidJourney proxy token
 GEE_TEST_ID=
 GEE_TEST_KEY=
 
+# AliCloud SMS API
+ALI_KEY_ID=
+ALI_KEY_SECRET=
+ALI_SMS_TEMPLATE=
+ALI_SMS_SIGN=
 ```
 
 ### Installation Steps

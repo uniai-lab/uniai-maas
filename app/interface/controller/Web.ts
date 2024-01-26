@@ -64,3 +64,9 @@ export interface ChatRequest {
     provider?: ModelProvider
     model?: ChatModelEnum
 }
+
+export interface getQRCodeResponse {
+    token: string
+    code: string
+    time: number
+}
