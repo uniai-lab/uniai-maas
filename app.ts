@@ -1,22 +1,28 @@
-/** @format */
-// Run as app starts
+/**
+ * Run when the app starts.
+ *
+ * @format
+ * @param app - The Egg.js application instance.
+ */
 
 import { Application } from 'egg'
-import config from '@data/config'
-import resourceType from '@data/resourceType'
-import promptType from '@data/promptType'
-import userResourceTab from '@data/userResourceTab'
 import { User } from '@model/User'
 import { UserCache } from '@interface/Cache'
 import $ from '@util/util'
+import { Model } from 'sequelize-typescript'
+import { ModelStatic, Optional } from 'sequelize'
 
+/**
+ * Initializes the application.
+ * @param app - The Egg.js application instance.
+ */
 export default (app: Application) => {
     app.beforeStart(async () => {
-        // 只在单进程模式下执行数据库结构的修改
         if (app.config.env === 'local') {
-            await syncData(app)
-            // clean redis
-            await app.redis.flushdb()
+            // Flush Redis (CAREFUL)
+            // await app.redis.flushdb()
+
+            await syncDatabase(app)
             await syncConfigCache(app)
             // await updateNewRows(app)
         }
@@ -24,46 +30,57 @@ export default (app: Application) => {
         await hookUserSave(app)
     })
 }
-async function syncData(app: Application) {
-    // sync database table structure
-    console.log('================SYNC DATA STRUCTURE==================')
+
+/**
+ * Synchronizes the database structure and initial data.
+ * @param app - The Egg.js application instance.
+ */
+async function syncDatabase(app: Application) {
+    console.log('================SYNC DATA STRUCT=====================')
     await app.model.query('CREATE EXTENSION if not exists vector')
     await app.model.sync({ force: false, alter: true })
 
-    // add initial table data
     console.log('==================SYNC INIT DATA=====================')
-    await app.model.Config.bulkCreate(config, { updateOnDuplicate: ['value', 'description'] })
-    await app.model.ResourceType.bulkCreate(resourceType, { updateOnDuplicate: ['name', 'description'] })
-    await app.model.PromptType.bulkCreate(promptType, { updateOnDuplicate: ['name', 'description'] })
-    await app.model.UserResourceTab.bulkCreate(userResourceTab, {
-        updateOnDuplicate: ['name', 'desc', 'pid']
-    })
+    await syncTableData(app.model.Config, require('@data/config'), ['value', 'description'])
+    await syncTableData(app.model.ResourceType, require('@data/resourceType'), ['name', 'description'])
+    await syncTableData(app.model.PromptType, require('@data/promptType'), ['name', 'description'])
+    await syncTableData(app.model.UserResourceTab, require('@data/userResourceTab'), ['name', 'desc', 'pid'])
 }
-// set config to redis cache
+
+/**
+ * Synchronizes table data with the provided Sequelize model.
+ * @param model - The Sequelize model to synchronize data for.
+ * @param data - The data to be synchronized.
+ * @param updateOnDuplicate - Fields to update in case of duplicate data.
+ */
+async function syncTableData(model: ModelStatic<Model>, data: Optional<any, string>[], updateOnDuplicate: string[]) {
+    const res = await model.bulkCreate(data, { updateOnDuplicate })
+    console.log('SYNC TABLE DATA', res)
+}
+
+/**
+ * Sets configuration data to Redis cache.
+ * @param app - The Egg.js application instance.
+ */
 async function syncConfigCache(app: Application) {
     console.log('================SYNC CONFIG CACHE====================')
     const configs = await app.model.Config.findAll({ attributes: ['key', 'value'] })
-    for (const item of configs) await app.redis.set(item.key, item.value)
-}
-
-// update new rows
-async function updateNewRows(app: Application) {
-    console.log('================UPDATE LARGE ROWs=====================')
-    const max: number = await app.model.User.max('id')
-    for (let i = 1; i <= max; i++) {
-        const res = await app.model.User.update({ freeChanceUpdateAt: new Date(0) }, { where: { id: i } })
-        console.log(i, res)
+    for (const item of configs) {
+        await app.redis.set(item.key, item.value)
+        console.log(item.key, item.value)
     }
 }
 
-// hook user model save
+/**
+ * Hooks the User model to set user cache in Redis.
+ * @param app - The Egg.js application instance.
+ */
 async function hookUserSave(app: Application) {
     console.log('===============HOOK USER CACHE SYNC==================')
-    app.model.User.addHook('afterSave', async (user: User) => {
+    const res = app.model.User.addHook('afterSave', async (user: User) => {
         if (!user.id) return
 
         const value = $.json<UserCache>(await app.redis.get(`user_${user.id}`))
-
         const cache: UserCache = {
             ...value,
             ...user.dataValues,
@@ -73,4 +90,18 @@ async function hookUserSave(app: Application) {
 
         await app.redis.set(`user_${user.id}`, JSON.stringify(cache))
     })
+    console.log('HOOK', res)
+}
+
+/**
+ * Loop through and update new rows in the User table.
+ * @param app - The Egg.js application instance.
+ */
+async function updateNewRows(app: Application) {
+    console.log('================UPDATE LARGE ROWs=====================')
+    const max: number = await app.model.User.max('id')
+    for (let i = 1; i <= max; i++) {
+        const res = await app.model.User.update({ freeChanceUpdateAt: new Date(0) }, { where: { id: i } })
+        console.log(i, res)
+    }
 }

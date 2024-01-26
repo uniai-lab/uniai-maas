@@ -510,7 +510,7 @@ export default class WeChat extends Service {
         const limit = parseInt(await this.getConfig('ADV_REWARD_LIMIT_COUNT'))
         if (res && now - res.time <= ONE_DAY && res.count >= limit) throw new Error('Adv too many times one day')
 
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChance', 'chatChanceUpdateAt'] })
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChance'] })
         if (!user) throw new Error('Invalid user')
 
         user.chatChance += parseInt(await this.getConfig('ADV_REWARD_CHAT_CHANCE'))

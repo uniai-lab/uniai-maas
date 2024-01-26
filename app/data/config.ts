@@ -4,7 +4,7 @@ import ROOT_PATH from 'app-root-path'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
 import { readFileSync } from 'fs'
 
-const ADV_REWARD_LIMIT_COUNT = 10
+const ADV_REWARD_LIMIT_COUNT = 5
 const ADV_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_UPLOAD_CHANCE = 5
