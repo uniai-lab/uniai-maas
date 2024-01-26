@@ -116,7 +116,7 @@ export default class Web extends Service {
         const { ctx } = this
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'uploadChanceFree', 'uploadChance'] })
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
@@ -208,8 +208,7 @@ export default class Web extends Service {
                     role: ASSISTANT,
                     content: data.content,
                     model: data.model,
-                    subModel: data.subModel,
-                    isEffect: data.isEffect
+                    subModel: data.subModel
                 })
                 data.chatId = chat.id
             }

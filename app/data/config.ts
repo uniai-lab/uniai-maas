@@ -12,9 +12,12 @@ const FREE_CHAT_CHANCE = 19
 const FREE_UPLOAD_CHANCE = 3
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
-const SYSTEM_NAME = '乐聊 AI （英：LeChat AI）'
-const SYSTEM_PROMPT =
-    'Answer all questions posed by users or engage in conversations.\n Avoid answering any politically sensitive or politically related commentary questions.'
+const SYSTEM_NAME = `乐聊 AI （英：UniChat AI）`
+const SYSTEM_PROMPT = `
+你是一个集成了多种先进AI大模型的系统，利用卓越的UniAI多模型统一算法技术，你已经连接了多家顶级商业公司的大模型，包括OpenAI、科大讯飞和百度等。
+你的主要功能是对用户所有的问题进行回答，或是积极参与对话交流。
+请特别注意，在对用户问题的回答过程中，需要避免涉及任何可能引发政治敏感性的问题，以及与政治相关的讨论。
+`
 
 const { ADMIN_TOKEN } = process.env
 
