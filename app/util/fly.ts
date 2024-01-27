@@ -19,8 +19,8 @@ import {
     SPKChatRequest,
     SPKChatResponse
 } from '@interface/Spark'
-import { FLYAuditType, SPKChatRoleEnum, FlyChatModel, FlyChatDomain } from '@interface/Enum'
-import { ChatResponse } from '@interface/controller/UniAI'
+import { FLYAuditType, SPKChatRoleEnum, FlyChatModel, FlyChatDomain, ChatRoleEnum } from '@interface/Enum'
+import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import $ from '@util/util'
 
 const { FLY_API_KEY, FLY_APP_ID, FLY_API_SECRET } = process.env
@@ -42,15 +42,12 @@ export default {
      */
     chat(
         model: FlyChatModel = FlyChatModel.V3,
-        messages: SPKChatMessage[],
+        messages: ChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        // only user and assistant role supported
-        messages = formatMessage(messages)
-
         // get specific generated URL
         const url = getSparkURL(model)
         const ws = new WebSocket(url)
@@ -64,7 +61,7 @@ export default {
         const input: SPKChatRequest = {
             header: { app_id: FLY_APP_ID },
             parameter: { chat: { domain: FlyChatDomain[model], temperature, max_tokens: maxLength, top_k: top } },
-            payload: { message: { text: messages } }
+            payload: { message: { text: formatMessage(messages) } }
         }
 
         return new Promise<ChatResponse | Readable>((resolve, reject) => {
@@ -90,7 +87,7 @@ export default {
                         data.completionTokens = res.payload?.usage?.text.completion_tokens || 0
                         data.totalTokens = res.payload?.usage?.text.total_tokens || 0
                         data.object = `chat.completion.chunk`
-                        output.write(`data: ${JSON.stringify(data)}\n\n`)
+                        output.write(JSON.stringify(data))
                     } else {
                         output.destroy(new Error(res.header.message))
                         ws.close()
@@ -190,21 +187,19 @@ function getAuditURL(type: FLYAuditType) {
     return `${AUDIT_API}/audit/v2/${type}?${baseString}&signature=${encodeURIComponent(signature)}`
 }
 
-function formatMessage(messages: SPKChatMessage[]) {
+function formatMessage(messages: ChatMessage[]) {
     const prompt: SPKChatMessage[] = []
     let input = ''
-    const { USER, ASSISTANT } = SPKChatRoleEnum
     for (const { role, content } of messages) {
         if (!content) continue
-        if (role !== ASSISTANT) input += `\n${content}`
+        if (role !== ChatRoleEnum.ASSISTANT) input += `\n${content}`
         else {
-            prompt.push({ role: USER, content: input.trim() || ' ' })
-            prompt.push({ role: ASSISTANT, content })
+            prompt.push({ role: SPKChatRoleEnum.USER, content: input.trim() || ' ' })
+            prompt.push({ role: SPKChatRoleEnum.ASSISTANT, content })
             input = ''
         }
     }
     if (!input.trim()) throw new Error('User input nothing')
-    prompt.push({ role: USER, content: input.trim() })
-    console.log(prompt)
+    prompt.push({ role: SPKChatRoleEnum.USER, content: input.trim() })
     return prompt
 }

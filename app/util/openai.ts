@@ -5,7 +5,6 @@
  * @author devilyouwei
  */
 
-import $ from '@util/util'
 import { PassThrough, Readable } from 'stream'
 import {
     GPTChatRequest,
@@ -15,16 +14,19 @@ import {
     GPTEmbeddingResponse,
     GPTImagineRequest,
     GPTImagineResponse,
-    GPTChatMessage,
     GPTImagineSize,
-    GPTChatStreamResponse
+    GPTChatStreamResponse,
+    GPTChatMessage
 } from '@interface/OpenAI'
-import { OpenAIChatModel, OpenAIEmbedModel } from '@interface/Enum'
-import { createParser } from 'eventsource-parser'
-import { ChatResponse } from '@interface/controller/UniAI'
+import EventSourceStream from '@server-sent-stream/node'
+import { decodeStream } from 'iconv-lite'
+import { ChatRoleEnum, OpenAIChatModel, OpenAIEmbedModel } from '@interface/Enum'
+import { ChatResponse, ChatMessage } from '@interface/controller/UniAI'
+import $ from '@util/util'
 
 // Destructure environment variables
 const { OPENAI_API, OPENAI_KEY } = process.env
+const DEFAULT_API = 'https://api.openai.com'
 const API_VERSION = 'v1'
 
 export default {
@@ -37,7 +39,7 @@ export default {
      */
     async embedding(input: string[], model: OpenAIEmbedModel = OpenAIEmbedModel.ADA2) {
         return await $.post<GPTEmbeddingRequest, GPTEmbeddingResponse>(
-            `${OPENAI_API}/${API_VERSION}/embeddings`,
+            `${OPENAI_API || DEFAULT_API}/${API_VERSION}/embeddings`,
             { model, input },
             { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: 'json' }
         )
@@ -56,15 +58,15 @@ export default {
      */
     async chat(
         model: OpenAIChatModel = OpenAIChatModel.GPT3,
-        messages: GPTChatMessage[],
+        messages: ChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
         const res = await $.post<GPTChatRequest | GPTChatStreamRequest, Readable | GPTChatResponse>(
-            `${OPENAI_API}/${API_VERSION}/chat/completions`,
-            { model, messages, stream, temperature, top_p: top, max_tokens: maxLength },
+            `${OPENAI_API || DEFAULT_API}/${API_VERSION}/chat/completions`,
+            { model, messages: formatMessage(messages), stream, temperature, top_p: top, max_tokens: maxLength },
             { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: stream ? 'stream' : 'json' }
         )
         const data: ChatResponse = {
@@ -77,21 +79,21 @@ export default {
         }
         if (res instanceof Readable) {
             const output = new PassThrough()
-            const parser = createParser(e => {
-                if (e.type === 'event') {
-                    const obj = $.json<GPTChatStreamResponse>(e.data)
-                    if (obj?.choices[0].delta?.content) {
-                        data.content = obj.choices[0].delta.content
-                        data.model = obj.model
-                        data.object = obj.object
-                        output.write(`data: ${JSON.stringify(data)}\n\n`)
-                    }
+            const parser = new EventSourceStream()
+            parser.on('data', (e: MessageEvent) => {
+                const obj = $.json<GPTChatStreamResponse>(e.data)
+                if (obj?.choices[0].delta?.content) {
+                    data.content = obj.choices[0].delta.content
+                    data.model = obj.model
+                    data.object = obj.object
+                    output.write(JSON.stringify(data))
                 }
             })
-            res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-            res.on('error', e => output.destroy(e))
-            res.on('end', () => output.end())
-            res.on('close', () => parser.reset())
+
+            parser.on('error', e => output.destroy(e))
+            parser.on('end', () => output.end())
+
+            res.pipe(decodeStream('utf-8')).pipe(parser)
             return output as Readable
         } else {
             data.content = res.choices[0].message.content || ''
@@ -125,4 +127,14 @@ export default {
             { headers: { Authorization: `Bearer ${OPENAI_KEY}` }, responseType: 'json' }
         )
     }
+}
+
+function formatMessage(messages: ChatMessage[]) {
+    const prompt: GPTChatMessage[] = []
+
+    for (const { role, content } of messages)
+        if (role === ChatRoleEnum.FUNCTION) continue
+        else prompt.push({ role, content })
+
+    return prompt
 }

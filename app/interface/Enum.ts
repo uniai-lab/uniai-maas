@@ -5,6 +5,7 @@ export enum ModelProvider {
     OpenAI = 'openai',
     IFlyTek = 'iflytek',
     Baidu = 'baidu',
+    Google = 'google',
     GLM = 'glm'
 }
 
@@ -36,6 +37,11 @@ export enum OpenAIChatModel {
     GPT4_TURBO = 'gpt-4-1106-preview',
     GPT4_VISION = 'gpt-4-vision-preview'
 }
+export enum GoogleChatModel {
+    GEM_PRO = 'gemini-pro',
+    GEM_VISION = 'gemini-pro-vision',
+    GEM_ULTRA = 'gemini-ultra'
+}
 export enum GLMChatModel {
     LOCAL = 'chatglm3-6b-32k',
     TURBO = 'chatglm-turbo'
@@ -59,8 +65,14 @@ export const FlyChatDomain = {
 }
 
 // All chat models
-export const ChatModelEnum = { ...OpenAIChatModel, ...BaiduChatModel, ...GLMChatModel, ...FlyChatModel }
-export type ChatModelEnum = OpenAIChatModel | BaiduChatModel | GLMChatModel | FlyChatModel
+export const ChatModelEnum = {
+    ...OpenAIChatModel,
+    ...BaiduChatModel,
+    ...GLMChatModel,
+    ...FlyChatModel,
+    ...GoogleChatModel
+}
+export type ChatModelEnum = OpenAIChatModel | BaiduChatModel | GLMChatModel | FlyChatModel | GoogleChatModel
 
 export enum ImgModelEnum {
     SD = 'SD',
@@ -91,6 +103,14 @@ export enum MJTaskEnum {
     BLEND = 'BLEND'
 }
 
+// We specified model roles
+export enum ChatRoleEnum {
+    SYSTEM = 'system',
+    USER = 'user',
+    ASSISTANT = 'assistant',
+    FUNCTION = 'function'
+}
+
 // GPT model roles
 export enum GPTChatRoleEnum {
     SYSTEM = 'system',
@@ -114,12 +134,13 @@ export enum GLMChatRoleEnum {
     OBSERVATION = 'observation'
 }
 
+export enum GEMChatRoleEnum {
+    USER = 'user',
+    MODEL = 'model'
+}
+
 export enum OSSEnum {
     OSS = 'oss',
     COS = 'cos',
     MIN = 'minio'
 }
-
-// ALL model roles
-export type ChatRoleEnum = GLMChatRoleEnum | GPTChatRoleEnum | SPKChatRoleEnum
-export const ChatRoleEnum = { ...GLMChatRoleEnum, ...GPTChatRoleEnum, ...SPKChatRoleEnum }

@@ -1,11 +1,18 @@
 /** @format */
 
-import { ModelProvider, ImgModelEnum, EmbedModelEnum, AuditProvider, ChatModelEnum } from '@interface/Enum'
-import { GLMChatMessage } from '@interface/GLM'
-import { GPTChatMessage } from '@interface/OpenAI'
-import { SPKChatMessage } from '@interface/Spark'
+import {
+    ModelProvider,
+    ImgModelEnum,
+    EmbedModelEnum,
+    AuditProvider,
+    ChatModelEnum,
+    ChatRoleEnum
+} from '@interface/Enum'
 
-export type ChatMessage = GPTChatMessage | GLMChatMessage | SPKChatMessage
+export interface ChatMessage {
+    role: ChatRoleEnum
+    content: string
+}
 
 export interface ChatRequest {
     prompts: ChatMessage[]

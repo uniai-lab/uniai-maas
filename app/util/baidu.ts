@@ -6,14 +6,14 @@
  */
 
 import { PassThrough, Readable } from 'stream'
-import { createParser } from 'eventsource-parser'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-
+import EventSourceStream from '@server-sent-stream/node'
+import { decodeStream } from 'iconv-lite'
 import { BaiduChatMessage, BaiduChatRequest, BaiduChatResponse } from '@interface/Baidu'
 import { BaiduChatModel, ChatRoleEnum } from '@interface/Enum'
-import { ChatResponse } from '@interface/controller/UniAI'
+import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import { BaiduAccessTokenRequest, BaiduAccessTokenResponse } from '@interface/Baidu'
 import $ from '@util/util'
 
@@ -36,7 +36,7 @@ export default {
      */
     async chat(
         model: BaiduChatModel = BaiduChatModel.ERNIE4,
-        messages: BaiduChatMessage[],
+        messages: ChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
@@ -45,13 +45,7 @@ export default {
         const token = await getAccessToken()
         const res = await $.post<BaiduChatRequest, BaiduChatResponse | Readable>(
             `${WORKSHOP_API}/chat/${model}?access_token=${token}`,
-            {
-                messages: formatMessage(messages),
-                stream,
-                temperature,
-                top_p: top,
-                max_output_tokens: maxLength
-            },
+            { messages: formatMessage(messages), stream, temperature, top_p: top, max_output_tokens: maxLength },
             { responseType: stream ? 'stream' : 'json' }
         )
 
@@ -65,23 +59,23 @@ export default {
         }
         if (res instanceof Readable) {
             const output = new PassThrough()
-            const parser = createParser(e => {
-                if (e.type === 'event') {
-                    const obj = $.json<BaiduChatResponse>(e.data)
-                    if (obj?.result) {
-                        data.content = obj.result
-                        data.object = obj.object
-                        data.promptTokens = obj.usage?.prompt_tokens || 0
-                        data.completionTokens = obj.usage?.completion_tokens || 0
-                        data.totalTokens = obj.usage?.total_tokens || 0
-                        output.write(`data: ${JSON.stringify(data)}\n\n`)
-                    }
+            const parser = new EventSourceStream()
+            parser.on('data', (e: MessageEvent) => {
+                const obj = $.json<BaiduChatResponse>(e.data)
+                if (obj?.result) {
+                    data.content = obj.result
+                    data.object = obj.object
+                    data.promptTokens = obj.usage?.prompt_tokens || 0
+                    data.completionTokens = obj.usage?.completion_tokens || 0
+                    data.totalTokens = obj.usage?.total_tokens || 0
+                    output.write(JSON.stringify(data))
                 }
             })
-            res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-            res.on('error', e => output.destroy(e))
-            res.on('end', () => output.end())
-            res.on('close', () => parser.reset())
+
+            parser.on('error', e => output.destroy(e))
+            parser.on('end', () => output.end())
+
+            res.pipe(decodeStream('utf-8')).pipe(parser)
             return output as Readable
         } else {
             if (res.error_code) throw new Error(res.error_msg)
@@ -123,7 +117,7 @@ async function getAccessToken() {
     return res.access_token
 }
 
-function formatMessage(messages: BaiduChatMessage[]) {
+function formatMessage(messages: ChatMessage[]) {
     const prompt: BaiduChatMessage[] = []
     let input = ''
     const { USER, ASSISTANT } = ChatRoleEnum

@@ -10,6 +10,9 @@ declare global {
             OPENAI_API: string
             OPENAI_KEY: string
 
+            // Google AI
+            GOOGLE_AI_KEY: string
+
             // GLM
             GLM_LOCAL_API: string
             GLM_REMOTE_API_KEY: string

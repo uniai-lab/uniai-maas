@@ -13,12 +13,18 @@ const {
     REDIS_HOST,
     REDIS_PORT,
     REDIS_PASS,
-    REDIS_DB
+    REDIS_DB,
+    MINIO_ACCESS_KEY,
+    MINIO_END_POINT,
+    MINIO_PORT,
+    MINIO_SECRET_KEY,
+    MINIO_BUCKET
 } = process.env
-const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
+
 const ALLOW_ORIGIN = '*'
 const ALLOW_METHOD = ['GET', 'POST']
 const FILE_SIZE = '5mb'
+const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
 
 export default (appInfo: EggAppInfo) => {
     // override config from framework / plugin
@@ -31,15 +37,18 @@ export default (appInfo: EggAppInfo) => {
             enable: false
         }
     }
+
     config.cors = {
         origin: ALLOW_ORIGIN,
         allowMethods: ALLOW_METHOD
     }
+
     config.multipart = {
         mode: 'file',
         fileSize: FILE_SIZE,
         whitelist: WHITELIST
     }
+
     config.static = {
         prefix: '/public',
         dir: ['app/public/']
@@ -69,11 +78,22 @@ export default (appInfo: EggAppInfo) => {
         }
     }
 
+    config.minio = {
+        client: {
+            endPoint: MINIO_END_POINT,
+            port: parseInt(MINIO_PORT),
+            useSSL: false,
+            accessKey: MINIO_ACCESS_KEY,
+            secretKey: MINIO_SECRET_KEY,
+            bucketName: MINIO_BUCKET
+        }
+    }
+
     // first end user transaction, then response, finally log
     config.middleware = ['notFound', 'errorHandler']
 
     config.i18n = { defaultLocale: 'zh-CN' }
 
     // the return config will combines to EggAppConfig
-    return { ...config }
+    return config
 }

@@ -6,11 +6,12 @@
  */
 
 import { PassThrough, Readable } from 'stream'
-import { createParser } from 'eventsource-parser'
 import jwt from 'jsonwebtoken'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import EventSourceStream from '@server-sent-stream/node'
+import { decodeStream } from 'iconv-lite'
 
 import {
     GLMChatRequest,
@@ -23,8 +24,8 @@ import {
     GLMTurboChatResponse,
     TokenCache
 } from '@interface/GLM'
-import { GLMChatRoleEnum, GLMChatModel, TextVecEmbedModel } from '@interface/Enum'
-import { ChatResponse } from '@interface/controller/UniAI'
+import { GLMChatRoleEnum, GLMChatModel, TextVecEmbedModel, ChatRoleEnum } from '@interface/Enum'
+import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import $ from '@util/util'
 
 const { GLM_LOCAL_API, GLM_REMOTE_API_KEY } = process.env
@@ -58,7 +59,7 @@ export default {
      */
     async chat(
         model: GLMChatModel = GLMChatModel.LOCAL,
-        messages: GLMChatMessage[],
+        messages: ChatMessage[],
         stream: boolean = false,
         top?: number,
         temperature?: number,
@@ -72,29 +73,28 @@ export default {
             completionTokens: 0,
             totalTokens: 0
         }
-        messages = formatMessage(messages)
         if (model === GLMChatModel.LOCAL) {
             const res = await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_LOCAL_API}/chat`,
-                { messages, stream, temperature, top_p: top, max_tokens: maxLength },
+                { messages: formatMessage(messages), stream, temperature, top_p: top, max_tokens: maxLength },
                 { responseType: stream ? 'stream' : 'json' }
             )
             if (res instanceof Readable) {
                 const output = new PassThrough()
-                const parser = createParser(e => {
-                    if (e.type === 'event') {
-                        const obj = $.json<GLMChatStreamResponse>(e.data)
-                        if (obj?.choices[0].delta?.content) {
-                            data.content = obj.choices[0].delta.content
-                            data.object = obj.object
-                            output.write(`data: ${JSON.stringify(data)}\n\n`)
-                        }
+                const parser = new EventSourceStream()
+                parser.on('data', (e: MessageEvent) => {
+                    const obj = $.json<GLMChatStreamResponse>(e.data)
+                    if (obj?.choices[0].delta?.content) {
+                        data.content = obj.choices[0].delta.content
+                        data.object = obj.object
+                        output.write(JSON.stringify(data))
                     }
                 })
-                res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-                res.on('error', e => output.destroy(e))
-                res.on('end', () => output.end())
-                res.on('close', () => parser.reset())
+
+                parser.on('error', e => output.destroy(e))
+                parser.on('end', () => output.end())
+
+                res.pipe(decodeStream('utf-8')).pipe(parser)
                 return output as Readable
             } else {
                 data.content = res.choices[0].message.content || ''
@@ -110,7 +110,7 @@ export default {
             const token = generateToken(GLM_REMOTE_API_KEY, EXPIRE_IN)
             const res = await $.post<GLMTurboChatRequest, Readable | GLMTurboChatResponse>(
                 url,
-                { prompt: messages, temperature, top_p: top },
+                { prompt: formatMessage(messages), temperature, top_p: top },
                 {
                     headers: { 'Content-Type': 'application/json', Authorization: token },
                     responseType: stream ? 'stream' : 'json'
@@ -119,19 +119,19 @@ export default {
 
             if (res instanceof Readable) {
                 const output = new PassThrough()
-                const parser = createParser(e => {
-                    if (e.type === 'event') {
-                        if (e.data) {
-                            data.content = e.data
-                            data.object = 'chat.completion.chunk'
-                            output.write(`data: ${JSON.stringify(data)}\n\n`)
-                        }
+                const parser = new EventSourceStream()
+                parser.on('data', (e: MessageEvent) => {
+                    if (e.data) {
+                        data.content = e.data
+                        data.object = 'chat.completion.chunk'
+                        output.write(JSON.stringify(data))
                     }
                 })
-                res.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-                res.on('error', e => output.destroy(e))
-                res.on('end', () => output.end())
-                res.on('close', () => parser.reset())
+
+                parser.on('error', e => output.destroy(e))
+                parser.on('end', () => output.end())
+
+                res.pipe(decodeStream('utf-8')).pipe(parser)
                 return output as Readable
             } else {
                 // Check response
@@ -172,20 +172,19 @@ function generateToken(key: string, expire: number) {
     return token
 }
 
-function formatMessage(messages: GLMChatMessage[]) {
+function formatMessage(messages: ChatMessage[]) {
     const prompt: GLMChatMessage[] = []
     let input = ''
-    const { USER, ASSISTANT } = GLMChatRoleEnum
     for (const { role, content } of messages) {
         if (!content) continue
-        if (role !== ASSISTANT) input += `\n${content}`
+        if (role !== ChatRoleEnum.ASSISTANT) input += `\n${content}`
         else {
-            prompt.push({ role: USER, content: input.trim() || ' ' })
-            prompt.push({ role: ASSISTANT, content })
+            prompt.push({ role: GLMChatRoleEnum.USER, content: input.trim() || ' ' })
+            prompt.push({ role: GLMChatRoleEnum.ASSISTANT, content })
             input = ''
         }
     }
     if (!input.trim()) throw new Error('User input nothing')
-    prompt.push({ role: USER, content: input.trim() })
+    prompt.push({ role: GLMChatRoleEnum.USER, content: input.trim() })
     return prompt
 }

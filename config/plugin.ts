@@ -46,13 +46,11 @@ const plugin: EggPlugin = {
     redis: {
         enable: true,
         package: 'egg-redis'
-    }
-    /*
-    websocket: {
+    },
+    minio: {
         enable: true,
-        package: 'egg-websocket-plugin'
+        package: 'egg-minio-ts'
     }
-    */
 }
 
 export default plugin

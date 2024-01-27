@@ -6,11 +6,11 @@
  */
 
 import { Application } from 'egg'
+import { Model } from 'sequelize-typescript'
+import { ModelStatic, Optional } from 'sequelize'
 import { User } from '@model/User'
 import { UserCache } from '@interface/Cache'
 import $ from '@util/util'
-import { Model } from 'sequelize-typescript'
-import { ModelStatic, Optional } from 'sequelize'
 
 /**
  * Initializes the application.
@@ -19,15 +19,13 @@ import { ModelStatic, Optional } from 'sequelize'
 export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
-            // Flush Redis (CAREFUL)
-            // await app.redis.flushdb()
-
-            await syncDatabase(app)
-            await syncConfigCache(app)
-            // await updateNewRows(app)
+            // await app.redis.flushdb() // flush redis, be careful
+            // await syncDatabase(app) // init database struct and data
+            // await syncConfigCache(app) // sync config cache
+            // await updateNewRows(app) // update some rows
         }
 
-        await hookUserSave(app)
+        await hookUserSave(app) // hook user save
     })
 }
 

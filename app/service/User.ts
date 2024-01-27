@@ -2,7 +2,14 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { UserCache } from '@interface/Cache'
-import { BaiduChatModel, FlyChatModel, GLMChatModel, ModelProvider, OpenAIChatModel } from '@interface/Enum'
+import {
+    BaiduChatModel,
+    FlyChatModel,
+    GLMChatModel,
+    GoogleChatModel,
+    ModelProvider,
+    OpenAIChatModel
+} from '@interface/Enum'
 import { ConfigVIP } from '@interface/controller/WeChat'
 import { Option } from '@interface/controller/Web'
 import { randomUUID } from 'crypto'
@@ -135,9 +142,10 @@ export default class User extends Service {
         console.log(id)
         const disable = false
         const models = {
-            [ModelProvider.OpenAI]: OpenAIChatModel,
-            [ModelProvider.Baidu]: BaiduChatModel,
             [ModelProvider.IFlyTek]: FlyChatModel,
+            [ModelProvider.Baidu]: BaiduChatModel,
+            [ModelProvider.OpenAI]: OpenAIChatModel,
+            [ModelProvider.Google]: GoogleChatModel,
             [ModelProvider.GLM]: GLMChatModel
         }
 

@@ -5,10 +5,8 @@ import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { Op } from 'sequelize'
 import { Readable } from 'stream'
-import { createParser } from 'eventsource-parser'
-import { basename, extname } from 'path'
 import { statSync } from 'fs'
-import { ModelProvider, ChatRoleEnum, AuditProvider, EmbedModelEnum, OSSEnum, FlyChatModel } from '@interface/Enum'
+import { ModelProvider, ChatRoleEnum, AuditProvider, EmbedModelEnum, FlyChatModel } from '@interface/Enum'
 import { AdvCache, ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
 import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
@@ -287,7 +285,6 @@ export default class WeChat extends Service {
         }
 
         prompts.push({ role: USER, content: input })
-        console.log(prompts)
 
         // WeChat require to audit input content
         const isEffect = (await ctx.service.uniAI.audit(input, AuditProvider.WX)).flag
@@ -297,8 +294,8 @@ export default class WeChat extends Service {
         const subModel = FlyChatModel.V3
 
         // start chat stream
-        const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
-        if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
+        const res = await ctx.service.uniAI.chat(prompts, true, model, subModel)
+        if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
         // set chat stream cache, should after chat stream started
         const cache: ChatStreamCache = {
@@ -313,33 +310,28 @@ export default class WeChat extends Service {
         }
         if (isEffect) await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
 
-        const parser = createParser(e => {
-            if (e.type === 'event') {
-                const obj = $.json<ChatResponse>(e.data)
-                if (obj) {
-                    cache.content += obj.content
-                    cache.subModel = obj.model
-                    if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
-                }
+        res.on('data', (buff: Buffer) => {
+            const obj = $.json<ChatResponse>(buff.toString())
+            if (obj) {
+                cache.content += obj.content
+                cache.subModel = obj.model
+                if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
             }
         })
 
-        // add listen stream
-        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-        stream.on('error', e => {
+        res.on('error', e => {
             cache.content += e.message
             cache.isEffect = false
             chat.isEffect = false
             chat.save()
         })
-        stream.on('end', async () => {
+        res.on('end', () => {
             // reduce user chat chance
             if (user.chatChanceFree > 0) user.chatChanceFree--
             else if (user.chatChance > 0) user.chatChance--
             user.save()
         })
-        stream.on('close', async () => {
-            parser.reset()
+        res.on('close', async () => {
             // save assistant response
             if (cache.content) {
                 const chat = await ctx.model.Chat.create({
@@ -383,29 +375,31 @@ export default class WeChat extends Service {
     async upload(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this
         const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'uploadChanceFree', 'uploadChance'] })
-        if (!user) throw new Error('Fail to find')
+        if (!user) throw new Error('Fail to find user')
         if (user.uploadChance + user.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
 
         // upload resource to oss
-        const resource = await ctx.service.uniAI.upload(file, userId, typeId)
+        let resource = await ctx.service.uniAI.upload(file, userId, typeId)
+
+        // embed resource content
+        resource = await ctx.service.uniAI.embedding(EmbedModelEnum.TextVec, resource.id)
 
         // audit resource content
         const { flag } = await ctx.service.uniAI.audit(resource.content)
-        resource.isEffect = flag
-
-        // embed resource content
-        await ctx.service.uniAI.embedding(EmbedModelEnum.TextVec, resource.id)
+        if (!flag) {
+            resource.isEffect = flag
+            await resource.save()
+        }
 
         // split pages as images
-        await this.resource(resource.id)
+        resource = await this.resource(resource.id)
 
         // reduce user upload chance
         if (user.uploadChanceFree > 0) user.uploadChanceFree--
         else if (user.uploadChance > 0) user.uploadChance--
-        else throw new Error('Fail to reduce upload chance')
         await user.save()
 
-        return await resource.save()
+        return resource
     }
 
     // find resource, pages by ID
@@ -417,31 +411,29 @@ export default class WeChat extends Service {
         })
         if (!res) throw new Error('Can not find the resource by ID')
 
-        // extract resource pages
+        // pages not found, generate pages
         if (!res.pages.length) {
-            // download file to local path
-            const stream = await $.getFileStream(res.filePath)
-            const oss = res.filePath.split('/')[0] as OSSEnum
-            // if oss type is not consistent, generate a new file name, upload file and update resource filePath
-            const path = await $.getStreamFile(stream, basename(res.filePath))
-            if (oss !== OSSEnum.MIN) {
-                // update new filePath and fileExt
-                res.filePath = await $.putOSS(path)
-                res.fileExt = extname(path).replace('.', '')
+            // get file
+            const path = await $.getFile(res.filePath)
+
+            // file not on minio server, upload
+            if (!res.filePath.startsWith('minio/')) {
                 res.fileSize = statSync(path).size
+                res.filePath = await $.putOSS(path)
             }
 
             // convert to page imgs
             const imgs = await $.convertIMG(path)
             if (!imgs.length) throw new Error('Fail to convert to imgs')
 
-            // upload and save page imgs
+            // upload and save pages
             const pages: string[] = []
             for (const i in imgs) pages.push(await $.putOSS(imgs[i]))
             res.pages = await ctx.model.Page.bulkCreate(
                 pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v }))
             )
             res.page = pages.length
+            await res.save()
         }
         return res
     }

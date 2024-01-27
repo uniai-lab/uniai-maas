@@ -283,8 +283,8 @@ export default {
      * @param url The URL from which to fetch the file.
      * @returns A Promise that resolves to a Readable stream of the fetched file.
      */
-    async getHttpFile(url: string) {
-        return await this.get<undefined, Readable>(url, undefined, { responseType: 'stream' })
+    async getHttpFile(url: string, query?: object) {
+        return await this.get<object, Readable>(url, query, { responseType: 'stream' })
     },
 
     /**
@@ -311,14 +311,24 @@ export default {
     },
 
     /**
+     * Directly get file from a URL, local, oss path
+     *
+     * @param path - OSS, http url, local filepath
+     * @returns - local tmp file path
+     */
+    async getFile(path: string) {
+        return await this.getStreamFile(await this.getFileStream(path), extname(path))
+    },
+
+    /**
      * Retrieves a file from a readable stream and saves it to a local path.
      *
      * @param stream - The readable stream of the file.
      * @param name - The file name to be saved, generate a new uuid filename.
      * @returns A Promise that resolves to the local path of the saved file.
      */
-    async getStreamFile(stream: Readable, name: string) {
-        const path = join(tmpdir(), `${randomUUID()}${extname(name)}`)
+    async getStreamFile(stream: Readable, ext: string) {
+        const path = join(tmpdir(), randomUUID() + ext)
         return new Promise<string>((resolve, reject) =>
             stream
                 .pipe(createWriteStream(path))

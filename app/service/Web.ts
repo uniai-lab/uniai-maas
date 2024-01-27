@@ -1,18 +1,17 @@
 /** @format */
 
-import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, FlyChatModel, ModelProvider } from '@interface/Enum'
-import { ChatMessage } from '@interface/controller/UniAI'
-import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
 import { Service } from 'egg'
-import { createParser } from 'eventsource-parser'
+import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
-import $ from '@util/util'
-import ali from '@util/aliyun'
-import md5 from 'md5'
 import { randomUUID } from 'crypto'
+import md5 from 'md5'
+import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, FlyChatModel, ModelProvider } from '@interface/Enum'
 import { WXAppQRCodeCache } from '@interface/Cache'
+import { ChatMessage } from '@interface/controller/UniAI'
+import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
+import ali from '@util/aliyun'
+import $ from '@util/util'
 
 const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
@@ -141,7 +140,7 @@ export default class Web extends Service {
 
         role = role || (await this.getConfig('SYSTEM_NAME'))
         prompt = prompt || (await this.getConfig('SYSTEM_PROMPT'))
-        prompts.push({ role: SYSTEM, content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}}\n` })
+        prompts.push({ role: SYSTEM, content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}\n` })
 
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
@@ -164,11 +163,10 @@ export default class Web extends Service {
         }
 
         prompts.push({ role: USER, content: input })
-        console.log(prompts)
 
         // start chat stream
-        const stream = await ctx.service.uniAI.chat(prompts, true, model, subModel)
-        if (!(stream instanceof Readable)) throw new Error('Chat stream is not readable')
+        const res = await ctx.service.uniAI.chat(prompts, true, model, subModel)
+        if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
         // filter sensitive
         const data: ChatResponse = {
@@ -184,20 +182,16 @@ export default class Web extends Service {
         }
         const output = new PassThrough()
 
-        const parser = createParser(e => {
-            if (e.type === 'event') {
-                const obj = $.json<ChatResponse>(e.data)
-                if (obj && obj.content) {
-                    data.content += obj.content
-                    data.subModel = obj.model
-                    output.write(`data: ${JSON.stringify(data)}\n\n`)
-                }
+        res.on('data', (buff: Buffer) => {
+            const obj = $.json<ChatResponse>(buff.toString())
+            if (obj && obj.content) {
+                data.content += obj.content
+                data.subModel = obj.model
+                output.write(JSON.stringify(data))
             }
         })
 
-        // add listen stream
-        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-        stream.on('end', async () => {
+        res.on('end', async () => {
             // save user chat
             if (input) await ctx.model.Chat.create({ dialogId, role: USER, content: input })
             // save assistant chat
@@ -212,15 +206,14 @@ export default class Web extends Service {
                 })
                 data.chatId = chat.id
             }
-            output.end(`data: ${JSON.stringify(data)}\n\n`)
+            output.end(JSON.stringify(data))
 
             // reduce user chat chance
             if (user.chatChanceFree > 0) user.chatChanceFree--
             else if (user.chatChance > 0) user.chatChance--
             user.save()
         })
-        stream.on('error', e => output.destroy(e))
-        stream.on('close', parser.reset)
+        res.on('error', e => output.destroy(e))
         return output as Readable
     }
 }

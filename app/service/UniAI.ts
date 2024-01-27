@@ -13,9 +13,6 @@ import {
     ProviderItem,
     ResourcePage
 } from '@interface/controller/UniAI'
-import { GPTChatMessage } from '@interface/OpenAI'
-import { GLMChatMessage } from '@interface/GLM'
-import { SPKChatMessage } from '@interface/Spark'
 import {
     BaiduChatModel,
     ModelProvider,
@@ -27,16 +24,15 @@ import {
     ChatModelEnum,
     OpenAIChatModel,
     GLMChatModel,
-    FlyChatModel
+    FlyChatModel,
+    GoogleChatModel
 } from '@interface/Enum'
 import resourceType from '@data/resourceType'
 import userResourceTab from '@data/userResourceTab'
 
 import { Resource } from '@model/Resource'
 import { PassThrough, Readable } from 'stream'
-import { createParser } from 'eventsource-parser'
 import { UserContext } from '@interface/Context'
-import { BaiduChatMessage } from '@interface/Baidu'
 
 import glm from '@util/glm'
 import gpt from '@util/openai'
@@ -44,6 +40,7 @@ import fly from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
 import baidu from '@util/baidu'
+import google from '@util/google'
 import $ from '@util/util'
 
 const MAX_PAGE = 10
@@ -82,7 +79,8 @@ export default class UniAI extends Service {
             [ModelProvider.OpenAI]: OpenAIChatModel,
             [ModelProvider.Baidu]: BaiduChatModel,
             [ModelProvider.IFlyTek]: FlyChatModel,
-            [ModelProvider.GLM]: GLMChatModel
+            [ModelProvider.GLM]: GLMChatModel,
+            [ModelProvider.Google]: GoogleChatModel
         }
 
         const providers: ProviderItem[] = Object.values(ModelProvider).map(provider => ({
@@ -164,62 +162,34 @@ export default class UniAI extends Service {
         maxLength?: number
     ) {
         if (provider === ModelProvider.OpenAI)
-            return await gpt.chat(
-                model as OpenAIChatModel,
-                prompts as GPTChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength
-            )
+            return await gpt.chat(model as OpenAIChatModel, prompts, stream, top, temperature, maxLength)
         else if (provider === ModelProvider.GLM)
-            return await glm.chat(
-                model as GLMChatModel,
-                prompts as GLMChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength
-            )
+            return await glm.chat(model as GLMChatModel, prompts, stream, top, temperature, maxLength)
         else if (provider === ModelProvider.IFlyTek)
-            return await fly.chat(
-                model as FlyChatModel,
-                prompts as SPKChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength
-            )
+            return await fly.chat(model as FlyChatModel, prompts, stream, top, temperature, maxLength)
         else if (provider === ModelProvider.Baidu)
-            return await baidu.chat(
-                model as BaiduChatModel,
-                prompts as BaiduChatMessage[],
-                stream,
-                top,
-                temperature,
-                maxLength
-            )
+            return await baidu.chat(model as BaiduChatModel, prompts, stream, top, temperature, maxLength)
+        else if (provider === ModelProvider.Google)
+            return await google.chat(model as GoogleChatModel, prompts, stream, top, temperature, maxLength)
         else throw new Error('Chat model not found')
     }
 
     // concat chat stream chunk
-    concatChunk(stream: Readable) {
+    concatChunk(input: Readable) {
         const output = new PassThrough()
         let content = ''
-        const parser = createParser(e => {
-            if (e.type === 'event') {
-                const obj = $.json<ChatResponse>(e.data)
-                if (obj) {
-                    obj.content = content += obj.content
-                    output.write(`data: ${JSON.stringify(obj)}\n\n`)
-                }
+
+        input.on('data', (e: Buffer) => {
+            const obj = $.json<ChatResponse>(e.toString())
+            if (obj) {
+                obj.content = content += obj.content
+                output.write(JSON.stringify(obj))
             }
         })
 
-        stream.on('data', (buff: Buffer) => parser.feed(buff.toString('utf-8')))
-        stream.on('error', e => output.destroy(e))
-        stream.on('end', () => output.end())
-        stream.on('close', () => parser.reset())
+        input.on('error', e => output.destroy(e))
+        input.on('end', () => output.end())
+
         return output as Readable
     }
 
