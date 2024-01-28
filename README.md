@@ -20,6 +20,8 @@ UniAI integrates several leading AI models, including:
 -   [THUDM/ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
 -   [ZHIPU/ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
 -   [OpenAI/GPT](https://platform.openai.com)
+-   [Baidu/wenxin workshop](https://cloud.baidu.com/product/wenxinworkshop)
+-   [Google/wenxin workshop](https://makersuite.google.com/app/)
 -   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 -   [OpenAI/DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
@@ -34,7 +36,7 @@ Discover how UniAI is utilized and experience it firsthand:
 
 Ensure you have the following `NPM` libs installed:
 
--   Node.js (version 16 or higher) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
+-   Node.js (version 18 or higher) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
 -   Docker & Docker-compose
 -   LibreOffice for document conversion (libreoffice-convert)
 -   pdf-to-img (canvas-node) - [Canvas NPM Package](https://www.npmjs.com/package/canvas)
@@ -57,8 +59,12 @@ Fill the `.env` file with the following environment variables:
 ADMIN_TOKEN= # Default admin token, can be modified in config table
 
 # OPENAI GPT Configuration
-OPENAI_API=http://8.214.93.3 # OpenAI API URL or proxy
+OPENAI_API= # Your OpenAI API URL or proxy
 OPENAI_KEY= # OpenAI API key
+
+# Google AI studio
+GOOGLE_AI_API=
+GOOGLE_AI_KEY=
 
 # GLM Configuration
 GLM_LOCAL_API=http://10.144.1.2:8100
