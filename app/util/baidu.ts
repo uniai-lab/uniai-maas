@@ -42,7 +42,14 @@ export default {
         temperature?: number,
         maxLength?: number
     ) {
+        // check params
+        if (typeof temperature === 'number' && !(temperature > 0 && temperature <= 1))
+            throw new Error('temperature range is (0, 1]')
+
+        if (typeof top === 'number' && !(top >= 0 && top <= 1)) throw new Error('top range is [0, 1]')
+
         const token = await getAccessToken()
+
         const res = await $.post<BaiduChatRequest, BaiduChatResponse | Readable>(
             `${WORKSHOP_API}/chat/${model}?access_token=${token}`,
             { messages: formatMessage(messages), stream, temperature, top_p: top, max_output_tokens: maxLength },
@@ -89,11 +96,6 @@ export default {
     }
 }
 
-/**
- * 获取百度API的访问令牌。
- * @returns {Promise<BaiduAccessTokenResponse>} 百度API访问令牌的响应数据。
- * @throws {Error} 如果获取访问令牌时出现错误，将抛出错误。
- */
 async function getAccessToken() {
     const filepath = join(tmpdir(), 'baidu_access_token.json')
     const now = Date.now()
@@ -132,5 +134,6 @@ function formatMessage(messages: ChatMessage[]) {
     }
     if (!input.trim()) throw new Error('User input nothing')
     prompt.push({ role: USER, content: input.trim() })
+    $.log(prompt)
     return prompt
 }

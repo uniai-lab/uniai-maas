@@ -171,19 +171,19 @@ export default class UniAI extends Service {
             return await baidu.chat(model as BaiduChatModel, prompts, stream, top, temperature, maxLength)
         else if (provider === ModelProvider.Google)
             return await google.chat(model as GoogleChatModel, prompts, stream, top, temperature, maxLength)
-        else throw new Error('Chat model not found')
+        else throw new Error('Model Provider not found')
     }
 
     // concat chat stream chunk
     concatChunk(input: Readable) {
         const output = new PassThrough()
-        let content = ''
 
+        let content = ''
         input.on('data', (e: Buffer) => {
-            const obj = $.json<ChatResponse>(e.toString())
-            if (obj) {
-                obj.content = content += obj.content
-                output.write(JSON.stringify(obj))
+            const data = $.json<ChatResponse>(e.toString())
+            if (data) {
+                data.content = content += data.content
+                output.write(JSON.stringify(data))
             }
         })
 
@@ -392,7 +392,7 @@ export default class UniAI extends Service {
         else throw new Error('Image queue model not found')
     }
 
-    // check content by iFlyTek, WeChat or mint-filter
+    // check content by AI, iFlyTek, WeChat or mint-filter
     // content is text or image, image should be base64 string
     async audit(content: string, provider: AuditProvider = AuditProvider.MINT) {
         content = content.replace(/\r\n|\n/g, ' ').trim()
@@ -414,7 +414,7 @@ export default class UniAI extends Service {
             const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {
-                const result = await this.chat(message, false, ModelProvider.GLM, GLMChatModel.LOCAL, 1, 0.1)
+                const result = await this.chat(message, false, ModelProvider.GLM, GLMChatModel.GLM_6B, 1, 0)
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
@@ -433,6 +433,8 @@ export default class UniAI extends Service {
 
         return res
     }
+
+    // split the content and embedding the first page
     async embedFirstPage(content: string) {
         const firstPage = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
         if (!firstPage) throw new Error('Fail to split first page')

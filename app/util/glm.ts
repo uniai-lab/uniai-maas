@@ -58,7 +58,7 @@ export default {
      * @returns A promise resolving to the chat response or a stream.
      */
     async chat(
-        model: GLMChatModel = GLMChatModel.LOCAL,
+        model: GLMChatModel = GLMChatModel.GLM_6B,
         messages: ChatMessage[],
         stream: boolean = false,
         top?: number,
@@ -73,7 +73,7 @@ export default {
             completionTokens: 0,
             totalTokens: 0
         }
-        if (model === GLMChatModel.LOCAL) {
+        if (model === GLMChatModel.GLM_6B) {
             const res = await $.post<GLMChatRequest, Readable | GLMChatResponse>(
                 `${GLM_LOCAL_API}/chat`,
                 { messages: formatMessage(messages), stream, temperature, top_p: top, max_tokens: maxLength },
@@ -104,7 +104,7 @@ export default {
                 data.totalTokens = res.usage?.total_tokens || 0
                 return data
             }
-        } else if (model === GLMChatModel.TURBO) {
+        } else if (model === GLMChatModel.GLM_TURBO) {
             const invoke = stream ? 'sse-invoke' : 'invoke'
             const url = `${GLM_REMOTE_API}/api/paas/v3/model-api/chatglm_turbo/${invoke}`
             const token = generateToken(GLM_REMOTE_API_KEY, EXPIRE_IN)
@@ -186,5 +186,6 @@ function formatMessage(messages: ChatMessage[]) {
     }
     if (!input.trim()) throw new Error('User input nothing')
     prompt.push({ role: GLMChatRoleEnum.USER, content: input.trim() })
+    $.log(prompt)
     return prompt
 }

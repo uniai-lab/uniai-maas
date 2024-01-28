@@ -20,7 +20,7 @@ import {
 } from '@interface/OpenAI'
 import EventSourceStream from '@server-sent-stream/node'
 import { decodeStream } from 'iconv-lite'
-import { ChatRoleEnum, OpenAIChatModel, OpenAIEmbedModel } from '@interface/Enum'
+import { ChatRoleEnum, GPTChatRoleEnum, OpenAIChatModel, OpenAIEmbedModel } from '@interface/Enum'
 import { ChatResponse, ChatMessage } from '@interface/controller/UniAI'
 import $ from '@util/util'
 
@@ -136,5 +136,7 @@ function formatMessage(messages: ChatMessage[]) {
         if (role === ChatRoleEnum.FUNCTION) continue
         else prompt.push({ role, content })
 
+    if (prompt[prompt.length - 1].role !== GPTChatRoleEnum.USER) throw new Error('User input nothing')
+    $.log(prompt)
     return prompt
 }

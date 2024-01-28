@@ -8,7 +8,7 @@ import { decodeStream } from 'iconv-lite'
 import { PassThrough, Readable } from 'stream'
 import $ from '@util/util'
 
-const { GOOGLE_AI_KEY } = process.env
+const { GOOGLE_AI_KEY, GOOGLE_AI_API } = process.env
 const API = 'https://generativelanguage.googleapis.com'
 const SAFE_SET = [
     {
@@ -50,7 +50,7 @@ export default {
         maxLength?: number
     ) {
         const res = await $.post<GEMChatRequest, GEMChatResponse | Readable>(
-            `${API}/v1beta/models/${model}:${stream ? 'streamGenerateContent' : 'generateContent'}?key=${GOOGLE_AI_KEY}`,
+            `${GOOGLE_AI_API || API}/v1beta/models/${model}:${stream ? 'streamGenerateContent' : 'generateContent'}?key=${GOOGLE_AI_KEY}`,
             {
                 contents: formatMessage(messages),
                 generationConfig: { topP: top, temperature, maxOutputTokens: maxLength },
@@ -71,7 +71,6 @@ export default {
             const parser = new JSONParser({ stringBufferSize: undefined })
 
             parser.on('data', ({ value }) => {
-                console.log(JSON.stringify(value))
                 if (value.candidates || value.promptFeedback) {
                     const obj = value as GEMChatResponse
                     const block = obj.promptFeedback?.blockReason
@@ -122,6 +121,6 @@ function formatMessage(messages: ChatMessage[]) {
     }
     if (!input.trim()) throw new Error('User input nothing')
     prompt.push({ role: GEMChatRoleEnum.USER, parts: [{ text: input.trim() }] })
-    console.log(JSON.stringify(prompt))
+    $.log(prompt)
     return prompt
 }

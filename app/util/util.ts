@@ -25,6 +25,7 @@ import * as MINIO from 'minio'
 import QRCode from 'qrcode'
 import isDomain from 'is-valid-domain'
 import isBase64 from 'is-base64'
+import { Logger, ILogObj } from 'tslog'
 
 // Environment variables
 const { MINIO_ACCESS_KEY, MINIO_END_POINT, MINIO_PORT, MINIO_SECRET_KEY, MINIO_BUCKET } = process.env
@@ -43,6 +44,7 @@ const oss = new MINIO.Client({
     port: parseInt(MINIO_PORT),
     useSSL: false
 })
+const logger = new Logger<ILogObj>()
 
 export default {
     /**
@@ -446,5 +448,12 @@ export default {
 
     async getQRCode(text: string) {
         return await QRCode.toDataURL(text)
+    },
+
+    log(data: any) {
+        return logger.silly(data)
+    },
+    error(e: Error) {
+        return logger.error(e)
     }
 }

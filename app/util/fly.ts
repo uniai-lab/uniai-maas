@@ -25,7 +25,7 @@ import $ from '@util/util'
 
 const { FLY_API_KEY, FLY_APP_ID, FLY_API_SECRET } = process.env
 
-const SPARK_API = 'ws://spark-api.xf-yun.com'
+const SPARK_API = 'wss://spark-api.xf-yun.com'
 const AUDIT_API = 'https://audit.iflyaisol.com'
 
 export default {
@@ -201,5 +201,6 @@ function formatMessage(messages: ChatMessage[]) {
     }
     if (!input.trim()) throw new Error('User input nothing')
     prompt.push({ role: SPKChatRoleEnum.USER, content: input.trim() })
+    $.log(prompt)
     return prompt
 }

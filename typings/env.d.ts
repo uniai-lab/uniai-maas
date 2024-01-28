@@ -11,6 +11,7 @@ declare global {
             OPENAI_KEY: string
 
             // Google AI
+            GOOGLE_AI_API: string
             GOOGLE_AI_KEY: string
 
             // GLM

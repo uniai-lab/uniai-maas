@@ -43,8 +43,8 @@ export enum GoogleChatModel {
     GEM_ULTRA = 'gemini-ultra'
 }
 export enum GLMChatModel {
-    LOCAL = 'chatglm3-6b-32k',
-    TURBO = 'chatglm-turbo'
+    GLM_6B = 'chatglm3-6b-32k',
+    GLM_TURBO = 'chatglm-turbo'
 }
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/clntwmv7t
 export enum BaiduChatModel {
