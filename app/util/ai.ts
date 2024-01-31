@@ -19,15 +19,15 @@ const {
 
 const ai = new UniAI({
     OpenAI: {
-        key: OPENAI_KEY,
+        key: OPENAI_KEY.split(','),
         proxy: OPENAI_API
     },
     Google: {
-        key: GOOGLE_AI_KEY,
+        key: GOOGLE_AI_KEY.split(','),
         proxy: GOOGLE_AI_API
     },
     GLM: {
-        key: ZHIPU_AI_KEY,
+        key: ZHIPU_AI_KEY.split(','),
         local: GLM_API
     },
     IFlyTek: {
@@ -40,7 +40,7 @@ const ai = new UniAI({
         secretKey: BAIDU_SECRET_KEY
     },
     MoonShot: {
-        key: MOONSHOT_KEY
+        key: MOONSHOT_KEY.split(',')
     },
     Other: {
         api: GLM_API
