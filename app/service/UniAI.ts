@@ -5,28 +5,9 @@ import { Service } from 'egg'
 import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
 import { extname } from 'path'
-import {
-    AIAuditResponse,
-    AuditResponse,
-    ChatMessage,
-    ChatResponse,
-    ProviderItem,
-    ResourcePage
-} from '@interface/controller/UniAI'
-import {
-    BaiduChatModel,
-    ModelProvider,
-    ChatRoleEnum,
-    AuditProvider,
-    EmbedModelEnum,
-    ImgModelEnum,
-    MJTaskEnum,
-    ChatModelEnum,
-    OpenAIChatModel,
-    GLMChatModel,
-    FlyChatModel,
-    GoogleChatModel
-} from '@interface/Enum'
+import { AIAuditResponse, AuditResponse, ResourcePage } from '@interface/controller/UniAI'
+import { ChatMessage, ChatModel, ChatResponse, ChatRoleEnum, GLMChatModel, ModelProvider } from 'uniai'
+import { AuditProvider, ImgModelEnum, MJTaskEnum } from '@interface/Enum'
 import resourceType from '@data/resourceType'
 import userResourceTab from '@data/userResourceTab'
 
@@ -34,14 +15,12 @@ import { Resource } from '@model/Resource'
 import { PassThrough, Readable } from 'stream'
 import { UserContext } from '@interface/Context'
 
-import glm from '@util/glm'
 import gpt from '@util/openai'
 import fly from '@util/fly'
 import sd from '@util/sd'
 import mj from '@util/mj'
-import baidu from '@util/baidu'
-import google from '@util/google'
 import $ from '@util/util'
+import ai from '@util/ai'
 
 const MAX_PAGE = 10
 const SAME_DISTANCE = 0.01
@@ -75,26 +54,14 @@ export default class UniAI extends Service {
     }
 
     async getModels() {
-        const models = {
-            [ModelProvider.OpenAI]: OpenAIChatModel,
-            [ModelProvider.Baidu]: BaiduChatModel,
-            [ModelProvider.IFlyTek]: FlyChatModel,
-            [ModelProvider.GLM]: GLMChatModel,
-            [ModelProvider.Google]: GoogleChatModel
-        }
-
-        const providers: ProviderItem[] = Object.values(ModelProvider).map(provider => ({
-            provider,
-            models: Object.values(models[provider]) as ChatModelEnum[]
-        }))
-        return providers
+        return ai.list()
     }
 
     // query resource
     async queryResource(
         prompts: ChatMessage[],
         resourceId?: number,
-        model: EmbedModelEnum = EmbedModelEnum.TextVec,
+        model: ModelProvider = ModelProvider.Other,
         maxPage: number = MAX_PAGE
     ) {
         const { ctx } = this
@@ -109,8 +76,9 @@ export default class UniAI extends Service {
 
             // check embeddings exist
             let count = 0
-            if (model === EmbedModelEnum.OpenAI) count = await ctx.model.Embedding1.count({ where })
-            else if (model === EmbedModelEnum.TextVec) count = await ctx.model.Embedding2.count({ where })
+            if (model === ModelProvider.OpenAI) count = await ctx.model.Embedding1.count({ where })
+            else if (model === ModelProvider.Other) count = await ctx.model.Embedding2.count({ where })
+            else throw new Error('Model provider not support')
 
             // embedding not exist, create embeddings
             if (!count) await this.embedding(model, resourceId)
@@ -121,9 +89,10 @@ export default class UniAI extends Service {
         for (const { content } of prompts) {
             if (!content || typeof content !== 'string') continue
             const query = content.trim()
-            if (model === EmbedModelEnum.OpenAI) {
-                const embed = await gpt.embedding([query])
-                const embedding = embed.data[0].embedding
+            const data = await ai.embed([query], model)
+            const embedding = data.embedding[0]
+
+            if (model === ModelProvider.OpenAI) {
                 const res = await ctx.model.Embedding1.similarFindAll(embedding, maxPage, where)
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
@@ -133,9 +102,7 @@ export default class UniAI extends Service {
                         content: item.content,
                         similar: $.cosine(embedding, item.embedding || [])
                     })
-            } else if (model === EmbedModelEnum.TextVec) {
-                const embed = await glm.embedding([query])
-                const embedding = embed.data[0]
+            } else if (model === ModelProvider.Other) {
                 const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
@@ -153,25 +120,15 @@ export default class UniAI extends Service {
 
     // chat to model
     async chat(
-        prompts: ChatMessage[],
+        messages: ChatMessage[],
         stream: boolean = false,
         provider: ModelProvider = ModelProvider.GLM,
-        model?: ChatModelEnum,
+        model?: ChatModel,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        if (provider === ModelProvider.OpenAI)
-            return await gpt.chat(model as OpenAIChatModel, prompts, stream, top, temperature, maxLength)
-        else if (provider === ModelProvider.GLM)
-            return await glm.chat(model as GLMChatModel, prompts, stream, top, temperature, maxLength)
-        else if (provider === ModelProvider.IFlyTek)
-            return await fly.chat(model as FlyChatModel, prompts, stream, top, temperature, maxLength)
-        else if (provider === ModelProvider.Baidu)
-            return await baidu.chat(model as BaiduChatModel, prompts, stream, top, temperature, maxLength)
-        else if (provider === ModelProvider.Google)
-            return await google.chat(model as GoogleChatModel, prompts, stream, top, temperature, maxLength)
-        else throw new Error('Model Provider not found')
+        return ai.chat(messages, provider, model, stream, top, temperature, maxLength)
     }
 
     // concat chat stream chunk
@@ -241,7 +198,7 @@ export default class UniAI extends Service {
 
     // create embedding
     async embedding(
-        model: EmbedModelEnum = EmbedModelEnum.TextVec,
+        model: ModelProvider = ModelProvider.Other,
         resourceId?: number,
         content?: string,
         fileName?: string,
@@ -329,11 +286,11 @@ export default class UniAI extends Service {
         resourceId = resource.id
 
         // embedding resource
-        if (model === EmbedModelEnum.OpenAI) {
+        const res = await ai.embed(pages, model)
+        if (model === ModelProvider.OpenAI) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
-            const res = await gpt.embedding(pages)
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
-                res.data.map(({ embedding }, i) => ({
+                res.embedding.map((embedding, i) => ({
                     resourceId,
                     page: i + 1,
                     embedding,
@@ -341,11 +298,10 @@ export default class UniAI extends Service {
                     tokens: $.countTokens(pages[i])
                 }))
             )
-        } else if (model === EmbedModelEnum.TextVec) {
+        } else if (model === ModelProvider.Other) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
-            const res = await glm.embedding(pages)
             resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(
-                res.data.map((embedding, i) => ({
+                res.embedding.map((embedding, i) => ({
                     resourceId,
                     page: i + 1,
                     embedding,
@@ -414,7 +370,7 @@ export default class UniAI extends Service {
             const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {
-                const result = await this.chat(message, false, ModelProvider.GLM, GLMChatModel.GLM_6B, 1, 0)
+                const result = await ai.chat(message, ModelProvider.GLM, GLMChatModel.GLM_6B, false, 1, 0)
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
@@ -436,10 +392,10 @@ export default class UniAI extends Service {
 
     // split the content and embedding the first page
     async embedFirstPage(content: string) {
-        const firstPage = $.splitPage(content, TOKEN_PAGE_FIRST)[0]
-        if (!firstPage) throw new Error('Fail to split first page')
-        const embedding = (await glm.embedding([firstPage])).data[0]
-        if (!embedding) throw new Error('Fail to embed first page')
-        return embedding
+        const page = $.splitPage(content, TOKEN_PAGE_FIRST)
+        if (!page.length) throw new Error('Fail to split first page')
+        const { embedding } = await ai.embed([page[0]])
+        if (!embedding.length) throw new Error('Fail to embed first page')
+        return embedding[0]
     }
 }

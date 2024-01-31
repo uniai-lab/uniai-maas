@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelEnum, ModelProvider } from '@interface/Enum'
+import { ChatModel, ModelProvider } from 'uniai'
 import { Benefit, ConfigMenuV2, ConfigVIP } from './WeChat'
 
 export interface SMSCodeRequest {
@@ -50,8 +50,8 @@ export interface ConfigResponse {
 }
 
 export interface Option {
-    value: string
-    label: string
+    value: ModelProvider | ChatModel
+    label: string | ChatModel
     disable: boolean
     children?: Option[]
 }
@@ -62,7 +62,7 @@ export interface ChatRequest {
     prompt?: string
     dialogId?: number
     provider?: ModelProvider
-    model?: ChatModelEnum
+    model?: ChatModel
 }
 
 export interface getQRCodeResponse {

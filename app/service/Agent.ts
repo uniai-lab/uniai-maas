@@ -1,10 +1,10 @@
 /** @format */
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { ChatRoleEnum } from '@interface/Enum'
 import { Service } from 'egg'
 import promptType from '@data/promptType'
 import $ from '@util/util'
+import { ChatRoleEnum } from 'uniai'
 
 const DEFAULT_PROMPT_TYPE = promptType[0].id
 

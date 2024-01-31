@@ -23,9 +23,9 @@ import {
     TabResponse
 } from '@interface/controller/WeChat'
 import $ from '@util/util'
-import { ChatRoleEnum } from '@interface/Enum'
 import { Readable } from 'stream'
 import { basename } from 'path'
+import { ChatRoleEnum } from 'uniai'
 
 @HTTPController({ path: '/web' })
 export default class Web {

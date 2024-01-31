@@ -14,7 +14,7 @@ import {
 } from 'sequelize-typescript'
 import { Dialog } from './Dialog'
 import { Resource } from './Resource'
-import { ModelProvider, ChatRoleEnum } from '@interface/Enum'
+import { ModelProvider, ChatRoleEnum } from 'uniai'
 import { IndexesOptions } from 'sequelize'
 
 const indexes: IndexesOptions[] = [{ fields: ['role'] }, { fields: ['model'] }, { fields: ['sub_model'] }]

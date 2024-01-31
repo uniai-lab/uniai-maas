@@ -6,26 +6,25 @@ declare global {
             // initial admin token
             ADMIN_TOKEN: string
 
-            // OpenAI GPT
             OPENAI_API: string
             OPENAI_KEY: string
-
-            // Google AI
             GOOGLE_AI_API: string
             GOOGLE_AI_KEY: string
-
-            // GLM
-            GLM_LOCAL_API: string
-            GLM_REMOTE_API_KEY: string
-
-            // Spark
+            ZHIPU_AI_API: string
+            ZHIPU_AI_KEY: string
+            FLY_APP_ID: string
             FLY_API_KEY: string
             FLY_API_SECRET: string
-            FLY_APP_ID: string
-
-            // Baidu
+            BAIDU_API: string
             BAIDU_API_KEY: string
             BAIDU_SECRET_KEY: string
+            MOONSHOT_API: string
+            MOONSHOT_KEY: string
+            STABLE_DIFFUSION_API: string
+            MID_JOURNEY_API: string
+            MID_JOURNEY_TOKEN: string
+            OTHER_API: string
+            GLM_API: string
 
             // select a database
             DB_DIALECT: string
@@ -59,13 +58,6 @@ declare global {
             MINIO_DATA_PATH: string
             MINIO_ROOT_USER: string
             MINIO_ROOT_PASS: string
-
-            // stable diffusion
-            STABLE_DIFFUSION_API: string
-
-            // mid journey
-            MID_JOURNEY_API: string
-            MID_JOURNEY_TOKEN: string
 
             // gee test
             GEE_TEST_ID: string

@@ -2,7 +2,8 @@
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, EggContext, HTTPBody, Middleware } from '@eggjs/tegg'
 import { Readable } from 'stream'
-import { ModelProvider, EmbedModelEnum, ImgModelEnum } from '@interface/Enum'
+import { ModelProvider } from 'uniai'
+import { ImgModelEnum } from '@interface/Enum'
 import {
     QueryResourceRequest,
     QueryResourceResponse,
@@ -84,7 +85,7 @@ export default class UniAI {
     @HTTPMethod({ path: '/embedding-text', method: HTTPMethodEnum.POST })
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         const { resourceId, content, fileName, filePath, fileExt, fileSize } = params
-        const model = params.model || EmbedModelEnum.TextVec // default: text2vec
+        const model = params.model || ModelProvider.Other // default: other/text2vec
 
         const res = await ctx.service.uniAI.embedding(model, resourceId, content, fileName, filePath, fileExt, fileSize)
         const { id, tokens, page } = res

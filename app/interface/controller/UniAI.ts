@@ -1,23 +1,12 @@
 /** @format */
 
-import {
-    ModelProvider,
-    ImgModelEnum,
-    EmbedModelEnum,
-    AuditProvider,
-    ChatModelEnum,
-    ChatRoleEnum
-} from '@interface/Enum'
-
-export interface ChatMessage {
-    role: ChatRoleEnum
-    content: string
-}
+import { ImgModelEnum, AuditProvider } from '@interface/Enum'
+import { ChatMessage, ChatModel, ModelProvider } from 'uniai'
 
 export interface ChatRequest {
     prompts: ChatMessage[]
     provider?: ModelProvider
-    model?: ChatModelEnum
+    model?: ChatModel
     stream?: boolean
     top?: number
     temperature?: number
@@ -26,7 +15,7 @@ export interface ChatRequest {
 
 export interface QueryResourceRequest {
     prompts: ChatMessage[]
-    model?: EmbedModelEnum
+    model?: ModelProvider
     resourceId?: number
     maxPage?: number
 }
@@ -39,7 +28,7 @@ export interface EmbeddingRequest {
     fileSize?: number
     fileExt?: string
     typeId?: number
-    model?: EmbedModelEnum
+    model?: ModelProvider
 }
 
 export interface UploadRequest {
@@ -80,15 +69,6 @@ export interface QueueRequest {
     model?: ImgModelEnum
 }
 
-export interface ChatResponse {
-    content: string
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-    model: ChatModelEnum | string
-    object: string
-}
-
 export interface QueryResourceResponse {
     content: string
     similar: number
@@ -100,7 +80,7 @@ export interface EmbeddingResponse {
     id: number
     page: number
     tokens: number
-    model: EmbedModelEnum
+    model: ModelProvider
 }
 
 export interface ImagineResponse {
@@ -143,5 +123,5 @@ export interface AIAuditResponse {
 
 export interface ProviderItem {
     provider: ModelProvider
-    models: ChatModelEnum[]
+    models: ChatModel[]
 }

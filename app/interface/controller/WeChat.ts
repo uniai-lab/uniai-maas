@@ -1,6 +1,6 @@
 /** @format */
 
-import { ModelProvider, ChatRoleEnum, ChatModelEnum } from '@interface/Enum'
+import { ChatModel, ChatRoleEnum, ModelProvider } from 'uniai'
 
 export interface ChatRequest {
     input: string
@@ -13,7 +13,7 @@ export interface ChatResponse {
     resourceId: number | null
     chatId: number | null
     model: ModelProvider | null
-    subModel: ChatModelEnum | string | null
+    subModel: ChatModel | string | null
     role: ChatRoleEnum
     avatar: string | null
     isEffect: boolean

@@ -14,7 +14,7 @@ import {
 } from 'sequelize-typescript'
 import { IndexesOptions } from 'sequelize'
 import { PromptType } from './PromptType'
-import { ChatRoleEnum } from '@interface/Enum'
+import { ChatRoleEnum } from 'uniai'
 
 const indexes: IndexesOptions[] = [{ fields: ['type_id'] }]
 

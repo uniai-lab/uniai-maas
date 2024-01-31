@@ -6,12 +6,11 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { randomUUID } from 'crypto'
 import md5 from 'md5'
-import { ChatModelEnum, ChatRoleEnum, EmbedModelEnum, FlyChatModel, ModelProvider } from '@interface/Enum'
 import { WXAppQRCodeCache } from '@interface/Cache'
-import { ChatMessage } from '@interface/controller/UniAI'
 import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
 import ali from '@util/aliyun'
 import $ from '@util/util'
+import { ChatMessage, ChatModel, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
 
 const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
@@ -110,7 +109,7 @@ export default class Web extends Service {
         prompt: string = '',
         dialogId: number = 0,
         model: ModelProvider = ModelProvider.IFlyTek,
-        subModel: ChatModelEnum = FlyChatModel.V3
+        subModel: ChatModel = IFlyTekChatModel.SPARK_V3
     ) {
         const { ctx } = this
 
@@ -153,7 +152,7 @@ export default class Web extends Service {
             const pages = await ctx.service.uniAI.queryResource(
                 [{ role: USER, content: input }],
                 resourceId,
-                EmbedModelEnum.TextVec,
+                ModelProvider.Other,
                 PAGE_LIMIT
             )
             // add resource to prompt

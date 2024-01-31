@@ -6,9 +6,8 @@ import { EggFile } from 'egg-multipart'
 import { Op } from 'sequelize'
 import { Readable } from 'stream'
 import { statSync } from 'fs'
-import { ModelProvider, ChatRoleEnum, AuditProvider, EmbedModelEnum, FlyChatModel } from '@interface/Enum'
+import { AuditProvider } from '@interface/Enum'
 import { AdvCache, ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
-import { ChatMessage, ChatResponse } from '@interface/controller/UniAI'
 import {
     ConfigMenu,
     ConfigMenuV2,
@@ -25,6 +24,7 @@ import {
 } from '@interface/controller/WeChat'
 import $ from '@util/util'
 import FormData from 'form-data'
+import { ChatMessage, ChatResponse, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
 
 const ONE_DAY = 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -276,7 +276,7 @@ export default class WeChat extends Service {
             let content = ctx.__('document content start')
             // query resource
             const query = [{ role: USER, content: input }]
-            const embedModel = EmbedModelEnum.TextVec
+            const embedModel = ModelProvider.Other
             const pages = await ctx.service.uniAI.queryResource(query, resourceId, embedModel, PAGE_LIMIT)
             // add resource to prompt
             for (const item of pages) content += `\n${item.content}`
@@ -291,7 +291,7 @@ export default class WeChat extends Service {
         // save user prompt
         const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
         const model = ModelProvider.IFlyTek
-        const subModel = FlyChatModel.V3
+        const subModel = IFlyTekChatModel.SPARK_V3
 
         // start chat stream
         const res = await ctx.service.uniAI.chat(prompts, true, model, subModel)
@@ -382,7 +382,7 @@ export default class WeChat extends Service {
         let resource = await ctx.service.uniAI.upload(file, userId, typeId)
 
         // embed resource content
-        resource = await ctx.service.uniAI.embedding(EmbedModelEnum.TextVec, resource.id)
+        resource = await ctx.service.uniAI.embedding(ModelProvider.Other, resource.id)
 
         // audit resource content
         const { flag } = await ctx.service.uniAI.audit(resource.content)

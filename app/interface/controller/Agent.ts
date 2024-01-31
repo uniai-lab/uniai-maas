@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatRoleEnum } from '@interface/Enum'
+import { ChatRoleEnum } from 'uniai'
 
 export interface AddPromptRequest {
     id?: number

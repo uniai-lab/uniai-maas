@@ -2,20 +2,13 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { UserCache } from '@interface/Cache'
-import {
-    BaiduChatModel,
-    FlyChatModel,
-    GLMChatModel,
-    GoogleChatModel,
-    ModelProvider,
-    OpenAIChatModel
-} from '@interface/Enum'
 import { ConfigVIP } from '@interface/controller/WeChat'
 import { Option } from '@interface/controller/Web'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
 import $ from '@util/util'
+import ai from '@util/ai'
 
 const FREE_SPLIT_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
 
@@ -141,19 +134,12 @@ export default class User extends Service {
     async getModelList(id: number) {
         console.log(id)
         const disable = false
-        const models = {
-            [ModelProvider.IFlyTek]: FlyChatModel,
-            [ModelProvider.Baidu]: BaiduChatModel,
-            [ModelProvider.OpenAI]: OpenAIChatModel,
-            [ModelProvider.Google]: GoogleChatModel,
-            [ModelProvider.GLM]: GLMChatModel
-        }
-
-        return Object.keys(ModelProvider).map<Option>(label => ({
-            value: ModelProvider[label],
-            label,
+        const models = ai.list()
+        return models.map<Option>(v => ({
+            value: v.value,
+            label: v.provider,
             disable,
-            children: Object.values<string>(models[ModelProvider[label]]).map(v => ({ disable, value: v, label: v }))
+            children: v.models.map(v => ({ disable, value: v, label: v }))
         }))
     }
 }

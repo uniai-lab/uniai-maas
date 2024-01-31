@@ -1,7 +1,6 @@
 /** @format */
 
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, HTTPQuery } from '@eggjs/tegg'
-import { ChatRoleEnum } from '@interface/Enum'
 import { UserContext } from '@interface/Context'
 import {
     SignInRequest,
@@ -28,6 +27,7 @@ import log from '@middleware/log'
 import $ from '@util/util'
 import { basename } from 'path'
 import { statSync } from 'fs'
+import { ChatRoleEnum } from 'uniai'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
