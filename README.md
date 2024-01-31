@@ -1,12 +1,18 @@
 <!-- @format -->
 
-# <img src="./logo.png" width=23 height=23 /> UniAI
+<p align=center>
+<img src="./logo.png" width=100 height=100 />
+</p>
 
-[Read this in Simplified Chinese (简体中文说明)](./README_CN.md)
+<h1 align=center>UniAI Application</h1>
 
-![Framework](./framework.png)
+<p align=center>
+<img src="./framework.png" width=100% />
+</p>
 
 ## Overview
+
+[Read this in Simplified Chinese (简体中文说明)](./README_CN.md)
 
 UniAI, a unified API-based platform, streamlines interactions with diverse and complex AI models.
 
