@@ -44,6 +44,24 @@ export default class Web extends Service {
         }
     }
 
+    async updateUser(
+        id: number,
+        obj: {
+            name?: string
+            avatar?: string
+            password?: string
+        }
+    ) {
+        const user = await this.ctx.model.User.findByPk(id)
+        if (!user) throw new Error('User not found')
+        const { password, name, avatar } = obj
+        // set password
+        if (password && user.phone) user.password = md5(`${user.id}${password}${user.createdAt}`)
+        if (name) user.name = name
+        if (avatar) user.avatar = avatar
+        return await user.save()
+    }
+
     // send SMS code
     async sendSMSCode(phone: string) {
         const { ctx } = this
@@ -81,32 +99,42 @@ export default class Web extends Service {
     }
 
     // login
-    async login(phone: string, code: string, fid?: number) {
+    async login(phone: string, code?: string, password?: string, fid?: number) {
         const { ctx } = this
-        const res = await ctx.model.PhoneCode.findOne({
-            where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_EXPIRE) } },
-            order: [['id', 'DESC']]
-        })
-        if (!res) throw new Error('Can not find the phone number')
-        await res.increment('count')
+        // password login
+        if (password) {
+            const user = await ctx.model.User.findOne({ where: { phone }, attributes: ['id', 'password', 'createdAt'] })
+            if (!user) throw new Error('Can not find the phone number')
+            if (user.password !== md5(`${user.id}${password}${user.createdAt}`)) throw new Error('Invalid password')
+            return await ctx.service.user.signIn(user.id)
+        }
+        // code login
+        else if (code) {
+            const res = await ctx.model.PhoneCode.findOne({
+                where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_EXPIRE) } },
+                order: [['id', 'DESC']]
+            })
+            if (!res) throw new Error('Can not find the phone number')
+            await res.increment('count')
 
-        // validate code
-        if (res.count >= LIMIT_SMS_COUNT) throw new Error('Try too many times')
-        if (res.code !== code) throw new Error('Code is invalid')
+            // validate code
+            if (res.count >= LIMIT_SMS_COUNT) throw new Error('Try too many times')
+            if (res.code !== code) throw new Error('Code is invalid')
 
-        // find user and sign in
-        const { id } =
-            (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
-            (await ctx.service.user.create(phone, null, fid))
-        return await ctx.service.user.signIn(id)
+            // find user and sign in
+            const { id } =
+                (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
+                (await ctx.service.user.create(phone, null, fid))
+            return await ctx.service.user.signIn(id)
+        } else throw new Error('Need phone code or password')
     }
 
     // sse chat
     async chat(
         userId: number,
         input: string,
-        role: string = '',
         prompt: string = '',
+        assistant: string = '',
         dialogId: number = 0,
         model: ModelProvider = ModelProvider.IFlyTek,
         subModel: ChatModel = IFlyTekChatModel.SPARK_V3
@@ -137,9 +165,10 @@ export default class Web extends Service {
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
-        role = role || (await this.getConfig('SYSTEM_NAME'))
+        // initial system and assistant prompt
         prompt = prompt || (await this.getConfig('SYSTEM_PROMPT'))
-        prompts.push({ role: SYSTEM, content: `${ctx.__('Role', role)}\n${ctx.__('Prompt', prompt)}\n` })
+        prompts.push({ role: SYSTEM, content: ctx.__('Prompt', prompt) })
+        if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)

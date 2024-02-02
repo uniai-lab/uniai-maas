@@ -13,7 +13,8 @@ export interface SMSCodeResponse {
 
 export interface LoginRequest {
     phone: string
-    code: string
+    code?: string
+    password?: string
     fid?: number
 }
 
@@ -58,9 +59,9 @@ export interface Option {
 
 export interface ChatRequest {
     input: string
-    role?: string
-    prompt?: string
     dialogId?: number
+    prompt?: string
+    assistant?: string
     provider?: ModelProvider
     model?: ChatModel
 }
@@ -69,4 +70,10 @@ export interface getQRCodeResponse {
     token: string
     code: string
     time: number
+}
+
+export interface UpdateUserRequest {
+    name?: string
+    password?: string
+    avatar?: string
 }

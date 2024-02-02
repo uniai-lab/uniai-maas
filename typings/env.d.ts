@@ -47,6 +47,9 @@ declare global {
             // WeChat API
             WX_APP_ID: string
             WX_APP_SECRET: string
+            WX_MCH_ID: string
+            WX_PAY_KEY: string
+            WX_PAY_CERT: string
 
             // minio
             MINIO_ACCESS_KEY: string

@@ -12,7 +12,8 @@ import {
     LoginRequest,
     UserinfoResponse,
     ChatRequest,
-    getQRCodeResponse
+    getQRCodeResponse,
+    UpdateUserRequest
 } from '@interface/controller/Web'
 import {
     AnnounceResponse,
@@ -101,9 +102,9 @@ export default class Web {
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
     async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {
-        const { phone, code, fid } = params
+        const { phone, code, password, fid } = params
 
-        const user = await ctx.service.web.login(phone, code, fid)
+        const user = await ctx.service.web.login(phone, code, password, fid)
         const data: UserinfoResponse = {
             id: user.id,
             name: user.name,
@@ -152,6 +153,34 @@ export default class Web {
             models: await ctx.service.user.getModelList(user.id)
         }
         ctx.service.res.success('User information', data)
+    }
+    @Middleware(auth())
+    @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
+    async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
+        const { id } = ctx.user!
+        const { avatar, name, password } = params
+        if (avatar) if (!$.isBase64(avatar, true)) throw new Error('Avatar base64 not valid')
+        if (password) if (!/^(?=.*[a-zA-Z])(?=.*\d).{8,}$/.test(password)) throw new Error('Password not valid')
+
+        const user = await ctx.service.web.updateUser(id, { avatar, name, password })
+        const data: UserinfoResponse = {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar,
+            username: user.username,
+            token: user.token,
+            tokenTime: user.tokenTime.getTime(),
+            phone: user.phone,
+            chance: {
+                level: user.level,
+                uploadSize: user.uploadSize,
+                totalChatChance: user.chatChance + user.chatChanceFree,
+                totalUploadChance: user.uploadChance + user.uploadChanceFree
+            },
+            benefit: await ctx.service.user.getLevelBenefit(user.level),
+            models: await ctx.service.user.getModelList(user.id)
+        }
+        ctx.service.res.success('Success to WeChat login', data)
     }
 
     @Middleware(auth(), log())
@@ -212,11 +241,11 @@ export default class Web {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
-        const user = ctx.user!
-        const { input, dialogId, provider, model, role, prompt } = params
+        const { id } = ctx.user!
+        const { input, dialogId, provider, model, prompt, assistant } = params
         if (!input) throw new Error('Input nothing')
 
-        const res = await ctx.service.web.chat(user.id, input, role, prompt, dialogId, provider, model)
+        const res = await ctx.service.web.chat(id, input, prompt, assistant, dialogId, provider, model)
 
         if (!(res instanceof Readable)) throw new Error('Response is not readable stream')
         ctx.service.res.success('Success to sse chat', res)

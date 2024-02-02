@@ -1,5 +1,10 @@
 /** @format */
 
+export enum PayType {
+    Alipay = 'alipay',
+    WeChat = 'wechat'
+}
+
 export enum AuditProvider {
     MINT = 'mint-filter', // a local json dict filter
     WX = 'wechat', // WeChat message check

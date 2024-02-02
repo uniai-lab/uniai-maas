@@ -13,6 +13,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { User } from './User'
+import { PayItem } from './PayItem'
 
 @Table
 export class Payment extends Model {
@@ -25,6 +26,11 @@ export class Payment extends Model {
     @ForeignKey(() => User)
     @Column(DataType.INTEGER)
     userId: number
+
+    @AllowNull(false)
+    @ForeignKey(() => PayItem)
+    @Column(DataType.INTEGER)
+    itemId: number
 
     @AllowNull(false)
     @Default('')
@@ -64,6 +70,9 @@ export class Payment extends Model {
 
     @BelongsTo(() => User)
     user: User
+
+    @BelongsTo(() => PayItem)
+    item: PayItem
 }
 
 export default () => Payment

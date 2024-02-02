@@ -20,8 +20,8 @@ export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
-            // await syncDatabase(app) // init database struct and data
-            // await syncConfigCache(app) // sync config cache
+            await syncDatabase(app) // init database struct and data
+            await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
         }
 
@@ -43,6 +43,7 @@ async function syncDatabase(app: Application) {
     await syncTableData(app.model.ResourceType, require('@data/resourceType'), ['name', 'description'])
     await syncTableData(app.model.PromptType, require('@data/promptType'), ['name', 'description'])
     await syncTableData(app.model.UserResourceTab, require('@data/userResourceTab'), ['name', 'desc', 'pid'])
+    await syncTableData(app.model.PayItem, require('@data/payItem'), ['title', 'description', 'price'])
 }
 
 /**

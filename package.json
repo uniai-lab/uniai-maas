@@ -72,6 +72,7 @@
         "sequelize-typescript": "^2.1.6",
         "tslog": "^4.9.2",
         "uniai": "^1.2.1",
+        "wechatpay-node-v3": "^2.2.0-beta",
         "ws": "^8.16.0"
     },
     "devDependencies": {

@@ -12,6 +12,7 @@ import ExportEmbedding1 from '../../../app/model/Embedding1';
 import ExportEmbedding2 from '../../../app/model/Embedding2';
 import ExportHTTPLog from '../../../app/model/HTTPLog';
 import ExportPage from '../../../app/model/Page';
+import ExportPayItem from '../../../app/model/PayItem';
 import ExportPayment from '../../../app/model/Payment';
 import ExportPhoneCode from '../../../app/model/PhoneCode';
 import ExportPrompt from '../../../app/model/Prompt';
@@ -32,6 +33,7 @@ declare module 'egg' {
     Embedding2: ReturnType<typeof ExportEmbedding2>;
     HTTPLog: ReturnType<typeof ExportHTTPLog>;
     Page: ReturnType<typeof ExportPage>;
+    PayItem: ReturnType<typeof ExportPayItem>;
     Payment: ReturnType<typeof ExportPayment>;
     PhoneCode: ReturnType<typeof ExportPhoneCode>;
     Prompt: ReturnType<typeof ExportPrompt>;
