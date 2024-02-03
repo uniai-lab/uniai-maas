@@ -26,7 +26,7 @@ import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Conf
 const ONE_DAY = 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
 const CHAT_PAGE_SIZE = 10
-const CHAT_PAGE_LIMIT = 20
+const CHAT_MAX_PAGE = 20
 const DIALOG_PAGE_SIZE = 10
 const DIALOG_PAGE_LIMIT = 20
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
@@ -40,6 +40,8 @@ const WX_MSG_CHECK_URL = 'https://api.weixin.qq.com/wxa/msg_sec_check' // use PO
 const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use POST
 const WX_QR_CODE_URL = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit'
 const { WX_APP_ID, WX_APP_SECRET } = process.env
+const PROVIDER = ModelProvider.IFlyTek
+const MODEL = IFlyTekChatModel.SPARK_V3
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -219,13 +221,16 @@ export default class WeChat extends Service {
         if (!dialog) throw new Error('Can not find dialog')
 
         const res = await ctx.model.Chat.findAll({
-            limit: pageSize > CHAT_PAGE_LIMIT ? CHAT_PAGE_LIMIT : pageSize,
+            limit: pageSize > CHAT_MAX_PAGE ? CHAT_MAX_PAGE : pageSize,
             order: [['id', 'DESC']],
             where: {
-                dialogId: dialog.id,
+                dialogId,
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isDel: false,
-                isEffect: true
+                isEffect: true,
+                // limit model, subModel for WeChat
+                model: { [Op.or]: [PROVIDER, null] },
+                subModel: { [Op.or]: [MODEL, null] }
             }
         })
 
@@ -246,8 +251,6 @@ export default class WeChat extends Service {
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
         // dialogId ? dialog chat : free chat
-        const model = ModelProvider.IFlyTek
-        const subModel = IFlyTekChatModel.SPARK_V3
         const dialog = await ctx.model.Dialog.findOne({
             where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
             attributes: ['id', 'resourceId'],
@@ -255,12 +258,13 @@ export default class WeChat extends Service {
                 model: ctx.model.Chat,
                 limit: CHAT_PAGE_SIZE,
                 order: [['id', 'desc']],
+                attributes: ['role', 'content'],
                 where: {
                     isEffect: true,
                     isDel: false,
                     // limit model, subModel for WeChat
-                    model: { [Op.or]: [model, null] },
-                    subModel: { [Op.or]: [subModel, null] }
+                    model: { [Op.or]: [PROVIDER, null] },
+                    subModel: { [Op.or]: [MODEL, null] }
                 }
             }
         })
@@ -296,7 +300,7 @@ export default class WeChat extends Service {
         const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
 
         // start chat stream
-        const res = await ctx.service.uniAI.chat(prompts, true, model, subModel)
+        const res = await ctx.service.uniAI.chat(prompts, true, PROVIDER, MODEL)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
         // set chat stream cache, should after chat stream started
@@ -305,8 +309,8 @@ export default class WeChat extends Service {
             dialogId,
             resourceId,
             content: '',
-            model,
-            subModel,
+            model: PROVIDER,
+            subModel: MODEL,
             time: Date.now(),
             isEffect
         }

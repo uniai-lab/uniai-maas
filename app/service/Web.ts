@@ -17,6 +17,7 @@ const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
 const LIMIT_SMS_COUNT = 5
 const CHAT_PAGE_SIZE = 10
+const CHAT_MAX_PAGE = 20
 const PAGE_LIMIT = 6
 
 const QRCODE_EXPIRE = 30 // 30 seconds
@@ -130,6 +131,29 @@ export default class Web extends Service {
         } else throw new Error('Need phone code or password')
     }
 
+    // list all the chats from a user and dialog
+    async listChat(userId: number, dialogId?: number, lastId?: number, pageSize: number = CHAT_PAGE_SIZE) {
+        const { ctx } = this
+        const dialog = await ctx.model.Dialog.findOne({
+            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            attributes: ['id']
+        })
+        if (!dialog) throw new Error('Can not find dialog')
+
+        const res = await ctx.model.Chat.findAll({
+            limit: pageSize > CHAT_MAX_PAGE ? CHAT_MAX_PAGE : pageSize,
+            order: [['id', 'DESC']],
+            where: {
+                dialogId,
+                id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
+                isDel: false,
+                isEffect: true
+            }
+        })
+
+        return res.reverse()
+    }
+
     // sse chat
     async chat(
         userId: number,
@@ -155,6 +179,7 @@ export default class Web extends Service {
                 model: ctx.model.Chat,
                 limit: CHAT_PAGE_SIZE,
                 order: [['id', 'desc']],
+                attributes: ['role', 'content'],
                 where: { isDel: false, isEffect: true }
             }
         })

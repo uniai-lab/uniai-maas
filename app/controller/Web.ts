@@ -218,7 +218,7 @@ export default class Web {
         const user = ctx.user!
         const { dialogId, lastId, pageSize } = params
 
-        const res = await ctx.service.weChat.listChat(user.id, dialogId, lastId, pageSize)
+        const res = await ctx.service.web.listChat(user.id, dialogId, lastId, pageSize)
         const data: ChatResponse[] = []
         for (const { id, dialogId, role, content, resourceId, model, subModel, isEffect } of res)
             data.push({
