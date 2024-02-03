@@ -225,7 +225,7 @@ export default class Web extends Service {
         // filter sensitive
         const data: ChatResponse = {
             chatId: 0,
-            role: ChatRoleEnum.ASSISTANT,
+            role: ASSISTANT,
             content: '',
             dialogId,
             resourceId,
@@ -246,12 +246,18 @@ export default class Web extends Service {
         })
         res.on('end', async () => {
             // save user chat
-            if (input) await ctx.model.Chat.create({ dialogId, role: USER, content: input })
+            if (input)
+                await ctx.model.Chat.create({
+                    dialogId,
+                    role: USER,
+                    content: input,
+                    model: data.model,
+                    subModel: data.subModel
+                })
             // save assistant chat
             if (data.content) {
                 const chat = await ctx.model.Chat.create({
-                    dialogId: data.dialogId,
-                    resourceId: data.resourceId,
+                    dialogId,
                     role: ASSISTANT,
                     content: data.content,
                     model: data.model,
@@ -259,12 +265,11 @@ export default class Web extends Service {
                 })
                 data.chatId = chat.id
             }
-            output.end(JSON.stringify(data))
-
             // reduce user chat chance
             if (user.chatChanceFree > 0) user.chatChanceFree--
             else if (user.chatChance > 0) user.chatChance--
-            user.save()
+            await user.save()
+            output.end(JSON.stringify(data))
         })
         res.on('error', e => output.destroy(e))
         return output as Readable

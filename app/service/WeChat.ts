@@ -226,10 +226,9 @@ export default class WeChat extends Service {
             where: {
                 dialogId: dialog.id,
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
-                isDel: false,
                 isEffect: true,
-                // limit model provider for WeChat
-                model: { [Op.or]: [PROVIDER, null] }
+                isDel: false,
+                model: PROVIDER
             }
         })
 
@@ -261,8 +260,7 @@ export default class WeChat extends Service {
                 where: {
                     isEffect: true,
                     isDel: false,
-                    // limit model provider for WeChat
-                    model: { [Op.or]: [PROVIDER, null] }
+                    model: PROVIDER
                 }
             }
         })
@@ -295,7 +293,14 @@ export default class WeChat extends Service {
         // WeChat require to audit input content
         const isEffect = (await ctx.service.uniAI.audit(input, AuditProvider.WX)).flag
         // save user prompt
-        const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
+        const chat = await ctx.model.Chat.create({
+            dialogId,
+            role: USER,
+            content: input,
+            model: PROVIDER,
+            subModel: MODEL,
+            isEffect
+        })
 
         // start chat stream
         const res = await ctx.service.uniAI.chat(prompts, true, PROVIDER, MODEL)
@@ -339,7 +344,6 @@ export default class WeChat extends Service {
             if (cache.content) {
                 const chat = await ctx.model.Chat.create({
                     dialogId: cache.dialogId,
-                    resourceId: cache.resourceId,
                     role: ASSISTANT,
                     content: cache.content,
                     model: cache.model,
