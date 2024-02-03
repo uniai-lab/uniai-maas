@@ -366,7 +366,7 @@ export default class UniAI extends Service {
             res.flag = result.code === '000000' && result.data.result.suggest === 'pass'
             res.data = result
         } else if (provider === AuditProvider.AI) {
-            const prompt = await this.getConfig('AUDITOR_AI_PROMPT')
+            const prompt = await this.getConfig('AUDIT_PROMPT')
             const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {

@@ -1,7 +1,7 @@
 /** @format */
 
 import { ChatModel, ModelProvider } from 'uniai'
-import { Benefit, ConfigMenuV2, ConfigVIP } from './WeChat'
+import { Benefit, ConfigMenuV2, ConfigVIP } from '../Config'
 
 export interface SMSCodeRequest {
     phone: string
@@ -52,7 +52,7 @@ export interface ConfigResponse {
 
 export interface Option {
     value: ModelProvider | ChatModel
-    label: string | ChatModel
+    label: keyof typeof ModelProvider | ChatModel
     disable: boolean
     children?: Option[]
 }

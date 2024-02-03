@@ -1,5 +1,6 @@
 /** @format */
 
+import { Benefit, ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Config'
 import { ChatModel, ChatRoleEnum, ModelProvider } from 'uniai'
 
 export interface ChatRequest {
@@ -133,45 +134,6 @@ export interface ConfigResponse {
     menuAdv: ConfigMenuV2
     showNewApp: string
     newAppId: string
-}
-
-export interface ConfigTask {
-    title: string
-    tip: string
-    button: string
-    type: number
-}
-
-export interface ConfigMenu {
-    image: string
-    title: string
-    tip: string
-}
-export interface ConfigMenuV2 {
-    icon: string
-    title: string
-    tip: string
-    show: boolean
-}
-export interface Benefit {
-    image: string
-    title: string
-    tip: string
-    iconShadow: string
-    tipColor: string
-}
-
-export interface ConfigVIP {
-    bgImg: string
-    bgLine: string
-    bgStar: string
-    titleImg: string
-    backgroundColor: string
-    boxShadow: string
-    linearGradient: string
-    color: string
-    desc: string
-    benefits: Benefit[]
 }
 
 export interface AnnounceResponse {

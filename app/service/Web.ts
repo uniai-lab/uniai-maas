@@ -7,10 +7,11 @@ import { PassThrough, Readable } from 'stream'
 import { randomUUID } from 'crypto'
 import md5 from 'md5'
 import { WXAppQRCodeCache } from '@interface/Cache'
-import { ChatResponse, ConfigMenuV2, ConfigVIP } from '@interface/controller/WeChat'
+import { ChatResponse } from '@interface/controller/WeChat'
 import ali from '@util/aliyun'
 import $ from '@util/util'
 import { ChatMessage, ChatModel, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
+import { ConfigMenuV2, ConfigVIP } from '@interface/Config'
 
 const LIMIT_SMS_WAIT = 1 * 60 * 1000
 const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
@@ -148,14 +149,13 @@ export default class Web extends Service {
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId
-                ? { id: dialogId, userId, isEffect: true, isDel: false }
-                : { resourceId: null, userId, isEffect: true, isDel: false },
+            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            attributes: ['id', 'resourceId'],
             include: {
                 model: ctx.model.Chat,
                 limit: CHAT_PAGE_SIZE,
                 order: [['id', 'desc']],
-                where: { isEffect: true, isDel: false }
+                where: { isDel: false, isEffect: true }
             }
         })
         if (!dialog) throw new Error('Dialog is not available')
@@ -170,10 +170,7 @@ export default class Web extends Service {
         prompts.push({ role: SYSTEM, content: ctx.__('Prompt', prompt) })
         if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
-        // add user chat history
-        for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
-
-        // add related resource
+        // add reference resource
         const resourceId = dialog.resourceId
         if (resourceId) {
             let content = ctx.__('document content start')
@@ -190,6 +187,10 @@ export default class Web extends Service {
             prompts.push({ role: SYSTEM, content })
         }
 
+        // add history chat
+        for (const { role, content } of dialog.chats) prompts.push({ role, content })
+
+        // add user chat
         prompts.push({ role: USER, content: input })
 
         // start chat stream
@@ -218,7 +219,6 @@ export default class Web extends Service {
                 output.write(JSON.stringify(data))
             }
         })
-
         res.on('end', async () => {
             // save user chat
             if (input) await ctx.model.Chat.create({ dialogId, role: USER, content: input })

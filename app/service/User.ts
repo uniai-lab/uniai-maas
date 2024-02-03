@@ -2,11 +2,11 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { UserCache } from '@interface/Cache'
-import { ConfigVIP } from '@interface/controller/WeChat'
 import { Option } from '@interface/controller/Web'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
+import { ConfigVIP, LevelModel } from '@interface/Config'
 import $ from '@util/util'
 import ai from '@util/ai'
 
@@ -28,8 +28,8 @@ export default class User extends Service {
             wxOpenId,
             phone,
             avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
-            chatChanceFree: parseInt(await this.getConfig('FREE_CHAT_CHANCE')),
-            uploadChanceFree: parseInt(await this.getConfig('FREE_UPLOAD_CHANCE')),
+            chatChanceFree: await this.getConfig<number[]>('FREE_CHAT_CHANCE')[0],
+            uploadChanceFree: await this.getConfig<number[]>('FREE_UPLOAD_CHANCE')[0],
             uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
         })
 
@@ -81,6 +81,7 @@ export default class User extends Service {
         return await user.save()
     }
 
+    // update user free chance
     async updateUserChance(id: number) {
         const cache = await this.getUserCache(id)
         if (!cache) throw new Error('User cache not found')
@@ -94,23 +95,11 @@ export default class User extends Service {
             if (!user) throw new Error('Can not find user')
 
             // update db
-            user.chatChanceFree = parseInt(await this.getConfig('FREE_CHAT_CHANCE'))
-            user.uploadChanceFree = parseInt(await this.getConfig('FREE_UPLOAD_CHANCE'))
+            user.chatChanceFree = await this.getConfig<number[]>('FREE_CHAT_CHANCE')[0]
+            user.uploadChanceFree = await this.getConfig<number[]>('FREE_UPLOAD_CHANCE')[0]
             user.freeChanceUpdateAt = now
             await user.save()
         }
-    }
-
-    // get user's benefit by level
-    async getLevelBenefit(level: number) {
-        const vips = await this.getConfig<ConfigVIP[]>('USER_VIP')
-        const images = await this.getConfig<string[]>('USER_MENU_VIP_ICON')
-
-        if (!vips[level]) throw new Error('User level is invalid')
-        return vips[level].benefits.map((v, i) => {
-            v.image = images[i]
-            return v
-        })
     }
 
     // update user cache in redis
@@ -130,16 +119,31 @@ export default class User extends Service {
         await app.redis.set(`user_${id}`, JSON.stringify(cache))
     }
 
-    // get user available models by user level
-    async getModelList(id: number) {
-        console.log(id)
-        const disable = false
+    // get user benefits by level
+    async getLevelBenefit(level: number) {
+        const vips = await this.getConfig<ConfigVIP[]>('USER_VIP')
+        const images = await this.getConfig<string[]>('USER_MENU_VIP_ICON')
+
+        if (!vips[level]) throw new Error('User level is invalid')
+        return vips[level].benefits.map((v, i) => {
+            v.image = images[i]
+            return v
+        })
+    }
+
+    // get user models by level
+    async getLevelModel(level: number) {
+        const res = await this.getConfig<LevelModel>('LEVEL_MODEL')
+
+        const disable = true
         const models = ai.list()
-        return models.map<Option>(v => ({
-            value: v.value,
-            label: v.provider,
-            disable,
-            children: v.models.map(v => ({ disable, value: v, label: v }))
-        }))
+        return models
+            .map<Option>(v => ({
+                value: v.value,
+                label: v.provider,
+                disable: level >= res[v.value] ? false : true,
+                children: v.models.map(v => ({ disable, value: v, label: v }))
+            }))
+            .filter(v => !v.disable && v.children?.length)
     }
 }

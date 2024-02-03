@@ -25,3 +25,5 @@ app/public/models/*
 !app/public/models/.gitkeep
 
 docker/**/data
+
+cache

@@ -9,10 +9,6 @@ import { statSync } from 'fs'
 import { AuditProvider } from '@interface/Enum'
 import { AdvCache, ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
 import {
-    ConfigMenu,
-    ConfigMenuV2,
-    ConfigTask,
-    ConfigVIP,
     WXAccessTokenRequest,
     WXAccessTokenResponse,
     WXAuthCodeRequest,
@@ -25,6 +21,7 @@ import {
 import $ from '@util/util'
 import FormData from 'form-data'
 import { ChatMessage, ChatResponse, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
+import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Config'
 
 const ONE_DAY = 24 * 60 * 60 * 1000
 const PAGE_LIMIT = 6
@@ -249,15 +246,22 @@ export default class WeChat extends Service {
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
         // dialogId ? dialog chat : free chat
+        const model = ModelProvider.IFlyTek
+        const subModel = IFlyTekChatModel.SPARK_V3
         const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId
-                ? { id: dialogId, userId, isEffect: true, isDel: false }
-                : { resourceId: null, userId, isEffect: true, isDel: false },
+            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            attributes: ['id', 'resourceId'],
             include: {
                 model: ctx.model.Chat,
                 limit: CHAT_PAGE_SIZE,
-                order: [['updatedAt', 'desc']],
-                where: { isEffect: true, isDel: false }
+                order: [['id', 'desc']],
+                where: {
+                    isEffect: true,
+                    isDel: false,
+                    // limit model, subModel for WeChat
+                    model: { [Op.or]: [model, null] },
+                    subModel: { [Op.or]: [subModel, null] }
+                }
             }
         })
         if (!dialog) throw new Error('Dialog is not available')
@@ -290,8 +294,6 @@ export default class WeChat extends Service {
         const isEffect = (await ctx.service.uniAI.audit(input, AuditProvider.WX)).flag
         // save user prompt
         const chat = await ctx.model.Chat.create({ dialogId, role: USER, content: input, isEffect })
-        const model = ModelProvider.IFlyTek
-        const subModel = IFlyTekChatModel.SPARK_V3
 
         // start chat stream
         const res = await ctx.service.uniAI.chat(prompts, true, model, subModel)
@@ -318,7 +320,6 @@ export default class WeChat extends Service {
                 if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
             }
         })
-
         res.on('error', e => {
             cache.content += e.message
             cache.isEffect = false
@@ -359,6 +360,7 @@ export default class WeChat extends Service {
         return res
     }
 
+    // update WeChat name, avatar
     async updateUser(id: number, params: { name?: string; avatar?: string }) {
         const { ctx } = this
         const user = await ctx.model.User.findByPk(id)

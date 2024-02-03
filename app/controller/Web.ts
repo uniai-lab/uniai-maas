@@ -120,7 +120,7 @@ export default class Web {
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             benefit: await ctx.service.user.getLevelBenefit(user.level),
-            models: await ctx.service.user.getModelList(user.id)
+            models: await ctx.service.user.getLevelModel(user.level)
         }
         ctx.service.res.success('Success to WeChat login', data)
     }
@@ -150,10 +150,11 @@ export default class Web {
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             benefit: await ctx.service.user.getLevelBenefit(user.level),
-            models: await ctx.service.user.getModelList(user.id)
+            models: await ctx.service.user.getLevelModel(user.level)
         }
         ctx.service.res.success('User information', data)
     }
+
     @Middleware(auth())
     @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
     async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
@@ -178,7 +179,7 @@ export default class Web {
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             benefit: await ctx.service.user.getLevelBenefit(user.level),
-            models: await ctx.service.user.getModelList(user.id)
+            models: await ctx.service.user.getLevelModel(user.level)
         }
         ctx.service.res.success('Success to WeChat login', data)
     }

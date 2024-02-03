@@ -1,25 +1,23 @@
 /** @format */
 
 import ROOT_PATH from 'app-root-path'
-import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/controller/WeChat'
 import { readFileSync } from 'fs'
+import { ModelProvider } from 'uniai'
+import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP, LevelModel } from '@interface/Config'
 
 const ADV_REWARD_LIMIT_COUNT = 5
 const ADV_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_UPLOAD_CHANCE = 5
-const FREE_CHAT_CHANCE = 19
-const FREE_UPLOAD_CHANCE = 3
 const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
-const SYSTEM_PROMPT = `
-你是乐聊 AI （英：LeChat AI），集成了多种先进AI大模型的统一平台，基于UniAI开发，你已经连接了多家供应商的大模型：包括OpenAI、科大讯飞和百度等。
-你的主要功能是对用户所有的问题进行回答或是积极参与对话交流。
-`
 
 const { ADMIN_TOKEN } = process.env
 
-const menus: ConfigMenu[] = [
+const FREE_CHAT_CHANCE: number[] = [19, 99, 199, 299]
+const FREE_UPLOAD_CHANCE: number[] = [5, 50, 100, 500]
+
+const USER_MENU: ConfigMenu[] = [
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-store.png',
         title: `${LIMIT_UPLOAD_SIZE / 1024 / 1024} MB`,
@@ -27,17 +25,17 @@ const menus: ConfigMenu[] = [
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-ques.png',
-        title: `${FREE_CHAT_CHANCE} 次`,
+        title: `${FREE_CHAT_CHANCE[0]} 次`,
         tip: '每日对话'
     },
     {
         image: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/menu-upload.png',
-        title: `${FREE_UPLOAD_CHANCE} 个`,
+        title: `${FREE_UPLOAD_CHANCE[0]} 个`,
         tip: '每日上传'
     }
 ]
 
-const tasks: ConfigTask[] = [
+const USER_TASK: ConfigTask[] = [
     {
         title: '分享给好友',
         tip: `对话+${SHARE_REWARD_CHAT_CHANCE} 上传+${SHARE_REWARD_UPLOAD_CHANCE}`,
@@ -58,7 +56,7 @@ const tasks: ConfigTask[] = [
     }
 ]
 
-const vips: ConfigVIP[] = [
+const USER_VIP: ConfigVIP[] = [
     {
         bgImg: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip0bg.png',
         bgLine: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/1702543260823-VIP0%E7%BA%BF%E6%9D%A1.png',
@@ -201,160 +199,201 @@ const vips: ConfigVIP[] = [
     }
 ]
 
+const LEVEL_MODEL: LevelModel = {
+    [ModelProvider.Other]: 0,
+    [ModelProvider.Baidu]: 0,
+    [ModelProvider.IFlyTek]: 0,
+    [ModelProvider.GLM]: 0,
+    [ModelProvider.MoonShot]: 1,
+    [ModelProvider.Google]: 2,
+    [ModelProvider.OpenAI]: 3
+}
+
 // write rows to config table
 export default [
     {
+        id: 1,
         key: 'APP_NAME',
         value: '乐聊-微信小程序',
         description: '小程序名称'
     },
     {
+        id: 2,
         key: 'APP_URL',
         value: 'https://iict.ac.cn',
         description: '应用官网'
     },
     {
+        id: 3,
         key: 'APP_VERSION',
         value: 'v2.2.0',
         description: '小程序版本'
     },
     {
+        id: 4,
         key: 'SYSTEM_PROMPT',
-        value: SYSTEM_PROMPT,
+        value: readFileSync(`${ROOT_PATH}/app/data/prompt-system.md`, 'utf-8'),
         description: 'AI默认提示词'
     },
     {
+        id: 5,
         key: 'SHOW_NEW_APP',
         value: false,
         description: '是否显示跳转新APP'
     },
     {
+        id: 6,
         key: 'NEW_APP_ID',
         value: 'wxf124c05330d154e7',
         description: '新APP的ID'
     },
     {
+        id: 7,
         key: 'ADMIN_TOKEN',
         value: ADMIN_TOKEN,
         description: '超级管理员密码'
     },
     {
+        id: 8,
         key: 'FOOT_TIP',
         value: '更多信息关注公众号',
         description: '底部标语'
     },
     {
+        id: 9,
         key: 'FOOT_COPY',
         value: 'IICT（点击复制）',
         description: '底部点击复制'
     },
     {
+        id: 10,
         key: 'OFFICIAL',
         value: 'IICT_SUZ',
         description: '公众号ID'
     },
     {
+        id: 11,
         key: 'SHARE_TITLE',
         value: '大模型文档分析对话小程序！',
         description: '小程序分享标题'
     },
     {
+        id: 12,
         key: 'SHARE_DESC',
         value: '大模型文档分析对话小程序！',
         description: '小程序分享详情'
     },
     {
+        id: 13,
         key: 'SHARE_IMG',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/share-background.png',
         description: '小程序分享背景图'
     },
     {
+        id: 14,
         key: 'DEFAULT_AVATAR_AI',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-lechat.png',
         description: '默认AI头像'
     },
     {
+        id: 15,
         key: 'DEFAULT_AVATAR_USER',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/avatar-user.png',
         description: '默认用户头像'
     },
     {
+        id: 16,
         key: 'DEFAULT_USERNAME',
         value: '人类用户',
         description: '默认用户名'
     },
     {
+        id: 17,
         key: 'FREE_CHAT_CHANCE',
-        value: FREE_CHAT_CHANCE,
+        value: JSON.stringify(FREE_CHAT_CHANCE),
         description: '每日免费对话次数'
     },
     {
+        id: 18,
         key: 'FREE_UPLOAD_CHANCE',
-        value: FREE_UPLOAD_CHANCE,
+        value: JSON.stringify(FREE_UPLOAD_CHANCE),
         description: '每日免费上传次数'
     },
     {
+        id: 19,
         key: 'SHARE_REWARD_CHAT_CHANCE',
         value: SHARE_REWARD_CHAT_CHANCE,
         description: '分享奖励对话次数'
     },
     {
+        id: 20,
         key: 'SHARE_REWARD_UPLOAD_CHANCE',
         value: SHARE_REWARD_UPLOAD_CHANCE,
         description: '分享奖励上传次数'
     },
     {
+        id: 21,
         key: 'ADV_REWARD_CHAT_CHANCE',
         value: ADV_REWARD_CHAT_CHANCE,
         description: '广告增加聊天次数'
     },
     {
+        id: 22,
         key: 'ADV_REWARD_LIMIT_COUNT',
         value: ADV_REWARD_LIMIT_COUNT,
         description: '24小时广告奖励上限'
     },
     {
+        id: 23,
         key: 'ADV_REWARD_UPLOAD_CHANCE',
         value: ADV_REWARD_CHAT_CHANCE,
         description: '广告增加上传次数'
     },
     {
+        id: 24,
         key: 'FOLLOW_REWARD_CHAT_CHANCE',
         value: 0,
         description: '默认关注奖励次数'
     },
     {
+        id: 25,
         key: 'LIMIT_UPLOAD_SIZE',
         value: LIMIT_UPLOAD_SIZE,
         description: '默认上传限制（Byte）'
     },
     {
+        id: 26,
         key: 'INIT_RESOURCE_ID',
         value: INIT_RESOURCE_ID,
         description: '初始化文档ID'
     },
     {
-        key: 'AUDITOR_AI_PROMPT',
+        id: 27,
+        key: 'AUDIT_PROMPT',
         value: readFileSync(`${ROOT_PATH}/app/data/prompt-audit.md`, 'utf-8'),
         description: 'AI审核提示词'
     },
     {
+        id: 28,
         key: 'WX_REVIEW_FILE',
         value: 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/file_review.pdf',
         description: '文件审核通知'
     },
     // v1.0
     {
+        id: 29,
         key: 'USER_MENU',
-        value: JSON.stringify(menus),
+        value: JSON.stringify(USER_MENU),
         description: '小程序用户菜单栏'
     },
     {
+        id: 30,
         key: 'USER_TASK',
-        value: JSON.stringify(tasks),
+        value: JSON.stringify(USER_TASK),
         description: '小程序用户菜单栏2'
     },
     {
+        id: 31,
         key: 'USER_MENU_VIP_ICON',
         value: JSON.stringify([
             'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/vip_upload.png',
@@ -364,6 +403,7 @@ export default [
         description: '用户界面会员权益图标'
     },
     {
+        id: 32,
         key: 'USER_MENU_MEMBER',
         value: JSON.stringify({
             icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128714624.png',
@@ -374,6 +414,7 @@ export default [
         description: '小程序用户-会员中心'
     },
     {
+        id: 33,
         key: 'USER_MENU_INFO',
         value: JSON.stringify({
             icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128704007.png',
@@ -384,6 +425,7 @@ export default [
         description: '小程序用户-个人资料'
     },
     {
+        id: 34,
         key: 'USER_MENU_SHARE',
         value: JSON.stringify({
             icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128723551.png',
@@ -394,6 +436,7 @@ export default [
         description: '小程序用户-分享给好友'
     },
     {
+        id: 35,
         key: 'USER_MENU_FOCUS',
         value: JSON.stringify({
             icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128731207.png',
@@ -404,6 +447,7 @@ export default [
         description: '小程序用户-关注公众号'
     },
     {
+        id: 36,
         key: 'USER_MENU_ADV',
         value: JSON.stringify({
             icon: 'http://openai-1259183477.cos.ap-shanghai.myqcloud.com/icon-1703128696275.png',
@@ -414,8 +458,15 @@ export default [
         description: '小程序用户-观看广告'
     },
     {
+        id: 37,
         key: 'USER_VIP',
-        value: JSON.stringify(vips),
+        value: JSON.stringify(USER_VIP),
         description: '小程序用户等级'
+    },
+    {
+        id: 38,
+        key: 'LEVEL_MODEL',
+        value: JSON.stringify(LEVEL_MODEL),
+        description: '等级模型对照表'
     }
 ]

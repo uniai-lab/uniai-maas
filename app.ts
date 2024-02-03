@@ -10,6 +10,11 @@ import { Model } from 'sequelize-typescript'
 import { ModelStatic, Optional } from 'sequelize'
 import { User } from '@model/User'
 import { UserCache } from '@interface/Cache'
+import ResourceTypeData from '@data/resourceType'
+import PromptTypeData from '@data/promptType'
+import UserResourceTabData from '@data/userResourceTab'
+import PayItemData from '@data/payItem'
+import Config from '@data/config'
 import $ from '@util/util'
 
 /**
@@ -20,6 +25,7 @@ export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
+            await app.model.Config.truncate({ force: true })
             await syncDatabase(app) // init database struct and data
             await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
@@ -39,11 +45,11 @@ async function syncDatabase(app: Application) {
     await app.model.sync({ force: false, alter: true })
 
     console.log('==================SYNC INIT DATA=====================')
-    await syncTableData(app.model.Config, require('@data/config'), ['value', 'description'])
-    await syncTableData(app.model.ResourceType, require('@data/resourceType'), ['name', 'description'])
-    await syncTableData(app.model.PromptType, require('@data/promptType'), ['name', 'description'])
-    await syncTableData(app.model.UserResourceTab, require('@data/userResourceTab'), ['name', 'desc', 'pid'])
-    await syncTableData(app.model.PayItem, require('@data/payItem'), ['title', 'description', 'price'])
+    await syncTableData(app.model.Config, Config, ['value', 'description'])
+    await syncTableData(app.model.ResourceType, ResourceTypeData, ['name', 'description'])
+    await syncTableData(app.model.PromptType, PromptTypeData, ['name', 'description'])
+    await syncTableData(app.model.UserResourceTab, UserResourceTabData, ['name', 'desc', 'pid'])
+    await syncTableData(app.model.PayItem, PayItemData, ['title', 'description', 'price'])
 }
 
 /**
@@ -53,8 +59,7 @@ async function syncDatabase(app: Application) {
  * @param updateOnDuplicate - Fields to update in case of duplicate data.
  */
 async function syncTableData(model: ModelStatic<Model>, data: Optional<any, string>[], updateOnDuplicate: string[]) {
-    const res = await model.bulkCreate(data, { updateOnDuplicate })
-    console.log('SYNC TABLE DATA', res)
+    await model.bulkCreate(data, { updateOnDuplicate })
 }
 
 /**

@@ -15,7 +15,6 @@ import {
     ResourceResponse,
     AnnounceResponse,
     ConfigResponse,
-    ConfigTask,
     TabResponse,
     UploadAvatarResponse,
     UpdateUserRequest,
@@ -28,6 +27,7 @@ import $ from '@util/util'
 import { basename } from 'path'
 import { statSync } from 'fs'
 import { ChatRoleEnum } from 'uniai'
+import { ConfigTask } from '@interface/Config'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
