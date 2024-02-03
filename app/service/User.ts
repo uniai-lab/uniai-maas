@@ -28,8 +28,8 @@ export default class User extends Service {
             wxOpenId,
             phone,
             avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
-            chatChanceFree: await this.getConfig<number[]>('FREE_CHAT_CHANCE')[0],
-            uploadChanceFree: await this.getConfig<number[]>('FREE_UPLOAD_CHANCE')[0],
+            chatChanceFree: (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0],
+            uploadChanceFree: (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0],
             uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
         })
 
@@ -95,8 +95,8 @@ export default class User extends Service {
             if (!user) throw new Error('Can not find user')
 
             // update db
-            user.chatChanceFree = await this.getConfig<number[]>('FREE_CHAT_CHANCE')[0]
-            user.uploadChanceFree = await this.getConfig<number[]>('FREE_UPLOAD_CHANCE')[0]
+            user.chatChanceFree = (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0]
+            user.uploadChanceFree = (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0]
             user.freeChanceUpdateAt = now
             await user.save()
         }
