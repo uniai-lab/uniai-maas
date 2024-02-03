@@ -17,7 +17,15 @@ import { Resource } from './Resource'
 import { ModelProvider, ChatRoleEnum } from 'uniai'
 import { IndexesOptions } from 'sequelize'
 
-const indexes: IndexesOptions[] = [{ fields: ['role'] }, { fields: ['model'] }, { fields: ['sub_model'] }]
+const indexes: IndexesOptions[] = [
+    { fields: ['role'] },
+    { fields: ['model'] },
+    { fields: ['sub_model'] },
+    { fields: ['dialog_id'] },
+    { fields: ['resource_id'] },
+    { fields: ['is_effect'] },
+    { fields: ['is_del'] }
+]
 @Table({ indexes })
 export class Chat extends Model {
     @PrimaryKey

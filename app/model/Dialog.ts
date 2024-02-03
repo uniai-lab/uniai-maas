@@ -18,7 +18,11 @@ import { Resource } from './Resource'
 import { User } from './User'
 import { IndexesOptions } from 'sequelize'
 
-const indexes: IndexesOptions[] = [{ fields: ['user_id', 'resource_id'] }]
+const indexes: IndexesOptions[] = [
+    { fields: ['user_id', 'resource_id'] },
+    { fields: ['is_effect'] },
+    { fields: ['is_del'] }
+]
 
 @Table({ indexes })
 export class Dialog extends Model {

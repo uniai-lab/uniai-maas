@@ -12,9 +12,12 @@ import {
     AllowNull,
     Default
 } from 'sequelize-typescript'
+import { IndexesOptions } from 'sequelize'
 import { Dialog } from './Dialog'
 
-@Table
+const indexes: IndexesOptions[] = [{ fields: ['level'] }, { fields: ['is_effect'] }, { fields: ['is_del'] }]
+
+@Table({ indexes })
 export class User extends Model {
     @PrimaryKey
     @AutoIncrement
