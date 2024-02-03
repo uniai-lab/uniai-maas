@@ -144,7 +144,7 @@ export default class Web extends Service {
             limit: pageSize > CHAT_MAX_PAGE ? CHAT_MAX_PAGE : pageSize,
             order: [['id', 'DESC']],
             where: {
-                dialogId,
+                dialogId: dialog.id,
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isDel: false,
                 isEffect: true
