@@ -228,9 +228,8 @@ export default class WeChat extends Service {
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isDel: false,
                 isEffect: true,
-                // limit model, subModel for WeChat
-                model: { [Op.or]: [PROVIDER, null] },
-                subModel: { [Op.or]: [MODEL, null] }
+                // limit model provider for WeChat
+                model: { [Op.or]: [PROVIDER, null] }
             }
         })
 
@@ -262,9 +261,8 @@ export default class WeChat extends Service {
                 where: {
                     isEffect: true,
                     isDel: false,
-                    // limit model, subModel for WeChat
-                    model: { [Op.or]: [PROVIDER, null] },
-                    subModel: { [Op.or]: [MODEL, null] }
+                    // limit model provider for WeChat
+                    model: { [Op.or]: [PROVIDER, null] }
                 }
             }
         })
