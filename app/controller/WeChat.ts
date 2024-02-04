@@ -3,7 +3,6 @@
 import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, HTTPQuery } from '@eggjs/tegg'
 import { UserContext } from '@interface/Context'
 import {
-    SignInRequest,
     UploadResponse,
     UserinfoResponse,
     ChatListRequest,
@@ -18,7 +17,8 @@ import {
     TabResponse,
     UploadAvatarResponse,
     UpdateUserRequest,
-    DialogRequest
+    DialogRequest,
+    LoginRequest
 } from '@interface/controller/WeChat'
 import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
@@ -28,6 +28,9 @@ import { basename } from 'path'
 import { statSync } from 'fs'
 import { ChatRoleEnum } from 'uniai'
 import { ConfigTask } from '@interface/Config'
+import { Readable } from 'stream'
+import captcha from '@middleware/captcha'
+import { SMSCodeRequest, SMSCodeResponse } from '@interface/controller/Web'
 
 @HTTPController({ path: '/wechat' })
 export default class WeChat {
@@ -78,16 +81,24 @@ export default class WeChat {
         ctx.service.res.success('Successfully list announcements', data)
     }
 
-    // WeChat login
+    // send code message on h5
+    @Middleware(log(), captcha())
+    @HTTPMethod({ path: '/get-sms-code', method: HTTPMethodEnum.POST })
+    async getSMSCode(@Context() ctx: UserContext, @HTTPBody() params: SMSCodeRequest) {
+        const { id, phone } = await ctx.service.web.sendSMSCode(params.phone)
+        const data: SMSCodeResponse = { id, phone }
+        ctx.service.res.success('Success to WeChat login', data)
+    }
+
+    // WeChat/Phone login
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
-    async login(@Context() ctx: UserContext, @HTTPBody() params: SignInRequest) {
-        const { code, fid, token } = params
-        if (!code.trim()) throw new Error('Code is null')
+    async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {
+        const { code, fid, phone, token } = params
 
-        const user = await ctx.service.weChat.login(code, fid)
-        // if QRCode login
-        if (token) await ctx.service.web.setQRCodeToken(token, user.id, user.token!)
+        const user = await ctx.service.weChat.login(code, phone, fid)
+        // if web use QRCode login
+        if (token) await ctx.service.web.setQRCodeToken(token, user.id, user.token)
 
         const data: UserinfoResponse = {
             id: user.id,
@@ -187,27 +198,29 @@ export default class WeChat {
         ctx.service.res.success('User information', data)
     }
 
-    // send chat message and set stream
+    // send chat message and set/get stream
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         const user = ctx.user!
-        const { input, dialogId } = params
+        const { input, dialogId, sse } = params
         if (!input) throw new Error('Input nothing')
 
-        const res = await ctx.service.weChat.chat(input, user.id, dialogId)
-
-        const data: ChatResponse = {
-            chatId: res.id,
-            role: res.role,
-            content: res.isEffect ? res.content : ctx.__('not compliant'),
-            dialogId: res.dialogId,
-            resourceId: res.resourceId,
-            model: res.model,
-            subModel: res.subModel,
-            avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
-            isEffect: res.isEffect
-        }
+        const res = await ctx.service.weChat.chat(input, user.id, dialogId, sse)
+        const data: Readable | ChatResponse =
+            res instanceof Readable
+                ? res
+                : {
+                      chatId: res.id,
+                      role: res.role,
+                      content: res.isEffect ? res.content : ctx.__('not compliant'),
+                      dialogId: res.dialogId,
+                      resourceId: res.resourceId,
+                      model: res.model,
+                      subModel: res.subModel,
+                      avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+                      isEffect: res.isEffect
+                  }
 
         ctx.service.res.success('Success start chat stream', data)
     }

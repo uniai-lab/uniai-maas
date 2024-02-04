@@ -50,5 +50,5 @@ export interface AdvCache {
 
 export interface WXAppQRCodeCache {
     id: number
-    token: string
+    token: string | null
 }

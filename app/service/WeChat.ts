@@ -4,7 +4,7 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Service } from 'egg'
 import { EggFile } from 'egg-multipart'
 import { Op } from 'sequelize'
-import { Readable } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import { statSync } from 'fs'
 import { AuditProvider } from '@interface/Enum'
 import { AdvCache, ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
@@ -21,6 +21,7 @@ import {
 import $ from '@util/util'
 import FormData from 'form-data'
 import { ChatMessage, ChatResponse, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
+import { ChatResponse as WXChatResponse } from '@interface/controller/WeChat'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Config'
 
 const ONE_DAY = 24 * 60 * 60 * 1000
@@ -30,6 +31,8 @@ const CHAT_MAX_PAGE = 20
 const DIALOG_PAGE_SIZE = 10
 const DIALOG_PAGE_LIMIT = 20
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
+const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
+const LIMIT_SMS_COUNT = 5
 const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
 
 // WeChat API
@@ -85,23 +88,56 @@ export default class WeChat extends Service {
     }
 
     // use WeChat to login, get code, return new user
-    async login(code: string, fid?: number) {
+    async login(code?: string, phone?: string, fid?: number) {
         const { ctx } = this
+        const where: { wxOpenId?: string; phone?: string } = {}
+        // phone login
+        if (phone) {
+            const res = await ctx.model.PhoneCode.findOne({
+                where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_EXPIRE) } },
+                order: [['id', 'DESC']]
+            })
+            if (!res) throw new Error('Can not find the phone number')
+            await res.increment('count')
 
-        // get access_token, openid, unionid from WeChat API
-        const { openid } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_AUTH_URL, {
-            grant_type: 'authorization_code',
-            appid: WX_APP_ID,
-            secret: WX_APP_SECRET,
-            js_code: code
-        })
-        if (!openid) throw new Error('Fail to get WeChat openid')
+            // validate code
+            if (res.count >= LIMIT_SMS_COUNT) throw new Error('Try too many times')
+            if (res.code !== code) throw new Error('Code is invalid')
+            where.phone = phone
+        }
+        // wechat login
+        else if (code) {
+            // get access_token, openid, unionid from WeChat API
+            const { openid } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_AUTH_URL, {
+                grant_type: 'authorization_code',
+                appid: WX_APP_ID,
+                secret: WX_APP_SECRET,
+                js_code: code
+            })
+            if (!openid) throw new Error('Fail to get WeChat openid')
+            where.wxOpenId = openid
+            // find user and sign in
+        } else throw new Error('Phone or code can not be null')
 
-        // find user and sign in
+        // find or create a user, then sign in
         const { id } =
-            (await ctx.model.User.findOne({ where: { wxOpenId: openid }, attributes: ['id'] })) ||
-            (await ctx.service.user.create(null, openid, fid))
-        return await ctx.service.user.signIn(id)
+            (await ctx.model.User.findOne({ where, attributes: ['id'] })) ||
+            (await ctx.service.user.create(where.phone, where.wxOpenId, fid))
+        const user = await ctx.service.user.signIn(id)
+
+        // add free chat dialog if not existed
+        if (!(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: null } })))
+            await ctx.service.weChat.addDialog(user.id)
+
+        // add default resource dialog if not existed
+        const resourceId = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
+        if (
+            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId } })) &&
+            (await ctx.model.Resource.count({ where: { id: resourceId } }))
+        )
+            await ctx.service.weChat.addDialog(user.id, resourceId)
+
+        return user
     }
 
     /* user sign phone number
@@ -189,11 +225,17 @@ export default class WeChat extends Service {
         const dialog = await ctx.model.Dialog.create({ userId, resourceId })
 
         // create default dialog chats
-        const content = `${ctx.__('Im AI model')}${
-            fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat')
-        }`
+        const content =
+            ctx.__('Im AI model') + (fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat'))
+
         dialog.chats = await ctx.model.Chat.bulkCreate([
-            { dialogId: dialog.id, role: ChatRoleEnum.ASSISTANT, content: $.contentFilter(content).text }
+            {
+                dialogId: dialog.id,
+                role: ChatRoleEnum.ASSISTANT,
+                content: $.contentFilter(content).text,
+                model: PROVIDER,
+                subModel: MODEL
+            }
         ])
 
         return dialog
@@ -236,12 +278,14 @@ export default class WeChat extends Service {
     }
 
     // chat
-    async chat(input: string, userId: number, dialogId: number = 0) {
+    async chat(input: string, userId: number, dialogId: number = 0, sse: boolean = false) {
         const { ctx, app } = this
 
-        // check processing chat stream
-        const check = await this.getChat(userId)
-        if (check && !check.chatId) throw new Error('You have another processing chat')
+        if (!sse) {
+            // check processing chat stream cache
+            const check = await this.getChat(userId)
+            if (check && !check.chatId) throw new Error('You have another processing chat')
+        }
 
         // check user chat chance
         const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChance', 'chatChanceFree'] })
@@ -292,69 +336,132 @@ export default class WeChat extends Service {
 
         // WeChat require to audit input content
         const isEffect = (await ctx.service.uniAI.audit(input, AuditProvider.WX)).flag
-        // save user prompt
-        const chat = await ctx.model.Chat.create({
-            dialogId,
-            role: USER,
-            content: input,
-            model: PROVIDER,
-            subModel: MODEL,
-            isEffect
-        })
 
         // start chat stream
         const res = await ctx.service.uniAI.chat(prompts, true, PROVIDER, MODEL)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
-        // set chat stream cache, should after chat stream started
-        const cache: ChatStreamCache = {
-            chatId: 0,
-            dialogId,
-            resourceId,
-            content: '',
-            model: PROVIDER,
-            subModel: MODEL,
-            time: Date.now(),
-            isEffect
-        }
-        if (isEffect) await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
-
-        res.on('data', (buff: Buffer) => {
-            const obj = $.json<ChatResponse>(buff.toString())
-            if (obj) {
-                cache.content += obj.content
-                cache.subModel = obj.model
-                if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+        if (sse) {
+            const cache: WXChatResponse = {
+                chatId: 0,
+                role: ChatRoleEnum.ASSISTANT,
+                content: '',
+                dialogId,
+                resourceId,
+                model: PROVIDER,
+                subModel: MODEL,
+                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+                isEffect
             }
-        })
-        res.on('error', e => {
-            cache.content += e.message
-            cache.isEffect = false
-            chat.isEffect = false
-            chat.save()
-        })
-        res.on('end', () => {
-            // reduce user chat chance
-            if (user.chatChanceFree > 0) user.chatChanceFree--
-            else if (user.chatChance > 0) user.chatChance--
-            user.save()
-        })
-        res.on('close', async () => {
-            // save assistant response
-            if (cache.content) {
-                const chat = await ctx.model.Chat.create({
-                    dialogId: cache.dialogId,
-                    role: ASSISTANT,
-                    content: cache.content,
-                    model: cache.model,
-                    subModel: cache.subModel,
-                    isEffect: cache.isEffect
-                })
-                cache.chatId = chat.id
-                if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
-            } else app.redis.del(`chat_${userId}`)
-        })
-        return chat
+
+            const output = new PassThrough()
+            res.on('data', (buff: Buffer) => {
+                const obj = $.json<ChatResponse>(buff.toString())
+                if (obj && obj.content) {
+                    cache.content += obj.content
+                    cache.subModel = obj.model
+                    output.write(JSON.stringify(cache))
+                }
+            })
+            res.on('error', e => {
+                cache.content += e.message
+                cache.isEffect = false
+            })
+            res.on('end', () => {
+                // reduce user chat chance
+                if (user.chatChanceFree > 0) user.chatChanceFree--
+                else if (user.chatChance > 0) user.chatChance--
+                user.save()
+            })
+            res.on('close', async () => {
+                // save user chat
+                if (input)
+                    await ctx.model.Chat.create({
+                        dialogId,
+                        role: USER,
+                        content: input,
+                        model: cache.model,
+                        subModel: cache.subModel,
+                        isEffect: cache.isEffect
+                    })
+                // save assistant chat
+                if (cache.content) {
+                    const chat = await ctx.model.Chat.create({
+                        dialogId,
+                        role: ASSISTANT,
+                        content: cache.content,
+                        model: cache.model,
+                        subModel: cache.subModel,
+                        isEffect: cache.isEffect
+                    })
+                    cache.chatId = chat.id
+                }
+                output.end(JSON.stringify(cache))
+            })
+
+            return output as Readable
+        } else {
+            // set chat stream cache, should after chat stream started
+            const cache: ChatStreamCache = {
+                chatId: 0,
+                dialogId,
+                resourceId,
+                content: '',
+                model: PROVIDER,
+                subModel: MODEL,
+                time: Date.now(),
+                isEffect
+            }
+            if (isEffect) await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+
+            // save user prompt
+            const chat = await ctx.model.Chat.create({
+                dialogId,
+                role: USER,
+                content: input,
+                model: PROVIDER,
+                subModel: MODEL,
+                isEffect
+            })
+
+            res.on('data', (buff: Buffer) => {
+                const obj = $.json<ChatResponse>(buff.toString())
+                if (obj) {
+                    cache.content += obj.content
+                    cache.subModel = obj.model
+                    if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                }
+            })
+            res.on('error', e => {
+                cache.content += e.message
+                cache.isEffect = false
+                chat.isEffect = false
+                chat.save()
+            })
+            res.on('end', () => {
+                // reduce user chat chance
+                if (user.chatChanceFree > 0) user.chatChanceFree--
+                else if (user.chatChance > 0) user.chatChance--
+                user.save()
+            })
+            res.on('close', async () => {
+                // save assistant response
+                if (cache.content) {
+                    const chat = await ctx.model.Chat.create({
+                        dialogId: cache.dialogId,
+                        role: ASSISTANT,
+                        content: cache.content,
+                        model: cache.model,
+                        subModel: cache.subModel,
+                        isEffect: cache.isEffect
+                    })
+                    cache.chatId = chat.id
+                    if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                } else app.redis.del(`chat_${userId}`)
+            })
+
+            return chat
+        }
     }
 
     // get current chat stream by userId

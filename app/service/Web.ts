@@ -84,20 +84,20 @@ export default class Web extends Service {
         const token = md5(`${randomUUID()}${Date.now()}`).substring(0, 24)
         const code = await this.ctx.service.weChat.getQRCode('pages/index/index', `token=${token}`)
         if (!code) throw new Error('Fail to generate QR Code')
-        await this.app.redis.setex(`wx_app_qrcode_${token}`, QRCODE_EXPIRE, JSON.stringify(null))
         return { token, code, time: Date.now() }
     }
 
     // set QR code token
-    async setQRCodeToken(qrToken: string, id: number, token: string) {
+    async setQRCodeToken(qrToken: string, id: number, token: string | null = null) {
         const cache: WXAppQRCodeCache = { id, token }
         await this.app.redis.setex(`wx_app_qrcode_${qrToken}`, QRCODE_EXPIRE, JSON.stringify(cache))
     }
 
     // verify QR Code token
     async verifyQRCode(token: string) {
-        const cache = await this.app.redis.getex(`wx_app_qrcode_${token}`)
-        return $.json<WXAppQRCodeCache>(cache)
+        const res = $.json<WXAppQRCodeCache>(await this.app.redis.getex(`wx_app_qrcode_${token}`))
+        if (res && res.token) await this.app.redis.del(`wx_app_qrcode_${token}`)
+        return res
     }
 
     // login

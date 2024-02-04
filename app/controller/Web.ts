@@ -27,6 +27,7 @@ import $ from '@util/util'
 import { Readable } from 'stream'
 import { basename } from 'path'
 import { ChatRoleEnum } from 'uniai'
+import shield from '@middleware/shield'
 
 @HTTPController({ path: '/web' })
 export default class Web {
@@ -83,7 +84,7 @@ export default class Web {
         ctx.service.res.success('Success to WeChat login', data)
     }
 
-    @Middleware()
+    @Middleware(shield(10))
     @HTTPMethod({ path: '/get-qr-code', method: HTTPMethodEnum.GET })
     async getQRCode(@Context() ctx: UserContext) {
         const res: getQRCodeResponse = await ctx.service.web.getQRCode()

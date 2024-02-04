@@ -1,12 +1,12 @@
 /** @format */
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
-import { UserCache } from '@interface/Cache'
-import { Option } from '@interface/controller/Web'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
 import { ConfigVIP, LevelModel } from '@interface/Config'
+import { UserCache } from '@interface/Cache'
+import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
 import ai from '@util/ai'
 
@@ -47,18 +47,6 @@ export default class User extends Service {
         // check banned or invalid user
         if (!user) throw new Error('Can not find user to sign in')
         if (user.isDel || !user.isEffect) throw new Error('User is invalid')
-
-        // add free chat dialog
-        if (!(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: null } })))
-            await ctx.service.weChat.addDialog(user.id)
-
-        // add default resource dialog
-        const id = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
-        if (
-            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: id } })) &&
-            (await ctx.model.Resource.count({ where: { id } }))
-        )
-            await ctx.service.weChat.addDialog(user.id, id)
 
         // set default user name
         if (!user.name) user.name = `${await this.getConfig('DEFAULT_USERNAME')} NO.${user.id}`

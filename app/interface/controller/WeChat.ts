@@ -6,6 +6,7 @@ import { ChatModel, ChatRoleEnum, ModelProvider } from 'uniai'
 export interface ChatRequest {
     input: string
     dialogId?: number
+    sse?: boolean
 }
 
 export interface ChatResponse {
@@ -26,8 +27,10 @@ export interface ChatListRequest {
     pageSize?: number
 }
 
-export interface SignInRequest {
-    code: string
+export interface LoginRequest {
+    phone?: string
+    code?: string
+    password?: string
     fid?: number
     token?: string
 }
