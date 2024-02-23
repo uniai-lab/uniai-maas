@@ -121,7 +121,9 @@ export default class User extends Service {
         const vips = await this.getConfig<ConfigVIP[]>('USER_VIP')
         const images = await this.getConfig<string[]>('USER_MENU_VIP_ICON')
 
-        if (!vips[level]) throw new Error('User level is invalid')
+        if (level < 0) level = 0
+        if (level >= vips.length) level = vips.length - 1
+
         return vips[level].benefits.map((v, i) => {
             v.image = images[i]
             return v
