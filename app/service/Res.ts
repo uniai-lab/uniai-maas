@@ -10,7 +10,7 @@ import $ from '@util/util'
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Res extends Service {
     // success response format
-    success(msg: string, data: string | object | Readable | null = null) {
+    success(msg: string, data: string | object | number | Readable | null = null) {
         const { ctx } = this
         const res: StandardResponse = { status: 1, msg: ctx.__(msg), data }
         if (data instanceof Readable) {

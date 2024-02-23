@@ -3,10 +3,10 @@
 
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { PayType } from '@interface/Enum'
+import { WXNotifyRequest, WXPaymentResult } from '@interface/controller/Pay'
 import { Service } from 'egg'
 import WxPay from 'wechatpay-node-v3'
-import { Inative } from 'wechatpay-node-v3/dist/lib/interface'
-const { WX_PAY_KEY, WX_PAY_CERT, WX_APP_ID, WX_MCH_ID } = process.env
+const { WX_PAY_KEY, WX_PAY_CERT, WX_APP_ID, WX_MCH_ID, WX_PAY_PRIVATE } = process.env
 
 const wx = new WxPay({
     appid: WX_APP_ID,
@@ -17,19 +17,87 @@ const wx = new WxPay({
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Pay extends Service {
-    // success response format
-    async create(id: number, type: PayType) {
+    // list shop items
+    async list() {
+        return await this.ctx.model.PayItem.findAll({
+            attributes: ['id', 'title', 'description', 'price'],
+            where: { isEffect: true, isDel: false }
+        })
+    }
+
+    // payment callback notify
+    async callback(type: PayType, result: WXNotifyRequest) {
+        const { ctx } = this
         if (type === PayType.WeChat) {
-            console.log(id)
-            const params: Inative = {
-                description: '测试支付',
-                out_trade_no: '11011011',
-                notify_url: 'https://api.test.uniai.cas-ll.cn/pay/wx',
-                amount: { total: 1 }
+            // success
+            if (result.event_type === 'TRANSACTION.SUCCESS') {
+                // decrypt transaction detail
+                const { ciphertext, associated_data, nonce } = result.resource
+                const res: WXPaymentResult = wx.decipher_gcm(ciphertext, associated_data, nonce, WX_PAY_PRIVATE)
+                // write to db
+                const payment = await ctx.model.Payment.findOne({ where: { transactionId: res.out_trade_no } })
+                if (!payment) throw new Error('Payment not found')
+                payment.status = 1
+                payment.result = res
+                payment.currency = res.amount.currency
+                payment.type = res.trade_type
+                return await payment.save()
             }
-            const res = await wx.transactions_native(params)
+        } else throw new Error('Pay type not support')
+    }
+
+    // check payment
+    async check(id: number, userId: number) {
+        // find payment by id
+        const payment = await this.ctx.model.Payment.findOne({ where: { id, userId } })
+        if (!payment) throw new Error('Payment not found')
+        if (payment.status === 1) return payment
+
+        // check pay status from provider
+        if (payment.platform === PayType.WeChat) {
+            const transaction = await wx.query({ out_trade_no: payment.transactionId })
+            const res: WXPaymentResult = transaction.data
+            // success, write to db
+            if (res.trade_state === 'SUCCESS') {
+                payment.status = 1
+                payment.result = res
+                payment.currency = res.amount.currency
+                payment.type = res.trade_type
+                await payment.save()
+            }
+        } else throw new Error('Pay type not support')
+
+        return payment
+    }
+
+    // create payment
+    async create(id: number, type: PayType, userId: number = 0) {
+        const { ctx } = this
+        if (type === PayType.WeChat) {
+            const item = await ctx.model.PayItem.findByPk(id, { attributes: ['id', 'title', 'price'] })
+            if (!item) throw new Error('Can not find item')
+
+            const transactionId = `${Date.now()}${Math.floor(Math.random() * 10000)}`.substring(0, 32)
+
+            // generate a transaction, amount must be int, *100
+            const res = await wx.transactions_native({
+                description: item.title,
+                out_trade_no: transactionId,
+                notify_url: 'https://api.test.uniai.cas-ll.cn/pay/callback',
+                amount: { total: parseInt(item.price.mul(100).toFixed(0)) }
+            })
             if (res.error) throw new Error(res.error)
-            return res
+
+            return await ctx.model.Payment.create({
+                userId,
+                itemId: item.id,
+                platform: type,
+                type: 'naive',
+                amount: item.price,
+                currency: 'CNY',
+                transactionId,
+                detail: res.data
+            })
         } else throw new Error('Pay type not support')
     }
 }

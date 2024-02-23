@@ -6,6 +6,7 @@ import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import captcha from '@middleware/captcha'
+import shield from '@middleware/shield'
 import {
     SMSCodeRequest,
     SMSCodeResponse,
@@ -27,7 +28,6 @@ import $ from '@util/util'
 import { Readable } from 'stream'
 import { basename } from 'path'
 import { ChatRoleEnum } from 'uniai'
-import shield from '@middleware/shield'
 
 @HTTPController({ path: '/web' })
 export default class Web {
@@ -116,6 +116,7 @@ export default class Web {
             phone: user.phone,
             chance: {
                 level: user.level,
+                levelExpiredAt: user.levelExpiredAt.getTime(),
                 uploadSize: user.uploadSize,
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
@@ -146,6 +147,7 @@ export default class Web {
             phone: user.phone,
             chance: {
                 level: user.level,
+                levelExpiredAt: user.levelExpiredAt,
                 uploadSize: user.uploadSize,
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
@@ -175,6 +177,7 @@ export default class Web {
             phone: user.phone,
             chance: {
                 level: user.level,
+                levelExpiredAt: user.levelExpiredAt.getTime(),
                 uploadSize: user.uploadSize,
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree

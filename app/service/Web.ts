@@ -6,27 +6,33 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { randomUUID } from 'crypto'
 import md5 from 'md5'
-import { WXAppQRCodeCache } from '@interface/Cache'
+import {
+    ChatMessage,
+    ChatModel,
+    ChatRoleEnum,
+    ChatModelProvider,
+    EmbedModelProvider,
+    ImagineModelProvider,
+    ImagineModel
+} from 'uniai'
+import { ConfigMenuV2, ConfigVIP } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/WeChat'
+import { WXAppQRCodeCache } from '@interface/Cache'
 import ali from '@util/aliyun'
 import $ from '@util/util'
-import { ChatMessage, ChatModel, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
-import { ConfigMenuV2, ConfigVIP } from '@interface/Config'
 
-const LIMIT_SMS_WAIT = 1 * 60 * 1000
-const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
-const LIMIT_SMS_COUNT = 5
+const SMS_WAIT = 1 * 60 * 1000
+const SMS_EXPIRE = 5 * 60 * 1000
+const SMS_COUNT = 5
 const CHAT_PAGE_SIZE = 10
 const CHAT_MAX_PAGE = 20
 const PAGE_LIMIT = 6
-
-const QRCODE_EXPIRE = 30 // 30 seconds
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
     // get config value by key
     async getConfig<T = string>(key: string) {
-        return await this.ctx.service.uniAI.getConfig<T>(key)
+        return await this.service.uniAI.getConfig<T>(key)
     }
 
     // get all user needed configs
@@ -68,29 +74,22 @@ export default class Web extends Service {
     async sendSMSCode(phone: string) {
         const { ctx } = this
         const count = await ctx.model.PhoneCode.count({
-            where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_WAIT) } }
+            where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - SMS_WAIT) } }
         })
         if (count) throw new Error('Too many times request SMS code')
 
         const code = Math.floor(Math.random() * 900000) + 100000
         const data = await ali.sendCode(phone, code)
-        console.log(data)
-        const expire = Math.floor(Date.now() / 1000 + LIMIT_SMS_EXPIRE)
+        const expire = Math.floor(Date.now() / 1000 + SMS_EXPIRE)
         return await ctx.model.PhoneCode.create({ phone, code, data, expire })
     }
 
     // generate WeChat mini app QR code
     async getQRCode() {
         const token = md5(`${randomUUID()}${Date.now()}`).substring(0, 24)
-        const code = await this.ctx.service.weChat.getQRCode('pages/index/index', `token=${token}`)
+        const code = await this.service.weChat.getQRCode('pages/index/index', `token=${token}`)
         if (!code) throw new Error('Fail to generate QR Code')
         return { token, code, time: Date.now() }
-    }
-
-    // set QR code token
-    async setQRCodeToken(qrToken: string, id: number, token: string | null = null) {
-        const cache: WXAppQRCodeCache = { id, token }
-        await this.app.redis.setex(`wx_app_qrcode_${qrToken}`, QRCODE_EXPIRE, JSON.stringify(cache))
     }
 
     // verify QR Code token
@@ -113,20 +112,25 @@ export default class Web extends Service {
         // code login
         else if (code) {
             const res = await ctx.model.PhoneCode.findOne({
-                where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_EXPIRE) } },
+                where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - SMS_EXPIRE) } },
                 order: [['id', 'DESC']]
             })
             if (!res) throw new Error('Can not find the phone number')
             await res.increment('count')
 
             // validate code
-            if (res.count >= LIMIT_SMS_COUNT) throw new Error('Try too many times')
+            if (res.count >= SMS_COUNT) throw new Error('Try too many times')
             if (res.code !== code) throw new Error('Code is invalid')
 
             // find user and sign in
             const { id } =
                 (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
                 (await ctx.service.user.create(phone, null, fid))
+
+            // add free chat dialog if not existed
+            if (!(await ctx.model.Dialog.count({ where: { userId: id, resourceId: null } })))
+                await ctx.service.weChat.addDialog(id)
+
             return await ctx.service.user.signIn(id)
         } else throw new Error('Need phone code or password')
     }
@@ -154,6 +158,22 @@ export default class Web extends Service {
         return res.reverse()
     }
 
+    async selectModel(input: string) {
+        const prompt: ChatMessage[] = [
+            { role: ChatRoleEnum.USER, content: `${input}\n${await this.getConfig('PROMPT_MODEL_SELECT')}` }
+        ]
+        const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
+        if (res instanceof Readable) throw new Error('Chat response is stream')
+        console.log(res)
+        return parseInt(res.content)
+    }
+    async translate(input: string) {
+        const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: 'Translate to English:' + input }]
+        const res = await this.ctx.service.uniAI.chat(prompt)
+        if (res instanceof Readable) throw new Error('Chat response is stream')
+        return res.content
+    }
+
     // sse chat
     async chat(
         userId: number,
@@ -161,8 +181,53 @@ export default class Web extends Service {
         prompt: string = '',
         assistant: string = '',
         dialogId: number = 0,
-        model: ModelProvider = ModelProvider.IFlyTek,
-        subModel: ChatModel = IFlyTekChatModel.SPARK_V3
+        provider: ChatModelProvider = ChatModelProvider.IFlyTek,
+        model: ChatModel = ChatModel.SPARK_V3
+    ) {
+        const { ctx } = this
+
+        const output = new PassThrough()
+        const data: ChatResponse = {
+            chatId: 0,
+            role: ChatRoleEnum.ASSISTANT,
+            content: '',
+            dialogId,
+            resourceId: 0,
+            model: provider,
+            subModel: model,
+            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+            isEffect: true
+        }
+
+        data.content = ctx.__('selecting model for user')
+        output.write(JSON.stringify(data))
+
+        this.selectModel(input)
+            .then(select => {
+                switch (select) {
+                    case 1:
+                        return this.doChat(userId, dialogId, input, prompt, assistant, provider, model, data, output)
+                    case 2:
+                        return this.doImagine(userId, dialogId, input, data, output)
+                    default:
+                        return this.doChat(userId, dialogId, input, prompt, assistant, provider, model, data, output)
+                }
+            })
+            .catch((e: Error) => output.destroy(e))
+
+        return output as Readable
+    }
+
+    async doChat(
+        userId: number,
+        dialogId: number,
+        input: string,
+        prompt: string = '',
+        assistant: string = '',
+        provider: ChatModelProvider = ChatModelProvider.IFlyTek,
+        model: ChatModel = ChatModel.SPARK_V3,
+        data: ChatResponse,
+        output: PassThrough
     ) {
         const { ctx } = this
 
@@ -171,7 +236,7 @@ export default class Web extends Service {
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
-        // dialogId ? dialog chat : free chat
+        // find dialog (default dialog) and chat history
         const dialog = await ctx.model.Dialog.findOne({
             where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
             attributes: ['id', 'resourceId'],
@@ -183,10 +248,11 @@ export default class Web extends Service {
                 where: { isDel: false, isEffect: true }
             }
         })
+
         if (!dialog) throw new Error('Dialog is not available')
         dialog.chats.reverse()
         dialogId = dialog.id
-
+        const resourceId = dialog.resourceId
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
@@ -196,14 +262,13 @@ export default class Web extends Service {
         if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
         // add reference resource
-        const resourceId = dialog.resourceId
         if (resourceId) {
             let content = ctx.__('document content start')
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
                 [{ role: USER, content: input }],
                 resourceId,
-                ModelProvider.Other,
+                EmbedModelProvider.Other,
                 PAGE_LIMIT
             )
             // add resource to prompt
@@ -219,22 +284,11 @@ export default class Web extends Service {
         prompts.push({ role: USER, content: input })
 
         // start chat stream
-        const res = await ctx.service.uniAI.chat(prompts, true, model, subModel)
+        const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
-        // filter sensitive
-        const data: ChatResponse = {
-            chatId: 0,
-            role: ASSISTANT,
-            content: '',
-            dialogId,
-            resourceId,
-            model,
-            subModel,
-            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
-            isEffect: true
-        }
-        const output = new PassThrough()
+        data.content = ''
+        output.write(JSON.stringify(data))
 
         res.on('data', (buff: Buffer) => {
             const obj = $.json<ChatResponse>(buff.toString())
@@ -272,6 +326,91 @@ export default class Web extends Service {
             output.end(JSON.stringify(data))
         })
         res.on('error', e => output.destroy(e))
-        return output as Readable
+    }
+
+    async doImagine(userId: number, dialogId: number, input: string, data: ChatResponse, output: PassThrough) {
+        const { ctx } = this
+        data.model = ImagineModelProvider.MidJourney
+        data.subModel = ImagineModel.MJ
+        data.content = ctx.__('system detect imagine task')
+        output.write(JSON.stringify(data))
+
+        // check user chat chance
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
+        if (!user) throw new Error('Fail to find user')
+        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
+
+        // find dialog (default dialog) and chat history
+        const dialog = await ctx.model.Dialog.findOne({
+            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            attributes: ['id']
+        })
+        if (!dialog) throw new Error('Dialog is not available')
+        dialogId = dialog.id
+
+        // translate to english
+        // imagine
+        const res = await ctx.service.uniAI.imagine(
+            await this.translate(input),
+            '',
+            1,
+            1024,
+            1024,
+            data.model,
+            data.subModel as ImagineModel
+        )
+        // watch task
+        while (true) {
+            const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
+            if (!task[0]) throw new Error('Task not found')
+            if (task[0].fail) throw new Error(task[0].fail)
+
+            console.log(task)
+
+            const img = task[0].imgs[0]
+            const url = img
+                ? this.service.weChat.url(await $.putOSS(img), Date.now() + '.png')
+                : 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
+            const markdown = `<img src="${url}" width="${img ? '400px' : '50px'}"/>`
+            data.content = `${markdown}\n${ctx.__('imagining')}${task[0].progress}%`
+            data.subModel = task[0].model
+            output.write(JSON.stringify(data))
+
+            const progress = task[0].progress
+
+            if (isNaN(progress)) throw new Error('Can not get task progress')
+
+            if (progress === 100) {
+                // save user chat
+                if (input)
+                    await ctx.model.Chat.create({
+                        dialogId,
+                        role: ChatRoleEnum.USER,
+                        content: input,
+                        model: data.model,
+                        subModel: data.subModel
+                    })
+                // save assistant chat
+                if (data.content) {
+                    data.content = markdown
+                    const chat = await ctx.model.Chat.create({
+                        dialogId,
+                        role: ChatRoleEnum.ASSISTANT,
+                        content: data.content,
+                        model: data.model,
+                        subModel: data.subModel
+                    })
+                    data.chatId = chat.id
+                }
+                // reduce user chance
+                if (user.chatChanceFree > 0) user.chatChanceFree--
+                else if (user.chatChance > 0) user.chatChance--
+                await user.save()
+
+                output.end(JSON.stringify(data))
+                break
+            }
+            if (!progress) await $.sleep(3000)
+        }
     }
 }

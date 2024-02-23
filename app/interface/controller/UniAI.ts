@@ -1,11 +1,20 @@
 /** @format */
 
-import { ImgModelEnum, AuditProvider } from '@interface/Enum'
-import { ChatMessage, ChatModel, ModelProvider } from 'uniai'
+import { AuditProvider } from '@interface/Enum'
+import {
+    ChatMessage,
+    ChatModel,
+    ChatModelProvider,
+    EmbedModel,
+    EmbedModelProvider,
+    ImagineModel,
+    ImagineModelProvider,
+    ModelProvider
+} from 'uniai'
 
 export interface ChatRequest {
     prompts: ChatMessage[]
-    provider?: ModelProvider
+    provider?: ChatModelProvider
     model?: ChatModel
     stream?: boolean
     top?: number
@@ -15,7 +24,8 @@ export interface ChatRequest {
 
 export interface QueryResourceRequest {
     prompts: ChatMessage[]
-    model?: ModelProvider
+    provider?: EmbedModelProvider
+    model?: EmbedModel
     resourceId?: number
     maxPage?: number
 }
@@ -28,7 +38,8 @@ export interface EmbeddingRequest {
     fileSize?: number
     fileExt?: string
     typeId?: number
-    model?: ModelProvider
+    provider?: EmbedModelProvider
+    model?: EmbedModel
 }
 
 export interface UploadRequest {
@@ -51,22 +62,20 @@ export interface ImagineRequest {
     width?: number
     height?: number
     num?: number
-    model?: ImgModelEnum
+    provider?: ImagineModelProvider
+    model?: ImagineModel
 }
 
 export interface TaskRequest {
-    taskId: string
-    model?: ImgModelEnum
+    taskId?: string
+    provider?: ImagineModelProvider
 }
 
 export interface ImgChangeRequest {
     taskId: string
     action: string
-    model?: ImgModelEnum
+    provider?: ImagineModelProvider.MidJourney
     index?: number
-}
-export interface QueueRequest {
-    model?: ImgModelEnum
 }
 
 export interface QueryResourceResponse {
@@ -80,22 +89,7 @@ export interface EmbeddingResponse {
     id: number
     page: number
     tokens: number
-    model: ModelProvider
-}
-
-export interface ImagineResponse {
-    images: string[]
-    info: string
-    taskId: string
-    model: ImgModelEnum
-}
-
-export interface TaskResponse {
-    id: string
-    progress: string
-    image: string | null
-    info: string
-    failReason: string | null
+    model: EmbedModel
 }
 
 export interface ResourcePage {

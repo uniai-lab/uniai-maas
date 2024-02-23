@@ -12,6 +12,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { Payment } from './Payment'
+import Decimal from 'decimal.js'
 
 @Table
 export class PayItem extends Model {
@@ -25,12 +26,21 @@ export class PayItem extends Model {
     title: string
 
     @AllowNull(false)
-    @Column(DataType.TEXT)
-    description: string
+    @Column(DataType.JSON)
+    description: string[]
 
     @AllowNull(false)
-    @Column(DataType.DECIMAL)
-    price: number
+    @Default(0.0)
+    @Column({
+        type: DataType.DECIMAL(10, 2),
+        get() {
+            return new Decimal(this.getDataValue('price'))
+        },
+        set(v: Decimal) {
+            this.setDataValue('price', v.toString())
+        }
+    })
+    price: Decimal
 
     @AllowNull(false)
     @Default(false)

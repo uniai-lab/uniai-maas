@@ -9,6 +9,7 @@ import ExportCaptcha from '../../../app/middleware/captcha';
 import ExportErrorHandler from '../../../app/middleware/errorHandler';
 import ExportLog from '../../../app/middleware/log';
 import ExportNotFound from '../../../app/middleware/notFound';
+import ExportShield from '../../../app/middleware/shield';
 import ExportTransaction from '../../../app/middleware/transaction';
 
 declare module 'egg' {
@@ -19,6 +20,7 @@ declare module 'egg' {
     errorHandler: typeof ExportErrorHandler;
     log: typeof ExportLog;
     notFound: typeof ExportNotFound;
+    shield: typeof ExportShield;
     transaction: typeof ExportTransaction;
   }
 }

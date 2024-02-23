@@ -25,8 +25,8 @@ export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
-            // await app.model.Config.truncate({ force: true })
-            // await syncDatabase(app) // init database struct and data
+            await app.model.Config.truncate({ force: true })
+            await syncDatabase(app) // init database struct and data
             await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
         }
@@ -88,6 +88,7 @@ async function hookUserSave(app: Application) {
         const cache: UserCache = {
             ...value,
             ...user.dataValues,
+            levelExpiredAt: user.levelExpiredAt?.getTime() || value?.levelExpiredAt || 0,
             tokenTime: user.tokenTime?.getTime() || value?.tokenTime || 0,
             freeChanceUpdateAt: user.freeChanceUpdateAt?.getTime() || value?.freeChanceUpdateAt || 0
         }

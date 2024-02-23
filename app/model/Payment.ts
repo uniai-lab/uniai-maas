@@ -10,12 +10,25 @@ import {
     BelongsTo,
     AllowNull,
     AutoIncrement,
-    Default
+    Default,
+    Unique
 } from 'sequelize-typescript'
+import { IndexesOptions } from 'sequelize'
+import Decimal from 'decimal.js'
+import { PayType } from '@interface/Enum'
 import { User } from './User'
 import { PayItem } from './PayItem'
 
-@Table
+const indexes: IndexesOptions[] = [
+    { fields: ['user_id'] },
+    { fields: ['item_id'] },
+    { fields: ['platform'] },
+    { fields: ['type'] },
+    { fields: ['currency'] },
+    { fields: ['status'] }
+]
+
+@Table({ indexes })
 export class Payment extends Model {
     @PrimaryKey
     @AutoIncrement
@@ -35,7 +48,7 @@ export class Payment extends Model {
     @AllowNull(false)
     @Default('')
     @Column(DataType.STRING)
-    platform: string
+    platform: PayType
 
     @AllowNull(false)
     @Default('')
@@ -44,26 +57,37 @@ export class Payment extends Model {
 
     @AllowNull(false)
     @Default(0.0)
-    @Column(DataType.DECIMAL(10, 2))
-    amount: number
+    @Column({
+        type: DataType.DECIMAL(10, 2),
+        get() {
+            return new Decimal(this.getDataValue('amount'))
+        },
+        set(v: Decimal) {
+            this.setDataValue('amount', v.toString())
+        }
+    })
+    amount: Decimal
 
     @AllowNull(false)
     @Default('')
     @Column(DataType.STRING)
     currency: string
 
+    @Unique
     @AllowNull(false)
-    @Default('')
     @Column(DataType.STRING)
     transactionId: string
 
     @AllowNull(false)
-    @Default('')
-    @Column(DataType.STRING)
-    status: string
+    @Default(0)
+    @Column(DataType.INTEGER)
+    status: number
 
     @Column(DataType.JSON)
     detail: object | null
+
+    @Column(DataType.JSON)
+    result: object | null
 
     @Column(DataType.TEXT)
     description: string | null

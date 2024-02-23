@@ -8,7 +8,6 @@ import { ConfigVIP, LevelModel } from '@interface/Config'
 import { UserCache } from '@interface/Cache'
 import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
-import ai from '@util/ai'
 
 const FREE_SPLIT_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
 
@@ -16,7 +15,7 @@ const FREE_SPLIT_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
 export default class User extends Service {
     // get config value by key
     async getConfig<T = string>(key: string) {
-        return await this.ctx.service.uniAI.getConfig<T>(key)
+        return await this.service.uniAI.getConfig<T>(key)
     }
 
     // create user by phone, wx openid
@@ -102,9 +101,19 @@ export default class User extends Service {
         const cache: UserCache = {
             ...user.dataValues,
             tokenTime: user.tokenTime.getTime(),
-            freeChanceUpdateAt: user.freeChanceUpdateAt.getTime()
+            freeChanceUpdateAt: user.freeChanceUpdateAt.getTime(),
+            levelExpiredAt: user.levelExpiredAt.getTime()
         }
         await app.redis.set(`user_${id}`, JSON.stringify(cache))
+    }
+
+    // update user level
+    async updateLevel(id: number, level: number) {
+        const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'level', 'levelExpiredAt'] })
+        if (!user) throw new Error('Can not find the user')
+        user.level = level
+        user.levelExpiredAt = $.nextMonthSameTime()
+        return user.save()
     }
 
     // get user benefits by level
@@ -124,7 +133,7 @@ export default class User extends Service {
         const res = await this.getConfig<LevelModel>('LEVEL_MODEL')
 
         const disable = true
-        const models = ai.list()
+        const models = await this.service.uniAI.getModels()
         return models
             .map<Option>(v => ({
                 value: v.value,

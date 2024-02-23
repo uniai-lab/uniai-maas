@@ -47,5 +47,8 @@
     "Start Topic": "==============================",
     "Invalid user access": "用户登录权限失效",
     "Invalid admin access": "管理员权限非法",
-    "Can not find user cache": "用户未登录"
+    "Can not find user cache": "用户未登录",
+    "system detect imagine task": "模型智能识别：用户生成图片",
+    "selecting model for user": "系统正在进行AI模型智能选择...",
+    "imagining": "生成图片中："
 }

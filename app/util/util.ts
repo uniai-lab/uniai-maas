@@ -397,8 +397,10 @@ export default {
      * @param file - The path to the file.
      * @returns The base64 encoded string.
      */
-    file2base64(file: string) {
-        return readFileSync(file).toString('base64')
+    file2base64(file: string, mime: boolean = false) {
+        const base64 = readFileSync(file).toString('base64')
+        if (mime) return 'data:image/png;base64,' + base64
+        else return base64
     },
 
     /**
@@ -442,18 +444,47 @@ export default {
      * @param allowMime - Optional flag to allow MIME types as part of the base64 string. Defaults to `false`.
      * @returns `true` if the string is a valid base64 encoded value, otherwise `false`.
      */
-    isBase64(text: string, allowMime: boolean = false) {
+    isBase64(text: string, allowMime: boolean = false): boolean {
         return isBase64(text, { allowMime })
     },
 
-    async getQRCode(text: string) {
+    /**
+     * Generates a QR code as a data URL from the provided text.
+     *
+     * @param text - The text to encode in the QR code.
+     * @returns A promise that resolves to the data URL of the QR code.
+     */
+    async getQRCode(text: string): Promise<string> {
         return await QRCode.toDataURL(text)
     },
 
+    /**
+     * Returns the date of the same time in the next month.
+     *
+     * @param date - The date from which to calculate the next month's date. Defaults to the current date.
+     * @returns A new Date object representing the same time in the next month.
+     */
+    nextMonthSameTime(date: Date = new Date()): Date {
+        const year = date.getFullYear()
+        const month = date.getMonth()
+
+        return new Date(
+            month === 11 ? year + 1 : year,
+            month === 11 ? 0 : month + 1,
+            date.getDate(),
+            date.getHours(),
+            date.getMinutes(),
+            date.getSeconds(),
+            date.getMilliseconds()
+        )
+    },
     log(data: any) {
         return logger.silly(data)
     },
     error(e: Error) {
         return logger.error(e)
+    },
+    sleep(time: number) {
+        return new Promise(resolve => setTimeout(resolve, time))
     }
 }

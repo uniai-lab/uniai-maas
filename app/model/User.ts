@@ -75,6 +75,11 @@ export class User extends Model {
     level: number
 
     @AllowNull(false)
+    @Default(new Date(0))
+    @Column(DataType.DATE)
+    levelExpiredAt: Date
+
+    @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
     uploadSize: number

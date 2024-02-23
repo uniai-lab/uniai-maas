@@ -5,7 +5,7 @@
  * DIM: 1024
  */
 
-import { WhereOptions } from 'sequelize'
+import { IndexesOptions, WhereOptions } from 'sequelize'
 import {
     Table,
     Column,
@@ -22,7 +22,9 @@ import { Resource } from './Resource'
 
 const EMBED_DIM = 1024
 
-@Table({ modelName: 'text2vec_embedding' })
+const indexes: IndexesOptions[] = [{ fields: ['resource_id'] }]
+
+@Table({ modelName: 'text2vec_embedding', indexes })
 export class Embedding2 extends Model {
     /** Unique identifier for the embedding. */
     @PrimaryKey

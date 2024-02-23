@@ -98,7 +98,7 @@ export default class WeChat {
 
         const user = await ctx.service.weChat.login(code, phone, fid)
         // if web use QRCode login
-        if (token) await ctx.service.web.setQRCodeToken(token, user.id, user.token)
+        if (token) await ctx.service.weChat.setQRCodeToken(token, user.id, user.token)
 
         const data: UserinfoResponse = {
             id: user.id,
@@ -110,6 +110,7 @@ export default class WeChat {
             wxOpenId: user.wxOpenId,
             chance: {
                 level: user.level,
+                levelExpiredAt: user.levelExpiredAt.getTime(),
                 uploadSize: user.uploadSize,
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
@@ -188,6 +189,7 @@ export default class WeChat {
             wxOpenId: user.wxOpenId,
             chance: {
                 level: user.level,
+                levelExpiredAt: user.levelExpiredAt,
                 uploadSize: user.uploadSize,
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
@@ -333,6 +335,7 @@ export default class WeChat {
             wxOpenId: user.wxOpenId,
             chance: {
                 level: user.level,
+                levelExpiredAt: user.levelExpiredAt.getTime(),
                 uploadSize: user.uploadSize,
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree

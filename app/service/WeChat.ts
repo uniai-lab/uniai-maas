@@ -7,7 +7,7 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { statSync } from 'fs'
 import { AuditProvider } from '@interface/Enum'
-import { AdvCache, ChatStreamCache, WXAccessTokenCache } from '@interface/Cache'
+import { AdvCache, ChatStreamCache, WXAccessTokenCache, WXAppQRCodeCache } from '@interface/Cache'
 import {
     WXAccessTokenRequest,
     WXAccessTokenResponse,
@@ -20,7 +20,7 @@ import {
 } from '@interface/controller/WeChat'
 import $ from '@util/util'
 import FormData from 'form-data'
-import { ChatMessage, ChatResponse, ChatRoleEnum, IFlyTekChatModel, ModelProvider } from 'uniai'
+import { ChatMessage, ChatModelProvider, ChatResponse, ChatRoleEnum, EmbedModelProvider, IFlyTekChatModel } from 'uniai'
 import { ChatResponse as WXChatResponse } from '@interface/controller/WeChat'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Config'
 
@@ -31,9 +31,9 @@ const CHAT_MAX_PAGE = 20
 const DIALOG_PAGE_SIZE = 10
 const DIALOG_PAGE_LIMIT = 20
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
-const LIMIT_SMS_EXPIRE = 5 * 60 * 1000
-const LIMIT_SMS_COUNT = 5
-const BASE64_IMG_TYPE = 'data:image/jpeg;base64,'
+const SMS_EXPIRE = 5 * 60 * 1000
+const SMS_COUNT = 5
+const QR_CODE_EXPIRE = 30 // 30 seconds
 
 // WeChat API
 const WX_AUTH_URL = 'https://api.weixin.qq.com/sns/jscode2session'
@@ -43,14 +43,14 @@ const WX_MSG_CHECK_URL = 'https://api.weixin.qq.com/wxa/msg_sec_check' // use PO
 const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use POST
 const WX_QR_CODE_URL = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit'
 const { WX_APP_ID, WX_APP_SECRET } = process.env
-const PROVIDER = ModelProvider.IFlyTek
+const PROVIDER = ChatModelProvider.IFlyTek
 const MODEL = IFlyTekChatModel.SPARK_V3
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
     // get config value by key
     async getConfig<T = string>(key: string) {
-        return await this.ctx.service.uniAI.getConfig<T>(key)
+        return await this.service.uniAI.getConfig<T>(key)
     }
 
     // get all user needed configs
@@ -94,14 +94,14 @@ export default class WeChat extends Service {
         // phone login
         if (phone) {
             const res = await ctx.model.PhoneCode.findOne({
-                where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - LIMIT_SMS_EXPIRE) } },
+                where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - SMS_EXPIRE) } },
                 order: [['id', 'DESC']]
             })
             if (!res) throw new Error('Can not find the phone number')
             await res.increment('count')
 
             // validate code
-            if (res.count >= LIMIT_SMS_COUNT) throw new Error('Try too many times')
+            if (res.count >= SMS_COUNT) throw new Error('Try too many times')
             if (res.code !== code) throw new Error('Code is invalid')
             where.phone = phone
         }
@@ -186,6 +186,11 @@ export default class WeChat extends Service {
     }
     */
 
+    // set QR code token
+    async setQRCodeToken(qrToken: string, id: number, token: string | null = null) {
+        const cache: WXAppQRCodeCache = { id, token }
+        await this.app.redis.setex(`wx_app_qrcode_${qrToken}`, QR_CODE_EXPIRE, JSON.stringify(cache))
+    }
     // list all dialogs
     async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
         const { ctx } = this
@@ -324,7 +329,7 @@ export default class WeChat extends Service {
             let content = ctx.__('document content start')
             // query resource
             const query = [{ role: USER, content: input }]
-            const embedModel = ModelProvider.Other
+            const embedModel = EmbedModelProvider.Other
             const pages = await ctx.service.uniAI.queryResource(query, resourceId, embedModel, PAGE_LIMIT)
             // add resource to prompt
             for (const item of pages) content += `\n${item.content}`
@@ -481,7 +486,7 @@ export default class WeChat extends Service {
 
         // update user
         if (params.name) user.name = params.name
-        if (params.avatar) user.avatar = BASE64_IMG_TYPE + $.file2base64(params.avatar)
+        if (params.avatar) user.avatar = $.file2base64(params.avatar, true)
 
         return await user.save()
     }
@@ -497,7 +502,7 @@ export default class WeChat extends Service {
         let resource = await ctx.service.uniAI.upload(file, userId, typeId)
 
         // embed resource content
-        resource = await ctx.service.uniAI.embedding(ModelProvider.Other, resource.id)
+        resource = (await ctx.service.uniAI.embedding(EmbedModelProvider.Other, resource.id)).resource
 
         // audit resource content
         const { flag } = await ctx.service.uniAI.audit(resource.content)
@@ -622,9 +627,9 @@ export default class WeChat extends Service {
         )
         const json = Buffer.from(base64, 'base64').toString('utf-8')
         const res = $.json<WXGetQRCodeResponse>(json)
-        if (!res) return `${BASE64_IMG_TYPE}${base64}`
+        if (!res) return `data:image/png;base64,${base64}`
         else {
-            console.log(res)
+            console.error(res)
             await this.app.redis.del('WX_ACCESS_TOKEN')
             throw new Error(res.errmsg)
         }

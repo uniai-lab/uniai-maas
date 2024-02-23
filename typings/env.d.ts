@@ -25,6 +25,7 @@ declare global {
             MID_JOURNEY_TOKEN: string
             OTHER_API: string
             GLM_API: string
+            STABILITY_KEY: string
 
             // select a database
             DB_DIALECT: string
@@ -50,6 +51,7 @@ declare global {
             WX_MCH_ID: string
             WX_PAY_KEY: string
             WX_PAY_CERT: string
+            WX_PAY_PRIVATE: string
 
             // minio
             MINIO_ACCESS_KEY: string

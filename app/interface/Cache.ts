@@ -28,6 +28,7 @@ export interface UserCache {
     wxUnionId: string | null
     tokenTime: number
     level: number
+    levelExpiredAt: number
     uploadSize: number
     chatChance: number
     chatChanceFree: number

@@ -6,8 +6,20 @@ import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
 import { extname } from 'path'
 import { AIAuditResponse, AuditResponse, ResourcePage } from '@interface/controller/UniAI'
-import { ChatMessage, ChatModel, ChatResponse, ChatRoleEnum, GLMChatModel, ModelProvider } from 'uniai'
-import { AuditProvider, ImgModelEnum, MJTaskEnum } from '@interface/Enum'
+import AI, {
+    ChatMessage,
+    ChatModel,
+    ChatModelProvider,
+    ChatResponse,
+    ChatRoleEnum,
+    EmbedModelProvider,
+    GLMChatModel,
+    ImagineModel,
+    ImagineModelProvider,
+    MJTaskType,
+    ModelProvider
+} from 'uniai'
+import { AuditProvider } from '@interface/Enum'
 import resourceType from '@data/resourceType'
 import userResourceTab from '@data/userResourceTab'
 
@@ -15,12 +27,38 @@ import { Resource } from '@model/Resource'
 import { PassThrough, Readable } from 'stream'
 import { UserContext } from '@interface/Context'
 
-import gpt from '@util/openai'
 import fly from '@util/fly'
-import sd from '@util/sd'
-import mj from '@util/mj'
 import $ from '@util/util'
-import ai from '@util/ai'
+
+const {
+    OPENAI_API,
+    OPENAI_KEY,
+    GOOGLE_AI_API,
+    GOOGLE_AI_KEY,
+    ZHIPU_AI_KEY,
+    GLM_API,
+    FLY_API_KEY,
+    FLY_API_SECRET,
+    FLY_APP_ID,
+    BAIDU_API_KEY,
+    BAIDU_SECRET_KEY,
+    MOONSHOT_KEY,
+    MID_JOURNEY_API,
+    MID_JOURNEY_TOKEN,
+    STABILITY_KEY
+} = process.env
+
+const ai = new AI({
+    OpenAI: { key: OPENAI_KEY.split(','), proxy: OPENAI_API },
+    Google: { key: GOOGLE_AI_KEY.split(','), proxy: GOOGLE_AI_API },
+    GLM: { key: ZHIPU_AI_KEY.split(','), local: GLM_API },
+    IFlyTek: { apiKey: FLY_API_KEY, apiSecret: FLY_API_SECRET, appId: FLY_APP_ID },
+    Baidu: { apiKey: BAIDU_API_KEY, secretKey: BAIDU_SECRET_KEY },
+    MoonShot: { key: MOONSHOT_KEY.split(',') },
+    Other: { api: GLM_API },
+    MidJourney: { proxy: MID_JOURNEY_API, token: MID_JOURNEY_TOKEN },
+    StabilityAI: { key: STABILITY_KEY }
+})
 
 const MAX_PAGE = 10
 const SAME_DISTANCE = 0.01
@@ -30,9 +68,6 @@ const TOKEN_PAGE_SPLIT_L2 = 1024
 const TOKEN_PAGE_SPLIT_L3 = 512
 const TOKEN_PAGE_TOTAL_L1 = TOKEN_PAGE_SPLIT_L1 * 1
 const TOKEN_PAGE_TOTAL_L2 = TOKEN_PAGE_SPLIT_L2 * 8
-const DEFAULT_IMAGINE_NUM = 1
-const DEFAULT_IMAGINE_WIDTH = 1024
-const DEFAULT_IMAGINE_HEIGHT = 1024
 const DEFAULT_RESOURCE_TYPE = resourceType[0].id
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 
@@ -54,14 +89,14 @@ export default class UniAI extends Service {
     }
 
     async getModels() {
-        return ai.list()
+        return ai.models
     }
 
     // query resource
     async queryResource(
         prompts: ChatMessage[],
         resourceId?: number,
-        model: ModelProvider = ModelProvider.Other,
+        provider: EmbedModelProvider = EmbedModelProvider.Other,
         maxPage: number = MAX_PAGE
     ) {
         const { ctx } = this
@@ -76,23 +111,23 @@ export default class UniAI extends Service {
 
             // check embeddings exist
             let count = 0
-            if (model === ModelProvider.OpenAI) count = await ctx.model.Embedding1.count({ where })
-            else if (model === ModelProvider.Other) count = await ctx.model.Embedding2.count({ where })
+            if (provider === EmbedModelProvider.OpenAI) count = await ctx.model.Embedding1.count({ where })
+            else if (provider === EmbedModelProvider.Other) count = await ctx.model.Embedding2.count({ where })
             else throw new Error('Model provider not support')
 
             // embedding not exist, create embeddings
-            if (!count) await this.embedding(model, resourceId)
+            if (!count) await this.embedding(provider, resourceId)
         }
 
         const pages: ResourcePage[] = []
 
         for (const { content } of prompts) {
-            if (!content || typeof content !== 'string') continue
+            if (typeof content !== 'string' || !content) continue
             const query = content.trim()
-            const data = await ai.embed([query], model)
+            const data = await ai.embedding([query], { provider })
             const embedding = data.embedding[0]
 
-            if (model === ModelProvider.OpenAI) {
+            if (provider === EmbedModelProvider.OpenAI) {
                 const res = await ctx.model.Embedding1.similarFindAll(embedding, maxPage, where)
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
@@ -102,7 +137,7 @@ export default class UniAI extends Service {
                         content: item.content,
                         similar: $.cosine(embedding, item.embedding || [])
                     })
-            } else if (model === ModelProvider.Other) {
+            } else if (provider === ModelProvider.Other) {
                 const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
@@ -122,13 +157,13 @@ export default class UniAI extends Service {
     async chat(
         messages: ChatMessage[],
         stream: boolean = false,
-        provider: ModelProvider = ModelProvider.GLM,
+        provider: ChatModelProvider = ChatModelProvider.OpenAI,
         model?: ChatModel,
         top?: number,
         temperature?: number,
         maxLength?: number
     ) {
-        return ai.chat(messages, provider, model, stream, top, temperature, maxLength)
+        return ai.chat(messages, { provider, model, stream, top, temperature, maxLength })
     }
 
     // concat chat stream chunk
@@ -198,7 +233,7 @@ export default class UniAI extends Service {
 
     // create embedding
     async embedding(
-        model: ModelProvider = ModelProvider.Other,
+        provider: EmbedModelProvider = EmbedModelProvider.Other,
         resourceId?: number,
         content?: string,
         fileName?: string,
@@ -286,8 +321,8 @@ export default class UniAI extends Service {
         resourceId = resource.id
 
         // embedding resource
-        const res = await ai.embed(pages, model)
-        if (model === ModelProvider.OpenAI) {
+        const res = await ai.embedding(pages, { provider })
+        if (provider === EmbedModelProvider.OpenAI) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
                 res.embedding.map((embedding, i) => ({
@@ -298,7 +333,7 @@ export default class UniAI extends Service {
                     tokens: $.countTokens(pages[i])
                 }))
             )
-        } else if (model === ModelProvider.Other) {
+        } else if (provider === EmbedModelProvider.Other) {
             await ctx.model.Embedding2.destroy({ where: { resourceId } })
             resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(
                 res.embedding.map((embedding, i) => ({
@@ -311,41 +346,34 @@ export default class UniAI extends Service {
             )
         } else throw new Error('Embedding model not found')
 
-        return await resource.save()
+        return { resource: await resource.save(), embedding: res }
     }
 
-    imagine(
+    async imagine(
         prompt: string,
-        nPrompt: string = '',
-        num: number = DEFAULT_IMAGINE_NUM,
-        width: number = DEFAULT_IMAGINE_WIDTH,
-        height: number = DEFAULT_IMAGINE_HEIGHT,
-        model: ImgModelEnum = ImgModelEnum.DALLE
+        negativePrompt?: string,
+        num?: number,
+        width?: number,
+        height?: number,
+        provider: ImagineModelProvider = ImagineModelProvider.OpenAI,
+        model?: ImagineModel
     ) {
-        const { SD, DALLE, MJ } = ImgModelEnum
-        if (model === SD) return sd.imagine(prompt, nPrompt, width, height, num)
-        else if (model === DALLE) return gpt.imagine(prompt, nPrompt, width, height, num)
-        else if (model === MJ) return mj.imagine(prompt, nPrompt, width, height)
-        else throw new Error('Image imagine model not found')
+        return await ai.imagine(prompt, { negativePrompt, provider, model, width, height, num })
     }
 
-    task(id: string, model: ImgModelEnum = ImgModelEnum.MJ) {
-        const { SD, MJ } = ImgModelEnum
-        if (model === MJ) return mj.task(id)
-        else if (model === SD) return sd.task()
-        else throw new Error('Image task model not found')
+    async task(id?: string, provider: ImagineModelProvider = ImagineModelProvider.OpenAI) {
+        return await ai.task(provider, id)
     }
 
-    change(id: string, action: string, index?: number, model: ImgModelEnum = ImgModelEnum.MJ) {
-        const { MJ } = ImgModelEnum
-        if (model === MJ) return mj.change(id, action as MJTaskEnum, index)
+    async change(
+        id: string,
+        action: string,
+        index?: number,
+        provider: ImagineModelProvider = ImagineModelProvider.MidJourney
+    ) {
+        if (provider === ImagineModelProvider.MidJourney)
+            return await ai.change(provider, id, action as MJTaskType, index)
         else throw new Error('Image change model not found')
-    }
-
-    queue(model: ImgModelEnum = ImgModelEnum.MJ) {
-        const { MJ } = ImgModelEnum
-        if (model === MJ) return mj.queue()
-        else throw new Error('Image queue model not found')
     }
 
     // check content by AI, iFlyTek, WeChat or mint-filter
@@ -370,7 +398,12 @@ export default class UniAI extends Service {
             const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
 
             try {
-                const result = await ai.chat(message, ModelProvider.GLM, GLMChatModel.GLM_6B, false, 1, 0)
+                const result = await ai.chat(message, {
+                    provider: ModelProvider.GLM,
+                    model: GLMChatModel.GLM_6B,
+                    stream: false,
+                    temperature: 0
+                })
                 const json = $.json<AIAuditResponse>((result as ChatResponse).content)
                 res.flag = json?.safe || false
                 res.data = result
@@ -394,7 +427,7 @@ export default class UniAI extends Service {
     async embedFirstPage(content: string) {
         const page = $.splitPage(content, TOKEN_PAGE_FIRST)
         if (!page.length) throw new Error('Fail to split first page')
-        const { embedding } = await ai.embed([page[0]])
+        const { embedding } = await ai.embedding([page[0]], { provider: EmbedModelProvider.Other })
         if (!embedding.length) throw new Error('Fail to embed first page')
         return embedding[0]
     }

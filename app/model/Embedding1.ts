@@ -5,7 +5,7 @@
  * DIM: 1536
  */
 
-import { WhereOptions } from 'sequelize'
+import { IndexesOptions, WhereOptions } from 'sequelize'
 import {
     Table,
     Column,
@@ -22,7 +22,9 @@ import { Resource } from './Resource'
 
 const EMBED_DIM = 1536
 
-@Table({ modelName: 'openai_embedding' })
+const indexes: IndexesOptions[] = [{ fields: ['resource_id'] }]
+
+@Table({ modelName: 'openai_embedding', indexes })
 export class Embedding1 extends Model {
     /** Unique identifier for the embedding. */
     @PrimaryKey

@@ -2,7 +2,7 @@
 
 import ROOT_PATH from 'app-root-path'
 import { readFileSync } from 'fs'
-import { ModelProvider } from 'uniai'
+import { ChatModelProvider } from 'uniai'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP, LevelModel } from '@interface/Config'
 
 const ADV_REWARD_LIMIT_COUNT = 5
@@ -200,13 +200,12 @@ const USER_VIP: ConfigVIP[] = [
 ]
 
 const LEVEL_MODEL: LevelModel = {
-    [ModelProvider.Other]: 0,
-    [ModelProvider.Baidu]: 0,
-    [ModelProvider.IFlyTek]: 0,
-    [ModelProvider.GLM]: 0,
-    [ModelProvider.MoonShot]: 1,
-    [ModelProvider.Google]: 2,
-    [ModelProvider.OpenAI]: 3
+    [ChatModelProvider.Baidu]: 0,
+    [ChatModelProvider.IFlyTek]: 0,
+    [ChatModelProvider.GLM]: 0,
+    [ChatModelProvider.MoonShot]: 1,
+    [ChatModelProvider.Google]: 2,
+    [ChatModelProvider.OpenAI]: 3
 }
 
 // write rows to config table
@@ -468,5 +467,10 @@ export default [
         key: 'LEVEL_MODEL',
         value: JSON.stringify(LEVEL_MODEL),
         description: '等级模型对照表'
+    },
+    {
+        id: 39,
+        key: 'PROMPT_MODEL_SELECT',
+        value: readFileSync(`${ROOT_PATH}/app/data/prompt-model-select.md`, 'utf-8')
     }
 ]

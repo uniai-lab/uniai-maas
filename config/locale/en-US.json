@@ -49,5 +49,8 @@
     "Start Topic": "===============Instructional Divider, the following is a dialogue between two parties===============",
     "Invalid user access": "Invalid user access",
     "Invalid admin access": "Invalid admin access",
-    "Can not find user cache": "User not login"
+    "Can not find user cache": "User not login",
+    "system detect imagine task": "Model recognizes: User intends to generate an image.",
+    "selecting model for user": "System is intelligently selecting AI model for user...",
+    "imagining": "Imagining: "
 }

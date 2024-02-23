@@ -12,9 +12,12 @@ import {
     AllowNull,
     Default
 } from 'sequelize-typescript'
+import { IndexesOptions } from 'sequelize'
 import { Resource } from './Resource'
 
-@Table
+const indexes: IndexesOptions[] = [{ fields: ['resource_id'] }, { fields: ['is_del'] }, { fields: ['is_effect'] }]
+
+@Table({ indexes })
 export class Page extends Model {
     @PrimaryKey
     @AutoIncrement

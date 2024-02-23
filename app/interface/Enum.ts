@@ -18,18 +18,3 @@ export enum FLYAuditType {
     AUDIO = 'audio',
     VIDEO = 'video'
 }
-
-export enum ImgModelEnum {
-    SD = 'SD',
-    DALLE = 'DALLE',
-    MJ = 'MJ'
-}
-
-export enum MJTaskEnum {
-    IMAGINE = 'IMAGINE',
-    UPSCALE = 'UPSCALE',
-    VARIATION = 'VARIATION',
-    REROLL = 'REROLL',
-    DESCRIBE = 'DESCRIBE',
-    BLEND = 'BLEND'
-}

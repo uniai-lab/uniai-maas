@@ -14,10 +14,10 @@ export interface ChatResponse {
     dialogId: number
     resourceId: number | null
     chatId: number | null
-    model: ModelProvider | null
-    subModel: ChatModel | string | null
     role: ChatRoleEnum
     avatar: string | null
+    model: ModelProvider | null
+    subModel: ChatModel | string | null
     isEffect: boolean
 }
 
@@ -110,6 +110,7 @@ export interface UserinfoResponse {
     wxOpenId: string | null
     chance: {
         level: number
+        levelExpiredAt: number
         uploadSize: number
         totalChatChance: number
         totalUploadChance: number

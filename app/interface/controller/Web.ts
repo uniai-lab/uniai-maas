@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModel, ModelProvider } from 'uniai'
+import { ChatModel, ChatModelProvider, ModelProvider } from 'uniai'
 import { Benefit, ConfigMenuV2, ConfigVIP } from '../Config'
 
 export interface SMSCodeRequest {
@@ -28,6 +28,7 @@ export interface UserinfoResponse {
     phone: string | null
     chance: {
         level: number
+        levelExpiredAt: number
         uploadSize: number
         totalChatChance: number
         totalUploadChance: number
@@ -62,7 +63,7 @@ export interface ChatRequest {
     dialogId?: number
     prompt?: string
     assistant?: string
-    provider?: ModelProvider
+    provider?: ChatModelProvider
     model?: ChatModel
 }
 

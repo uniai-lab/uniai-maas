@@ -2,7 +2,7 @@
 
 import { Context } from 'egg'
 
-const EXPIRE = 10 * 60
+const EXPIRE = 60
 const MAX = 10
 
 // handle and format user http request and response
@@ -13,7 +13,6 @@ export default function shield(max: number = MAX) {
 
         const key = `request_count_${ip}`
         const count = await app.redis.get(key)
-        console.log(ip, count)
 
         if (count && parseInt(count) >= max) throw new Error('Too many requests')
 
