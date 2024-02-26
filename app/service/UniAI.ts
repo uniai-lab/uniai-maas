@@ -43,8 +43,9 @@ const {
     BAIDU_API_KEY,
     BAIDU_SECRET_KEY,
     MOONSHOT_KEY,
-    MID_JOURNEY_API,
-    MID_JOURNEY_TOKEN,
+    MJ_API,
+    MJ_TOKEN,
+    MJ_IMG_PROXY,
     STABILITY_KEY
 } = process.env
 
@@ -56,7 +57,7 @@ const ai = new AI({
     Baidu: { apiKey: BAIDU_API_KEY, secretKey: BAIDU_SECRET_KEY },
     MoonShot: { key: MOONSHOT_KEY.split(',') },
     Other: { api: GLM_API },
-    MidJourney: { proxy: MID_JOURNEY_API, token: MID_JOURNEY_TOKEN },
+    MidJourney: { proxy: MJ_API, token: MJ_TOKEN, imgProxy: MJ_IMG_PROXY },
     StabilityAI: { key: STABILITY_KEY }
 })
 

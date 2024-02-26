@@ -21,8 +21,9 @@ declare global {
             MOONSHOT_API: string
             MOONSHOT_KEY: string
             STABLE_DIFFUSION_API: string
-            MID_JOURNEY_API: string
-            MID_JOURNEY_TOKEN: string
+            MJ_API: string
+            MJ_TOKEN: string
+            MJ_IMG_PROXY: string
             OTHER_API: string
             GLM_API: string
             STABILITY_KEY: string

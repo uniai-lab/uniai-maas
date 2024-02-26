@@ -560,9 +560,10 @@ export default class WeChat extends Service {
 
     // generate file url
     url(path: string, name?: string) {
-        const { host, protocol } = this.ctx.request
-        const http = $.isTLS(protocol) || $.isDomain(host) ? 'https' : 'http'
-        return `${http}://${host}/wechat/file?path=${path}` + (name ? `&name=${encodeURIComponent(name)}` : '')
+        return (
+            `${this.ctx.request.URL.origin}/wechat/file?path=${path}` +
+            (name ? `&name=${encodeURIComponent(name)}` : '')
+        )
     }
 
     // use WX API to check content

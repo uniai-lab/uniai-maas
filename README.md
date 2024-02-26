@@ -99,8 +99,8 @@ MOONSHOT_KEY=
 STABLE_DIFFUSION_API=
 
 # Midjourney
-MID_JOURNEY_API=
-MID_JOURNEY_TOKEN=
+MJ_API=
+MJ_TOKEN=
 
 # other models, local deployed models, opensource models
 OTHER_API=

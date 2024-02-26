@@ -23,7 +23,6 @@ import Mint from 'mint-filter'
 import * as pdf2img from 'pdf-to-img'
 import * as MINIO from 'minio'
 import QRCode from 'qrcode'
-import isDomain from 'is-valid-domain'
 import isBase64 from 'is-base64'
 import { Logger, ILogObj } from 'tslog'
 
@@ -415,26 +414,6 @@ export default {
         const output = join(tmpdir(), `${randomUUID()}${ext ? '.' + ext : ''}`)
         writeFileSync(output, buffer)
         return output
-    },
-
-    /**
-     * Checks if a string is a valid domain name.
-     *
-     * @param text - The string to check.
-     * @returns `true` if the string is a valid domain name, otherwise `false`.
-     */
-    isDomain(text: string) {
-        return isDomain(text)
-    },
-
-    /**
-     * Checks if a string represents a TLS/HTTPS URL.
-     *
-     * @param text - The string to check.
-     * @returns `true` if the string starts with "https", otherwise `false`.
-     */
-    isTLS(text: string) {
-        return text.startsWith('https')
     },
 
     /**

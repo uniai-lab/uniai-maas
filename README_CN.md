@@ -108,8 +108,8 @@ MINIO_ROOT_PASS=12345678
 STABLE_DIFFUSION_API=http://10.144.1.7:3400
 
 # Mid Journey Configuration
-MID_JOURNEY_API=                    # Visit https://github.com/novicezk/midjourney-proxy
-MID_JOURNEY_TOKEN=                  # MidJourney proxy token
+MJ_API=                    # Visit https://github.com/novicezk/midjourney-proxy
+MJ_TOKEN=                  # MidJourney proxy token
 
 ```
 
