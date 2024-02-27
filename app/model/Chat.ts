@@ -43,6 +43,7 @@ export class Chat extends Model {
     role: ChatRoleEnum
 
     @AllowNull(false)
+    @Default('')
     @Column(DataType.TEXT)
     content: string
 

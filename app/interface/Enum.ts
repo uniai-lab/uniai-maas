@@ -18,3 +18,9 @@ export enum FLYAuditType {
     AUDIO = 'audio',
     VIDEO = 'video'
 }
+
+export enum OutputMode {
+    AUTO,
+    TEXT,
+    IMAGE
+}

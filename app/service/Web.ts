@@ -13,19 +13,25 @@ import {
     ChatModelProvider,
     EmbedModelProvider,
     ImagineModelProvider,
-    ImagineModel
+    ImagineModel,
+    ModelProvider,
+    IFlyTekChatModel
 } from 'uniai'
-import { ConfigMenuV2, ConfigVIP } from '@interface/Config'
-import { ChatResponse } from '@interface/controller/WeChat'
+import { ConfigVIP } from '@interface/Config'
+import { ChatResponse } from '@interface/controller/Web'
 import { WXAppQRCodeCache } from '@interface/Cache'
 import ali from '@util/aliyun'
 import $ from '@util/util'
+import { OutputMode } from '@interface/Enum'
+import { EggFile } from 'egg-multipart'
 
 const SMS_WAIT = 1 * 60 * 1000
 const SMS_EXPIRE = 5 * 60 * 1000
 const SMS_COUNT = 5
 const CHAT_PAGE_SIZE = 10
 const CHAT_MAX_PAGE = 20
+const DIALOG_PAGE_SIZE = 10
+const DIALOG_PAGE_LIMIT = 20
 const PAGE_LIMIT = 6
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -43,15 +49,11 @@ export default class Web extends Service {
             footer: await this.getConfig('FOOT_TIP'),
             footerCopy: await this.getConfig('FOOT_COPY'),
             officialAccount: await this.getConfig('OFFICIAL'),
-            vip: await this.getConfig<ConfigVIP[]>('USER_VIP'),
-            menuMember: await this.getConfig<ConfigMenuV2>('USER_MENU_MEMBER'),
-            menuInfo: await this.getConfig<ConfigMenuV2>('USER_MENU_INFO'),
-            menuShare: await this.getConfig<ConfigMenuV2>('USER_MENU_SHARE'),
-            menuFocus: await this.getConfig<ConfigMenuV2>('USER_MENU_FOCUS'),
-            menuAdv: await this.getConfig<ConfigMenuV2>('USER_MENU_ADV')
+            vip: await this.getConfig<ConfigVIP[]>('USER_VIP')
         }
     }
 
+    // update user info
     async updateUser(
         id: number,
         obj: {
@@ -122,17 +124,57 @@ export default class Web extends Service {
             if (res.count >= SMS_COUNT) throw new Error('Try too many times')
             if (res.code !== code) throw new Error('Code is invalid')
 
-            // find user and sign in
+            // find or create user
             const { id } =
                 (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
                 (await ctx.service.user.create(phone, null, fid))
 
             // add free chat dialog if not existed
-            if (!(await ctx.model.Dialog.count({ where: { userId: id, resourceId: null } })))
-                await ctx.service.weChat.addDialog(id)
-
+            if (!(await ctx.model.Dialog.count({ where: { userId: id, resourceId: null } }))) await this.addDialog(id)
+            // sign in
             return await ctx.service.user.signIn(id)
         } else throw new Error('Need phone code or password')
+    }
+
+    // find or add a dialog
+    async addDialog(userId: number) {
+        const { ctx } = this
+
+        // create a new dialog
+        const dialog = await ctx.model.Dialog.create({ userId })
+
+        // create default dialog chats
+        const content = ctx.__('Im AI model') + ctx.__('feel free to chat')
+
+        dialog.chats = await ctx.model.Chat.bulkCreate([
+            {
+                dialogId: dialog.id,
+                role: ChatRoleEnum.ASSISTANT,
+                content: $.contentFilter(content).text,
+                model: ModelProvider.IFlyTek,
+                subModel: IFlyTekChatModel.SPARK_V3
+            }
+        ])
+
+        return dialog
+    }
+
+    // list all dialogs
+    async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
+        const { ctx } = this
+
+        return await ctx.model.Dialog.findAll({
+            where: {
+                id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Dialog.max('id') },
+                resourceId: null,
+                userId,
+                isEffect: true,
+                isDel: false
+            },
+            attributes: ['id', 'updatedAt', 'createdAt'],
+            order: [['id', 'DESC']],
+            limit: pageSize > DIALOG_PAGE_LIMIT ? DIALOG_PAGE_LIMIT : pageSize
+        })
     }
 
     // list all the chats from a user and dialog
@@ -152,21 +194,29 @@ export default class Web extends Service {
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isDel: false,
                 isEffect: true
+            },
+            include: {
+                model: ctx.model.Resource,
+                attributes: ['fileName', 'fileSize', 'fileExt', 'filePath']
             }
         })
 
         return res.reverse()
     }
 
-    async selectModel(input: string) {
-        const prompt: ChatMessage[] = [
-            { role: ChatRoleEnum.USER, content: `${input}\n${await this.getConfig('PROMPT_MODEL_SELECT')}` }
-        ]
-        const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
-        if (res instanceof Readable) throw new Error('Chat response is stream')
-        console.log(res)
-        return parseInt(res.content)
+    // select a model
+    async selectModel(input: string, mode?: OutputMode) {
+        if (!mode) {
+            const prompt: ChatMessage[] = [
+                { role: ChatRoleEnum.USER, content: `${input}\n${await this.getConfig('PROMPT_MODEL_SELECT')}` }
+            ]
+            const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
+            if (res instanceof Readable) throw new Error('Chat response is stream')
+            return parseInt(res.content) as OutputMode
+        } else return mode
     }
+
+    // translate input content
     async translate(input: string) {
         const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: 'Translate to English:' + input }]
         const res = await this.ctx.service.uniAI.chat(prompt)
@@ -178,11 +228,12 @@ export default class Web extends Service {
     async chat(
         userId: number,
         input: string,
-        prompt: string = '',
+        system: string = '',
         assistant: string = '',
         dialogId: number = 0,
         provider: ChatModelProvider = ChatModelProvider.IFlyTek,
-        model: ChatModel = ChatModel.SPARK_V3
+        model: ChatModel = ChatModel.SPARK_V3,
+        mode = OutputMode.AUTO
     ) {
         const { ctx } = this
 
@@ -196,21 +247,22 @@ export default class Web extends Service {
             model: provider,
             subModel: model,
             avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+            file: null,
             isEffect: true
         }
 
         data.content = ctx.__('selecting model for user')
         output.write(JSON.stringify(data))
 
-        this.selectModel(input)
+        this.selectModel(input, mode)
             .then(select => {
                 switch (select) {
                     case 1:
-                        return this.doChat(userId, dialogId, input, prompt, assistant, provider, model, data, output)
+                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                     case 2:
                         return this.doImagine(userId, dialogId, input, data, output)
                     default:
-                        return this.doChat(userId, dialogId, input, prompt, assistant, provider, model, data, output)
+                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                 }
             })
             .catch((e: Error) => output.destroy(e))
@@ -245,7 +297,7 @@ export default class Web extends Service {
                 limit: CHAT_PAGE_SIZE,
                 order: [['id', 'desc']],
                 attributes: ['role', 'content'],
-                where: { isDel: false, isEffect: true }
+                where: { isDel: false, isEffect: true, resourceId: null }
             }
         })
 
@@ -365,20 +417,17 @@ export default class Web extends Service {
             if (!task[0]) throw new Error('Task not found')
             if (task[0].fail) throw new Error(task[0].fail)
 
-            console.log(task)
+            const progress = task[0].progress
+            if (isNaN(progress)) throw new Error('Can not get task progress')
 
             const img = task[0].imgs[0]
             const url = img
                 ? this.service.weChat.url(await $.putOSS(img), Date.now() + '.png')
                 : 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
             const markdown = `<img src="${url}" width="${img ? '400px' : '50px'}"/>`
-            data.content = `${markdown}\n${ctx.__('imagining')}${task[0].progress}%`
+            data.content = `${markdown}\n${ctx.__('imagining')} ${progress}%`
             data.subModel = task[0].model
             output.write(JSON.stringify(data))
-
-            const progress = task[0].progress
-
-            if (isNaN(progress)) throw new Error('Can not get task progress')
 
             if (progress === 100) {
                 // save user chat
@@ -410,7 +459,17 @@ export default class Web extends Service {
                 output.end(JSON.stringify(data))
                 break
             }
-            if (!progress) await $.sleep(3000)
+            await $.sleep(1000)
         }
+    }
+
+    // upload file
+    async upload(file: EggFile, dialogId: number, userId: number) {
+        // upload resource to oss
+        const { ctx } = this
+        const resource = await ctx.service.uniAI.upload(file, userId)
+        const chat = await ctx.model.Chat.create({ dialogId, role: ChatRoleEnum.USER, resourceId: resource.id })
+        chat.resource = resource
+        return chat
     }
 }

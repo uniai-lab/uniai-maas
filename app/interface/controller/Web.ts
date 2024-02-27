@@ -1,7 +1,8 @@
 /** @format */
 
-import { ChatModel, ChatModelProvider, ModelProvider } from 'uniai'
+import { ChatModel, ChatModelProvider, ChatRoleEnum, ModelProvider } from 'uniai'
 import { Benefit, ConfigMenuV2, ConfigVIP } from '../Config'
+import { OutputMode } from '@interface/Enum'
 
 export interface SMSCodeRequest {
     phone: string
@@ -61,10 +62,29 @@ export interface Option {
 export interface ChatRequest {
     input: string
     dialogId?: number
-    prompt?: string
+    system?: string
     assistant?: string
     provider?: ChatModelProvider
     model?: ChatModel
+    mode?: OutputMode
+}
+
+export interface ChatResponse {
+    content: string
+    dialogId: number
+    resourceId: number | null
+    chatId: number | null
+    role: ChatRoleEnum
+    avatar: string | null
+    model: ModelProvider | null
+    subModel: ChatModel | string | null
+    file: {
+        name: string
+        size: number
+        url: string
+        ext: string
+    } | null
+    isEffect: boolean
 }
 
 export interface getQRCodeResponse {
@@ -77,4 +97,25 @@ export interface UpdateUserRequest {
     name?: string
     password?: string
     avatar?: string
+}
+
+export interface UploadRequest {
+    dialogId: number
+}
+
+export interface DialogListRequest {
+    pageSize?: number
+    lastId?: number
+}
+
+export interface DialogListResponse {
+    id: number
+    updatedAt: Date
+    createdAt: Date
+}
+
+export interface ChatListRequest {
+    dialogId?: number
+    lastId?: number
+    pageSize?: number
 }

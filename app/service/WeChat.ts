@@ -191,6 +191,7 @@ export default class WeChat extends Service {
         const cache: WXAppQRCodeCache = { id, token }
         await this.app.redis.setex(`wx_app_qrcode_${qrToken}`, QR_CODE_EXPIRE, JSON.stringify(cache))
     }
+
     // list all dialogs
     async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
         const { ctx } = this

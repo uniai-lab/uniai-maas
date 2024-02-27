@@ -210,26 +210,24 @@ export default class UniAI extends Service {
 
         // split and embed first page
         const embedding = await this.embedFirstPage(content)
-        // find the similar resource
+        // find the similar resource and cover
         const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
+        const filePath = resources[0] ? resources[0].filePath : await $.putOSS(file.filepath)
 
         // find or create resource
-        return (
-            resources[0] ||
-            (await ctx.model.Resource.create({
-                page,
-                content,
-                userId,
-                typeId,
-                tabId,
-                fileName: file.filename,
-                filePath: await $.putOSS(file.filepath),
-                fileSize,
-                fileExt: extname(file.filepath).replace('.', ''),
-                embedding,
-                tokens: $.countTokens(content)
-            }))
-        )
+        return await ctx.model.Resource.create({
+            page,
+            content,
+            userId,
+            typeId,
+            tabId,
+            fileName: file.filename,
+            filePath,
+            fileSize,
+            fileExt: extname(file.filepath).replace('.', ''),
+            embedding,
+            tokens: $.countTokens(content)
+        })
     }
 
     // create embedding

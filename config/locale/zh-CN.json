@@ -50,5 +50,5 @@
     "Can not find user cache": "用户未登录",
     "system detect imagine task": "模型智能识别：用户生成图片",
     "selecting model for user": "系统正在进行AI模型智能选择...",
-    "imagining": "生成图片中："
+    "imagining": "图片生成进度"
 }
