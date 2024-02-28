@@ -126,7 +126,11 @@ export default class WeChat extends Service {
         const user = await ctx.service.user.signIn(id)
 
         // add free chat dialog if not existed
-        if (!(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId: null } })))
+        if (
+            !(await ctx.model.Dialog.count({
+                where: { userId: user.id, resourceId: null, isEffect: true, isDel: false }
+            }))
+        )
             await ctx.service.weChat.addDialog(user.id)
 
         // add default resource dialog if not existed
@@ -263,7 +267,9 @@ export default class WeChat extends Service {
     async listChat(userId: number, dialogId?: number, lastId?: number, pageSize: number = CHAT_PAGE_SIZE) {
         const { ctx } = this
         const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            where: dialogId
+                ? { id: dialogId, userId, isEffect: true, isDel: false }
+                : { resourceId: null, userId, isEffect: true, isDel: false },
             attributes: ['id']
         })
         if (!dialog) throw new Error('Can not find dialog')
@@ -300,7 +306,9 @@ export default class WeChat extends Service {
 
         // dialogId ? dialog chat : free chat
         const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
+            where: dialogId
+                ? { id: dialogId, userId, isEffect: true, isDel: false }
+                : { resourceId: null, userId, isEffect: true, isDel: false },
             attributes: ['id', 'resourceId'],
             include: {
                 model: ctx.model.Chat,

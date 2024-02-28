@@ -11,7 +11,8 @@ import {
     HasMany,
     BelongsTo,
     AllowNull,
-    Default
+    Default,
+    HasOne
 } from 'sequelize-typescript'
 import { Chat } from './Chat'
 import { Resource } from './Resource'
@@ -41,6 +42,11 @@ export class Dialog extends Model {
     resourceId: number | null
 
     @AllowNull(false)
+    @Default('')
+    @Column(DataType.STRING)
+    title: string
+
+    @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
     isDel: boolean
@@ -57,7 +63,7 @@ export class Dialog extends Model {
     user: User
 
     @BelongsTo(() => Resource)
-    resource: Resource
+    resource: Resource | null
 }
 
 export default () => Dialog

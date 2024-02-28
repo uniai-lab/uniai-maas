@@ -61,7 +61,7 @@ export interface Option {
 
 export interface ChatRequest {
     input: string
-    dialogId?: number
+    dialogId: number
     system?: string
     assistant?: string
     provider?: ChatModelProvider
@@ -104,18 +104,20 @@ export interface UploadRequest {
 }
 
 export interface DialogListRequest {
+    id?: number
     pageSize?: number
     lastId?: number
 }
 
 export interface DialogListResponse {
     id: number
+    title: string
     updatedAt: Date
     createdAt: Date
 }
 
 export interface ChatListRequest {
-    dialogId?: number
+    dialogId: number
     lastId?: number
     pageSize?: number
 }

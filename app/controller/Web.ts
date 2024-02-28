@@ -48,7 +48,7 @@ export default class Web {
     async getSMSCode(@Context() ctx: UserContext, @HTTPBody() params: SMSCodeRequest) {
         const { id, phone } = await ctx.service.web.sendSMSCode(params.phone)
         const data: SMSCodeResponse = { id, phone }
-        ctx.service.res.success('Success to WeChat login', data)
+        ctx.service.res.success('Success to get SMS code', data)
     }
 
     @Middleware(shield(50))
@@ -91,7 +91,7 @@ export default class Web {
             benefit: await ctx.service.user.getLevelBenefit(user.level),
             models: await ctx.service.user.getLevelModel(user.level)
         }
-        ctx.service.res.success('Success to WeChat login', data)
+        ctx.service.res.success('Success to login', data)
     }
 
     // get user info
@@ -152,17 +152,22 @@ export default class Web {
             benefit: await ctx.service.user.getLevelBenefit(user.level),
             models: await ctx.service.user.getLevelModel(user.level)
         }
-        ctx.service.res.success('Success to WeChat login', data)
+        ctx.service.res.success('Success to update user info', data)
     }
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/list-dialog', method: HTTPMethodEnum.POST })
-    async listDialogResource(@Context() ctx: UserContext, @HTTPBody() params: DialogListRequest) {
+    async listDialog(@Context() ctx: UserContext, @HTTPBody() params: DialogListRequest) {
         const user = ctx.user!
 
-        const res = await ctx.service.web.listDialog(user.id, params.lastId, params.pageSize)
+        const res = await ctx.service.web.listDialog(user.id, params.id, params.lastId, params.pageSize)
 
-        const data: DialogListResponse[] = res.map(({ id, updatedAt, createdAt }) => ({ id, updatedAt, createdAt }))
+        const data: DialogListResponse[] = res.map(({ id, title, updatedAt, createdAt }) => ({
+            id,
+            title,
+            updatedAt,
+            createdAt
+        }))
 
         ctx.service.res.success('Success to list resources', data)
     }
@@ -172,6 +177,7 @@ export default class Web {
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
         const user = ctx.user!
         const { dialogId, lastId, pageSize } = params
+        if (!dialogId) throw new Error('Dialog id is null')
 
         const res = await ctx.service.web.listChat(user.id, dialogId, lastId, pageSize)
         const data: ChatResponse[] = []
@@ -204,20 +210,30 @@ export default class Web {
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
         const { id } = ctx.user!
         const { input, dialogId, provider, model, system, assistant, mode } = params
+        if (!dialogId) throw new Error('Dialog id is null')
         if (!input) throw new Error('Input nothing')
 
-        const res = await ctx.service.web.chat(id, input, system, assistant, dialogId, provider, model, mode)
+        const res = await ctx.service.web.chat(dialogId, id, input, system, assistant, provider, model, mode)
 
         if (!(res instanceof Readable)) throw new Error('Response is not readable stream')
         ctx.service.res.success('Success to sse chat', res)
     }
 
-    @Middleware(auth(), log())
+    @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
-    async delDialog(@Context() ctx: UserContext) {
+    async delDialog(@Context() ctx: UserContext, @HTTPQuery() id: string) {
         const user = ctx.user!
-        await ctx.service.weChat.delDialog(user.id)
+        await ctx.service.web.delDialog(user.id, parseInt(id))
         ctx.service.res.success('Success to delete a dialog')
+    }
+
+    @Middleware(auth(), log(), transaction())
+    @HTTPMethod({ path: '/add-dialog', method: HTTPMethodEnum.GET })
+    async addDialog(@Context() ctx: UserContext) {
+        const user = ctx.user!
+        const { id, title, createdAt, updatedAt } = await ctx.service.web.addDialog(user.id)
+        const data: DialogListResponse = { id, title, createdAt, updatedAt }
+        ctx.service.res.success('Success to add a dialog', data)
     }
 
     @Middleware(auth(), log())
@@ -241,10 +257,10 @@ export default class Web {
             subModel: res.subModel,
             isEffect: res.isEffect,
             file: {
-                name: res.resource.fileName,
-                ext: res.resource.fileExt,
-                size: res.resource.fileSize,
-                url: ctx.service.weChat.url(res.resource.filePath, res.resource.fileName)
+                name: res.resource!.fileName,
+                ext: res.resource!.fileExt,
+                size: res.resource!.fileSize,
+                url: ctx.service.weChat.url(res.resource!.filePath, res.resource!.fileName)
             }
         }
 

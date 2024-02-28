@@ -377,6 +377,7 @@ export default class WeChat {
 
         const data: DialogResponse[] = []
         for (const { id, resource } of res) {
+            if (!resource) continue
             if (!resource.isEffect) resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
             // filter file name
             resource.fileName = $.contentFilter(resource.fileName).text

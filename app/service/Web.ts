@@ -32,7 +32,8 @@ const CHAT_PAGE_SIZE = 10
 const CHAT_MAX_PAGE = 20
 const DIALOG_PAGE_SIZE = 10
 const DIALOG_PAGE_LIMIT = 20
-const PAGE_LIMIT = 6
+const LOOP_MAX = 100
+const LOOP_WAIT = 1000 // ms
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -54,14 +55,7 @@ export default class Web extends Service {
     }
 
     // update user info
-    async updateUser(
-        id: number,
-        obj: {
-            name?: string
-            avatar?: string
-            password?: string
-        }
-    ) {
+    async updateUser(id: number, obj: { name?: string; avatar?: string; password?: string }) {
         const user = await this.ctx.model.User.findByPk(id)
         if (!user) throw new Error('User not found')
         const { password, name, avatar } = obj
@@ -130,7 +124,13 @@ export default class Web extends Service {
                 (await ctx.service.user.create(phone, null, fid))
 
             // add free chat dialog if not existed
-            if (!(await ctx.model.Dialog.count({ where: { userId: id, resourceId: null } }))) await this.addDialog(id)
+            if (
+                !(await ctx.model.Dialog.count({
+                    where: { userId: id, resourceId: null, isEffect: true, isDel: false }
+                }))
+            )
+                await this.addDialog(id)
+
             // sign in
             return await ctx.service.user.signIn(id)
         } else throw new Error('Need phone code or password')
@@ -159,38 +159,52 @@ export default class Web extends Service {
         return dialog
     }
 
+    // delete a dialog
+    async delDialog(userId: number, id: number = 0) {
+        const { ctx } = this
+
+        const dialog = await ctx.model.Dialog.findOne({ where: { id, userId } })
+        if (!dialog) throw new Error('Can not find the dialog')
+
+        const count = await ctx.model.Dialog.count({
+            where: { userId, resourceId: null, isEffect: true, isDel: false }
+        })
+        if (count <= 1) throw new Error('Can not delete all the dialog')
+
+        dialog.isDel = true
+        await dialog.save()
+        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
+    }
+
     // list all dialogs
-    async listDialog(userId: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
+    async listDialog(userId: number, id?: number, lastId?: number, pageSize: number = DIALOG_PAGE_SIZE) {
         const { ctx } = this
 
         return await ctx.model.Dialog.findAll({
             where: {
-                id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Dialog.max('id') },
+                id: id || (lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Dialog.max('id') }),
                 resourceId: null,
                 userId,
                 isEffect: true,
                 isDel: false
             },
-            attributes: ['id', 'updatedAt', 'createdAt'],
+            attributes: ['id', 'title', 'updatedAt', 'createdAt'],
             order: [['id', 'DESC']],
             limit: pageSize > DIALOG_PAGE_LIMIT ? DIALOG_PAGE_LIMIT : pageSize
         })
     }
 
     // list all the chats from a user and dialog
-    async listChat(userId: number, dialogId?: number, lastId?: number, pageSize: number = CHAT_PAGE_SIZE) {
+    async listChat(userId: number, dialogId: number, lastId?: number, pageSize: number = CHAT_PAGE_SIZE) {
         const { ctx } = this
-        const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
-            attributes: ['id']
-        })
-        if (!dialog) throw new Error('Can not find dialog')
+        const count = await ctx.model.Dialog.count({ where: { id: dialogId, userId, isEffect: true, isDel: false } })
+        if (!count) throw new Error('Can not find dialog')
 
         const res = await ctx.model.Chat.findAll({
             limit: pageSize > CHAT_MAX_PAGE ? CHAT_MAX_PAGE : pageSize,
             order: [['id', 'DESC']],
             where: {
-                dialogId: dialog.id,
+                dialogId,
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isDel: false,
                 isEffect: true
@@ -205,8 +219,11 @@ export default class Web extends Service {
     }
 
     // select a model
-    async selectModel(input: string, mode?: OutputMode) {
+    async selectModel(input: string, mode: OutputMode, data: ChatResponse, output: PassThrough) {
+        const { ctx } = this
         if (!mode) {
+            data.content = ctx.__('selecting model for user')
+            output.write(JSON.stringify(data))
             const prompt: ChatMessage[] = [
                 { role: ChatRoleEnum.USER, content: `${input}\n${await this.getConfig('PROMPT_MODEL_SELECT')}` }
             ]
@@ -226,16 +243,28 @@ export default class Web extends Service {
 
     // sse chat
     async chat(
+        dialogId: number,
         userId: number,
         input: string,
         system: string = '',
         assistant: string = '',
-        dialogId: number = 0,
         provider: ChatModelProvider = ChatModelProvider.IFlyTek,
         model: ChatModel = ChatModel.SPARK_V3,
         mode = OutputMode.AUTO
     ) {
         const { ctx } = this
+
+        // make sure dialog is right
+        const dialog = await ctx.model.Dialog.findOne({
+            where: { id: dialogId, userId, isEffect: true, isDel: false },
+            attributes: ['id', 'title']
+        })
+        if (!dialog) throw new Error('Dialog is not available')
+        // update title
+        if (!dialog.title) {
+            dialog.title = input
+            dialog.save()
+        }
 
         const output = new PassThrough()
         const data: ChatResponse = {
@@ -251,18 +280,17 @@ export default class Web extends Service {
             isEffect: true
         }
 
-        data.content = ctx.__('selecting model for user')
-        output.write(JSON.stringify(data))
-
-        this.selectModel(input, mode)
+        this.selectModel(input, mode, data, output)
             .then(select => {
                 switch (select) {
                     case 1:
-                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
+                        this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
+                        break
                     case 2:
-                        return this.doImagine(userId, dialogId, input, data, output)
+                        this.doImagine(userId, dialogId, input, data, output)
+                        break
                     default:
-                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
+                        this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                 }
             })
             .catch((e: Error) => output.destroy(e))
@@ -274,7 +302,7 @@ export default class Web extends Service {
         userId: number,
         dialogId: number,
         input: string,
-        prompt: string = '',
+        system: string = '',
         assistant: string = '',
         provider: ChatModelProvider = ChatModelProvider.IFlyTek,
         model: ChatModel = ChatModel.SPARK_V3,
@@ -289,51 +317,60 @@ export default class Web extends Service {
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
         // find dialog (default dialog) and chat history
-        const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
-            attributes: ['id', 'resourceId'],
+        const chats = await ctx.model.Chat.findAll({
+            limit: CHAT_PAGE_SIZE,
+            order: [['id', 'desc']],
+            attributes: ['id', 'role', 'content'],
+            where: { dialogId, isDel: false, isEffect: true, resourceId: null }
+        })
+        chats.reverse()
+        const files = await ctx.model.Chat.findAll({
+            limit: CHAT_MAX_PAGE,
+            order: [['id', 'desc']],
+            attributes: ['id'],
+            where: { dialogId, isDel: false, isEffect: true, resourceId: { [Op.ne]: null } },
             include: {
-                model: ctx.model.Chat,
-                limit: CHAT_PAGE_SIZE,
-                order: [['id', 'desc']],
-                attributes: ['role', 'content'],
-                where: { isDel: false, isEffect: true, resourceId: null }
+                model: ctx.model.Resource,
+                attributes: ['id', 'fileName', 'fileSize', 'filePath']
             }
         })
+        files.reverse()
 
-        if (!dialog) throw new Error('Dialog is not available')
-        dialog.chats.reverse()
-        dialogId = dialog.id
-        const resourceId = dialog.resourceId
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
         // initial system and assistant prompt
-        prompt = prompt || (await this.getConfig('SYSTEM_PROMPT'))
-        prompts.push({ role: SYSTEM, content: ctx.__('Prompt', prompt) })
-        if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
+        system = system || (await this.getConfig('SYSTEM_PROMPT'))
+        prompts.push({ role: SYSTEM, content: ctx.__('Prompt', system) })
 
+        // filter same resource by file path
+        const filter: string[] = []
         // add reference resource
-        if (resourceId) {
-            let content = ctx.__('document content start')
+        for (const i in files) {
+            const file = files[i].resource!
+            if (filter.includes(file.filePath)) continue
+
             // query resource
             const pages = await ctx.service.uniAI.queryResource(
                 [{ role: USER, content: input }],
-                resourceId,
+                file.id,
                 EmbedModelProvider.Other,
-                PAGE_LIMIT
+                Math.floor(20 / files.length)
             )
+            let content = `Reference Document: ${i}\nFile name: ${file.fileName}\nFile size: ${file.fileSize}\nContent:\n`
             // add resource to prompt
-            for (const item of pages) content += `\n${item.content}`
-            content += `\n${ctx.__('document content end')}\n${ctx.__('answer according to')}`
+            for (const i in pages) content += `Reference Section ${i}: ${pages[i].content}\n`
             prompts.push({ role: SYSTEM, content })
+            filter.push(file.filePath)
         }
 
         // add history chat
-        for (const { role, content } of dialog.chats) prompts.push({ role, content })
+        if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
+        for (const { role, content } of chats) prompts.push({ role, content })
 
         // add user chat
         prompts.push({ role: USER, content: input })
+        console.log(prompts)
 
         // start chat stream
         const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
@@ -392,18 +429,9 @@ export default class Web extends Service {
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
-        // find dialog (default dialog) and chat history
-        const dialog = await ctx.model.Dialog.findOne({
-            where: dialogId ? { id: dialogId, userId } : { resourceId: null, userId },
-            attributes: ['id']
-        })
-        if (!dialog) throw new Error('Dialog is not available')
-        dialogId = dialog.id
-
-        // translate to english
         // imagine
         const res = await ctx.service.uniAI.imagine(
-            await this.translate(input),
+            await this.translate(input), // need translate for some models
             '',
             1,
             1024,
@@ -411,8 +439,10 @@ export default class Web extends Service {
             data.model,
             data.subModel as ImagineModel
         )
+        let loop = 0
         // watch task
-        while (true) {
+        while (loop < LOOP_MAX) {
+            loop++
             const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
             if (!task[0]) throw new Error('Task not found')
             if (task[0].fail) throw new Error(task[0].fail)
@@ -459,15 +489,29 @@ export default class Web extends Service {
                 output.end(JSON.stringify(data))
                 break
             }
-            await $.sleep(1000)
+            await $.sleep(LOOP_WAIT)
         }
+        if (loop >= LOOP_MAX) throw new Error('Waiting imagine task timeout')
     }
 
     // upload file
     async upload(file: EggFile, dialogId: number, userId: number) {
         // upload resource to oss
         const { ctx } = this
+
+        // make sure dialog is right
+        const dialog = await ctx.model.Dialog.findOne({
+            where: { id: dialogId, userId, isEffect: true, isDel: false },
+            attributes: ['id', 'title']
+        })
+        if (!dialog) throw new Error('Dialog is not available')
+        // update title
+        if (!dialog.title) {
+            dialog.title = file.filename
+            dialog.save()
+        }
         const resource = await ctx.service.uniAI.upload(file, userId)
+        await ctx.service.uniAI.embedding(EmbedModelProvider.Other, resource.id)
         const chat = await ctx.model.Chat.create({ dialogId, role: ChatRoleEnum.USER, resourceId: resource.id })
         chat.resource = resource
         return chat

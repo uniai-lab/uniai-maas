@@ -71,7 +71,7 @@ export class Chat extends Model {
     dialog: Dialog
 
     @BelongsTo(() => Resource)
-    resource: Resource
+    resource: Resource | null
 }
 
 export default () => Chat
