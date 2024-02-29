@@ -358,8 +358,8 @@ export default class Web extends Service {
                     5
                 )
                 // make reference prompt
-                let content = `# Reference Document NO.${countFile}\n`
-                content += `## File Info\nFile name: ${file.fileName}\nFile size: ${file.fileSize}\n`
+                let content = `# Reference File ${countFile}\n`
+                content += `## File Info\nFile name: ${file.fileName}\nFile size: ${file.fileSize} Bytes\n`
                 content += '## Content\n'
                 // add resource to prompt
                 for (const i in pages) content += `### Section ${i}\n${pages[i].content}\n`
