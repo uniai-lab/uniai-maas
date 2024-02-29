@@ -56,6 +56,14 @@ export default class Web extends Service {
         }
     }
 
+    // generate file url
+    url(path: string, name?: string) {
+        return (
+            `${this.ctx.request.URL.origin}/wechat/file?path=${path}` +
+            (name ? `&name=${encodeURIComponent(name)}` : '')
+        )
+    }
+
     // update user info
     async updateUser(id: number, obj: { name?: string; avatar?: string; password?: string }) {
         const user = await this.ctx.model.User.findByPk(id)
@@ -451,7 +459,7 @@ export default class Web extends Service {
 
             const img = task[0].imgs[0]
             const url = img
-                ? this.service.weChat.url(await $.putOSS(img), Date.now() + '.png')
+                ? this.service.web.url(await $.putOSS(img), Date.now() + '.png')
                 : 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
             const markdown = `<img src="${url}" width="${img ? '400px' : '50px'}"/>`
             data.content = `${markdown}\n${ctx.__('imagining')} ${progress}%`

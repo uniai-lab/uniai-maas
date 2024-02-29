@@ -197,7 +197,7 @@ export default class Web {
                           name: resource.fileName,
                           ext: resource.fileExt,
                           size: resource.fileSize,
-                          url: ctx.service.weChat.url(resource.filePath, resource.fileName)
+                          url: ctx.service.web.url(resource.filePath, resource.fileName)
                       }
                     : null
             })
@@ -262,7 +262,7 @@ export default class Web {
                 name: res.resource!.fileName,
                 ext: res.resource!.fileExt,
                 size: res.resource!.fileSize,
-                url: ctx.service.weChat.url(res.resource!.filePath, res.resource!.fileName)
+                url: ctx.service.web.url(res.resource!.filePath, res.resource!.fileName)
             }
         }
 

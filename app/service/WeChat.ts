@@ -6,6 +6,7 @@ import { EggFile } from 'egg-multipart'
 import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { statSync } from 'fs'
+import { isIP } from 'net'
 import { AuditProvider } from '@interface/Enum'
 import { AdvCache, ChatStreamCache, WXAccessTokenCache, WXAppQRCodeCache } from '@interface/Cache'
 import {
@@ -569,8 +570,9 @@ export default class WeChat extends Service {
 
     // generate file url
     url(path: string, name?: string) {
+        const host = this.ctx.request.URL.host
         return (
-            `${this.ctx.request.URL.origin}/wechat/file?path=${path}` +
+            `${isIP(host) ? 'http://' : 'https://'}${host}/wechat/file?path=${path}` +
             (name ? `&name=${encodeURIComponent(name)}` : '')
         )
     }
