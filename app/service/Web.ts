@@ -6,6 +6,7 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { randomUUID } from 'crypto'
 import md5 from 'md5'
+import { isIP } from 'net'
 import {
     ChatMessage,
     ChatModel,
@@ -56,10 +57,19 @@ export default class Web extends Service {
         }
     }
 
-    // generate file url
+    /* generate file url
     url(path: string, name?: string) {
         return (
             `${this.ctx.request.URL.origin}/wechat/file?path=${path}` +
+            (name ? `&name=${encodeURIComponent(name)}` : '')
+        )
+    }
+    */
+    // generate file url
+    url(path: string, name?: string) {
+        const host = this.ctx.request.URL.host
+        return (
+            `${isIP(host) ? 'http://' : 'https://'}${host}/wechat/file?path=${path}` +
             (name ? `&name=${encodeURIComponent(name)}` : '')
         )
     }
