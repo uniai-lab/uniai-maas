@@ -25,7 +25,9 @@ import * as MINIO from 'minio'
 import QRCode from 'qrcode'
 import isBase64 from 'is-base64'
 import { Logger, ILogObj } from 'tslog'
+import util from 'util'
 
+const convertSync = util.promisify(libreoffice.convert)
 // Environment variables
 const { MINIO_ACCESS_KEY, MINIO_END_POINT, MINIO_PORT, MINIO_SECRET_KEY, MINIO_BUCKET } = process.env
 
@@ -156,36 +158,18 @@ export default {
     },
 
     /**
-     * Converts office files to PDF format.
-     *
-     * @param path - The path to the office file.
-     * @returns A Promise that resolves with the path to the converted PDF file.
-     */
-    convertPDF(path: string) {
-        return new Promise<string>((resolve, reject) => {
-            libreoffice.convert(readFileSync(path), '.pdf', undefined, (err, data) => {
-                if (err) reject(err)
-                else {
-                    path = path.replace(extname(path), '.pdf')
-                    writeFileSync(path, data)
-                    resolve(path)
-                }
-            })
-        })
-    },
-
-    /**
      * Converts a PDF file to images.
      *
-     * @param path - The path to the PDF file.
-     * @returns A Promise that resolves with an array of image paths.
+     * @param path - The path to the office file.
+     * @returns A Promise that resolves with an array of converted image paths.
      */
     async convertIMG(path: string) {
         // If not a PDF, convert to PDF
-        if (extname(path) !== '.pdf') path = await this.convertPDF(path)
+        const buffer =
+            extname(path) === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
 
         const imgs: string[] = []
-        const pages = await pdf2img.pdf(path, { scale: 2 })
+        const pages = await pdf2img.pdf(buffer, { scale: 2 })
         let i = 0
         for await (const item of pages) {
             i++
@@ -199,12 +183,13 @@ export default {
     /**
      * Extracts content from a PDF file.
      *
-     * @param path - The path to the PDF file.
+     * @param path - The path to the office file.
      * @returns An object containing the extracted content and the number of pages.
      */
     async convertText(path: string) {
-        if (extname(path) !== '.pdf') path = await this.convertPDF(path)
-        const { text, numpages } = await pdf(readFileSync(path))
+        const buffer =
+            extname(path) === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
+        const { text, numpages } = await pdf(buffer)
         return { content: this.tinyText(text), page: numpages }
     },
 

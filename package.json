@@ -73,7 +73,11 @@
         "tslog": "^4.9.2",
         "uniai": "^1.3.4",
         "wechatpay-node-v3": "^2.2.0-beta",
-        "ws": "^8.16.0"
+        "ws": "^8.16.0",
+        "pdf2json": "^3.0.5",
+        "pdfreader": "^3.0.2",
+        "xlsx": "^0.18.5",
+        "xlsx2md": "^0.6.1"
     },
     "devDependencies": {
         "@types/dockerode": "^3.3.23",

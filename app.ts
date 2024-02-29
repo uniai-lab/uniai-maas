@@ -24,8 +24,7 @@ import $ from '@util/util'
 export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
-            // await app.redis.flushdb() // flush redis, be careful
-            await app.model.Config.truncate({ force: true })
+            await app.redis.flushdb() // flush redis, be careful
             await syncDatabase(app) // init database struct and data
             await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
@@ -39,10 +38,10 @@ export default (app: Application) => {
  * Synchronizes the database structure and initial data.
  * @param app - The Egg.js application instance.
  */
-async function syncDatabase(app: Application) {
+async function syncDatabase(app: Application, force: boolean = false) {
     console.log('================SYNC DATA STRUCT=====================')
     await app.model.query('CREATE EXTENSION if not exists vector')
-    await app.model.sync({ force: false, alter: true })
+    await app.model.sync({ force, alter: true })
 
     console.log('==================SYNC INIT DATA=====================')
     await syncTableData(app.model.Config, Config, ['value', 'description'])
