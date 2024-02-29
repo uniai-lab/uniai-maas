@@ -118,6 +118,7 @@ export interface DialogListResponse {
 
 export interface ChatListRequest {
     dialogId: number
+    id?: number
     lastId?: number
     pageSize?: number
 }

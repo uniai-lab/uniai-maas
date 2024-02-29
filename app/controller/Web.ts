@@ -176,10 +176,10 @@ export default class Web {
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
     async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
         const user = ctx.user!
-        const { dialogId, lastId, pageSize } = params
+        const { id, dialogId, lastId, pageSize } = params
         if (!dialogId) throw new Error('Dialog id is null')
 
-        const res = await ctx.service.web.listChat(user.id, dialogId, lastId, pageSize)
+        const res = await ctx.service.web.listChat(user.id, dialogId, id, lastId, pageSize)
         const data: ChatResponse[] = []
         for (const { id, dialogId, role, content, resourceId, model, subModel, isEffect, resource } of res)
             data.push({
@@ -223,6 +223,8 @@ export default class Web {
     @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
     async delDialog(@Context() ctx: UserContext, @HTTPQuery() id: string) {
         const user = ctx.user!
+        if (!parseInt(id)) throw new Error('Dialog id is null')
+
         await ctx.service.web.delDialog(user.id, parseInt(id))
         ctx.service.res.success('Success to delete a dialog')
     }
@@ -236,7 +238,7 @@ export default class Web {
         ctx.service.res.success('Success to add a dialog', data)
     }
 
-    @Middleware(auth(), log())
+    @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
     async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
         const user = ctx.user!

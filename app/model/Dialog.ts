@@ -11,8 +11,7 @@ import {
     HasMany,
     BelongsTo,
     AllowNull,
-    Default,
-    HasOne
+    Default
 } from 'sequelize-typescript'
 import { Chat } from './Chat'
 import { Resource } from './Resource'

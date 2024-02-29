@@ -3,26 +3,26 @@
 export default [
     {
         id: 1,
-        title: '1元小白',
+        title: '次卡',
         price: 0.01,
-        description: ['只能用国产', '1级']
+        description: ['100次文本对话']
     },
     {
         id: 2,
-        title: '2元新手',
+        title: '月卡',
         price: 0.02,
-        description: ['gpt', '2级']
+        description: ['当月有效', '每天100次对话', '支持GLM、百度、讯飞模型']
     },
     {
         id: 3,
-        title: '3元老哥',
+        title: '季卡',
         price: 0.03,
-        description: ['快充', '3级']
+        description: ['当季有效', '每天200次对话', '支持GPT']
     },
     {
         id: 4,
-        title: '4元大师',
+        title: '年卡',
         price: 0.04,
-        description: ['充值个4', '4级']
+        description: ['当年有效', '每天1000次对话', '支持所有模型', '支持生图', '可以优化文']
     }
 ]
