@@ -36,7 +36,8 @@ export default class Res extends Service {
     file(data: Readable, name: string) {
         const { ctx } = this
         ctx.response.type = extname(name)
-        ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`) // 强制浏览器下载，设置下载的文件名
+        ctx.set('Content-Disposition', `filename=${encodeURIComponent(name)}`)
+        ctx.set('Content-Security-Policy', 'frame-ancestors *')
         ctx.body = data
     }
     // error response
