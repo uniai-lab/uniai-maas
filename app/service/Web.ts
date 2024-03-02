@@ -28,17 +28,19 @@ const SMS_EXPIRE = 5 * 60 * 1000
 const SMS_COUNT = 5
 const CHAT_PAGE_SIZE = 10 // chat default page size
 const CHAT_PAGE_LIMIT = 20 // chat max page size
-const DIALOG_PAGE_SIZE = 10
-const DIALOG_PAGE_LIMIT = 20
-const LOOP_MAX = 600
-const LOOP_WAIT = 1000 // ms
+const DIALOG_PAGE_SIZE = 10 // dialog default page size
+const DIALOG_PAGE_LIMIT = 20 // dialog max page size
+const LOOP_MAX = 600 // imagine task request max loop
+const LOOP_WAIT = 1000 // imagine task request interval, ms
+
 // default provider and model
 const DEFAULT_CHAT_PROVIDER = ChatModelProvider.IFlyTek
 const DEFAULT_CHAT_MODEL = ChatModel.SPARK_V3
 const DEFAULT_IMG_PROVIDER = ImagineModelProvider.MidJourney
 const DEFAULT_IMG_MODEL = ImagineModel.MJ
-const TITLE_SUB_TOKEN = 60
-const QUERY_PAGE_LIMIT = 5
+
+const TITLE_SUB_TOKEN = 60 // dialog title limit length
+const QUERY_PAGE_LIMIT = 5 // query resource page limit
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -128,7 +130,7 @@ export default class Web extends Service {
                 (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
                 (await ctx.service.user.create(phone, null, fid))
 
-            // add free chat dialog if not existed
+            // add a default free chat dialog if not existed
             if (
                 !(await ctx.model.Dialog.count({
                     where: { userId: id, resourceId: null, isEffect: true, isDel: false }
@@ -231,19 +233,6 @@ export default class Web extends Service {
         return res.reverse()
     }
 
-    private data: ChatResponse = {
-        chatId: 0,
-        role: ChatRoleEnum.ASSISTANT,
-        content: '',
-        dialogId: 0,
-        resourceId: 0,
-        model: DEFAULT_CHAT_PROVIDER,
-        subModel: DEFAULT_CHAT_MODEL,
-        avatar: '',
-        file: null,
-        isEffect: true
-    }
-    private output: PassThrough = new PassThrough()
     // sse chat
     async chat(
         dialogId: number,
@@ -255,7 +244,7 @@ export default class Web extends Service {
         model: ChatModel = DEFAULT_CHAT_MODEL,
         mode = OutputMode.AUTO
     ) {
-        const { ctx, data } = this
+        const { ctx } = this
 
         // check dialog is right
         const dialog = await ctx.model.Dialog.findOne({
@@ -267,35 +256,44 @@ export default class Web extends Service {
         // update title
         if (!dialog.title) await dialog.update({ title: $.subTokens(input, TITLE_SUB_TOKEN) })
 
-        data.dialogId = dialogId
-        data.model = provider
-        data.subModel = model
-        data.avatar = await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI')
+        const data: ChatResponse = {
+            chatId: 0,
+            role: ChatRoleEnum.ASSISTANT,
+            content: '',
+            dialogId,
+            resourceId: 0,
+            model: provider,
+            subModel: model,
+            avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+            file: null,
+            isEffect: true
+        }
+        const output: PassThrough = new PassThrough()
 
-        this.selectMode(input, mode)
+        this.selectMode(input, mode, data, output)
             .then(select => {
                 switch (select) {
                     case 1:
-                        this.doChat(userId, dialogId, input, system, assistant, provider, model)
+                        this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                         break
                     case 2:
-                        this.doImagine(userId, dialogId, input)
+                        this.doImagine(userId, dialogId, input, data, output)
                         break
                     default:
-                        this.doChat(userId, dialogId, input, system, assistant, provider, model)
+                        this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                 }
             })
-            .catch((e: Error) => this.output.destroy(e))
+            .catch((e: Error) => output.destroy(e))
 
-        return this.output as Readable
+        return output as Readable
     }
 
     // select a model
-    async selectMode(input: string, mode: OutputMode) {
+    async selectMode(input: string, mode: OutputMode, data: ChatResponse, output: PassThrough) {
         if (mode) return mode
 
-        this.data.content = this.ctx.__('selecting model for user')
-        this.output.write(JSON.stringify(this.data))
+        data.content = this.ctx.__('selecting model for user')
+        output.write(JSON.stringify(data))
 
         const prompt = [
             { role: ChatRoleEnum.USER, content: `${input}\n${await this.getConfig('PROMPT_MODEL_SELECT')}` }
@@ -320,9 +318,11 @@ export default class Web extends Service {
         system: string = '',
         assistant: string = '',
         provider: ChatModelProvider,
-        model: ChatModel
+        model: ChatModel,
+        data: ChatResponse,
+        output: PassThrough
     ) {
-        const { ctx, data, output } = this
+        const { ctx } = this
 
         // check user chat chance
         const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
@@ -420,8 +420,8 @@ export default class Web extends Service {
         res.on('error', e => output.destroy(e))
     }
 
-    async doImagine(userId: number, dialogId: number, input: string) {
-        const { ctx, data, output } = this
+    async doImagine(userId: number, dialogId: number, input: string, data: ChatResponse, output: PassThrough) {
+        const { ctx } = this
         data.model = DEFAULT_IMG_PROVIDER
         data.subModel = DEFAULT_IMG_MODEL
         data.content = ctx.__('system detect imagine task')
