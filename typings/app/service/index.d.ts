@@ -12,6 +12,7 @@ import ExportPay from '../../../app/service/Pay';
 import ExportRes from '../../../app/service/Res';
 import ExportUniAI from '../../../app/service/UniAI';
 import ExportUser from '../../../app/service/User';
+import ExportUtil from '../../../app/service/Util';
 import ExportWeChat from '../../../app/service/WeChat';
 import ExportWeb from '../../../app/service/Web';
 
@@ -22,6 +23,7 @@ declare module 'egg' {
     res: AutoInstanceType<typeof ExportRes>;
     uniAI: AutoInstanceType<typeof ExportUniAI>;
     user: AutoInstanceType<typeof ExportUser>;
+    util: AutoInstanceType<typeof ExportUtil>;
     weChat: AutoInstanceType<typeof ExportWeChat>;
     web: AutoInstanceType<typeof ExportWeb>;
   }

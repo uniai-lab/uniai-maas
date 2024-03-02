@@ -22,7 +22,7 @@ import '@openai-link/egg-sequelize-ts';
 import 'egg-view-nunjucks';
 import 'egg-cors';
 import 'egg-redis';
-import 'egg-minio-ts';
+import 'egg-minio-typescript';
 import { EggPluginItem } from 'egg';
 declare module 'egg' {
   interface EggPlugin {

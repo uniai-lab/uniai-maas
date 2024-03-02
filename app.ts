@@ -24,9 +24,9 @@ import $ from '@util/util'
 export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
-            await app.redis.flushdb() // flush redis, be careful
-            await syncDatabase(app) // init database struct and data
-            await syncConfigCache(app) // sync config cache
+            // await app.redis.flushdb() // flush redis, be careful
+            // await syncDatabase(app) // init database struct and data
+            // await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
         }
 

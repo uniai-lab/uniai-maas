@@ -39,7 +39,7 @@ export default class Web {
     async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         if (!path) throw new Error('Path is null')
 
-        const data = await ctx.service.uniAI.fileStream(path)
+        const data = await ctx.service.util.getFileStream(path)
         ctx.service.res.file(data, name || basename(path))
     }
 
@@ -197,7 +197,7 @@ export default class Web {
                           name: resource.fileName,
                           ext: resource.fileExt,
                           size: resource.fileSize,
-                          url: ctx.service.web.url(resource.filePath, resource.fileName)
+                          url: ctx.service.util.url(resource.filePath, resource.fileName)
                       }
                     : null
             })
@@ -262,7 +262,7 @@ export default class Web {
                 name: res.resource!.fileName,
                 ext: res.resource!.fileExt,
                 size: res.resource!.fileSize,
-                url: ctx.service.web.url(res.resource!.filePath, res.resource!.fileName)
+                url: ctx.service.util.url(res.resource!.filePath, res.resource!.fileName)
             }
         }
 

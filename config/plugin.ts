@@ -1,5 +1,4 @@
 /** @format */
-
 import { EggPlugin } from 'egg'
 
 const plugin: EggPlugin = {
@@ -49,7 +48,7 @@ const plugin: EggPlugin = {
     },
     minio: {
         enable: true,
-        package: 'egg-minio-ts'
+        package: 'egg-minio-typescript'
     }
 }
 

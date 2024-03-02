@@ -30,6 +30,13 @@ export interface QueryResourceRequest {
     maxPage?: number
 }
 
+export interface QueryResourcesRequest {
+    input: string
+    resourceId: number | number[]
+    provider?: EmbedModelProvider
+    maxPage?: number
+}
+
 export interface EmbeddingRequest {
     resourceId?: number
     content?: string
@@ -83,6 +90,22 @@ export interface QueryResourceResponse {
     similar: number
     page: number
     resourceId: number
+}
+
+export interface QueryResource {
+    id: number
+    page: number
+    fileName: string
+    fileSize: number
+    provider: EmbedModelProvider
+    pages: QueryPage[]
+}
+export interface QueryPage {
+    id: number
+    page: number
+    content: string
+    tokens: number
+    similar: number
 }
 
 export interface EmbeddingResponse {

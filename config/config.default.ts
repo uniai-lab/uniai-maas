@@ -17,8 +17,7 @@ const {
     MINIO_ACCESS_KEY,
     MINIO_END_POINT,
     MINIO_PORT,
-    MINIO_SECRET_KEY,
-    MINIO_BUCKET
+    MINIO_SECRET_KEY
 } = process.env
 
 const ALLOW_ORIGIN = '*'
@@ -58,7 +57,7 @@ export default (appInfo: EggAppInfo) => {
         dialect: DB_DIALECT,
         host: POSTGRES_HOST,
         password: POSTGRES_PASS,
-        port: POSTGRES_PORT,
+        port: parseInt(POSTGRES_PORT),
         username: POSTGRES_USER,
         database: POSTGRES_DB
     }
@@ -84,8 +83,7 @@ export default (appInfo: EggAppInfo) => {
             port: parseInt(MINIO_PORT),
             useSSL: false,
             accessKey: MINIO_ACCESS_KEY,
-            secretKey: MINIO_SECRET_KEY,
-            bucketName: MINIO_BUCKET
+            secretKey: MINIO_SECRET_KEY
         }
     }
 

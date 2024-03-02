@@ -6,7 +6,6 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { randomUUID } from 'crypto'
 import md5 from 'md5'
-import { isIP } from 'net'
 import {
     ChatMessage,
     ChatModel,
@@ -38,6 +37,9 @@ const DEFAULT_CHAT_PROVIDER = ChatModelProvider.IFlyTek
 const DEFAULT_CHAT_MODEL = ChatModel.SPARK_V3
 const DEFAULT_IMG_PROVIDER = ImagineModelProvider.MidJourney
 const DEFAULT_IMG_MODEL = ImagineModel.MJ
+const TITLE_SUB_TOKEN = 60
+const QUERY_PAGE_LIMIT = 5
+
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
     // get config value by key
@@ -55,23 +57,6 @@ export default class Web extends Service {
             officialAccount: await this.getConfig('OFFICIAL'),
             vip: await this.getConfig<ConfigVIP[]>('USER_VIP')
         }
-    }
-
-    /* generate file url
-    url(path: string, name?: string) {
-        return (
-            `${this.ctx.request.URL.origin}/wechat/file?path=${path}` +
-            (name ? `&name=${encodeURIComponent(name)}` : '')
-        )
-    }
-    */
-    // generate file url
-    url(path: string, name?: string) {
-        const host = this.ctx.request.URL.host
-        return (
-            `${isIP(host) ? 'http://' : 'https://'}${host}/wechat/file?path=${path}` +
-            (name ? `&name=${encodeURIComponent(name)}` : '')
-        )
     }
 
     // update user info
@@ -170,7 +155,7 @@ export default class Web extends Service {
             {
                 dialogId: dialog.id,
                 role: ChatRoleEnum.ASSISTANT,
-                content: $.contentFilter(content).text,
+                content,
                 model: DEFAULT_CHAT_PROVIDER,
                 subModel: DEFAULT_CHAT_MODEL
             }
@@ -280,7 +265,7 @@ export default class Web extends Service {
         if (!dialog) throw new Error('Dialog is not available')
 
         // update title
-        if (!dialog.title) await dialog.update({ title: input })
+        if (!dialog.title) await dialog.update({ title: $.subTokens(input, TITLE_SUB_TOKEN) })
 
         data.dialogId = dialogId
         data.model = provider
@@ -350,38 +335,39 @@ export default class Web extends Service {
             order: [['id', 'desc']],
             attributes: ['id', 'role', 'content'],
             where: { dialogId, isDel: false, isEffect: true },
-            include: { model: ctx.model.Resource, attributes: ['id', 'fileName', 'fileSize', 'filePath'] }
+            include: { model: ctx.model.Resource, attributes: ['id', 'fileName', 'fileSize', 'page'] }
         })
         chats.reverse()
 
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
-        // system prompt
+        // system prompt and initial assistant prompt
         prompts.push({ role: SYSTEM, content: ctx.__('Prompt', system || (await this.getConfig('SYSTEM_PROMPT'))) })
         if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
         // add history chat including resource files
         // add reference resource
-        let countFile = 0
+        let embedding: number[] | null = null
         for (const item of chats) {
             const file = item.resource
             if (file) {
-                countFile++
-                // query resource
-                const pages = await ctx.service.uniAI.queryResource(
-                    [{ role: USER, content: input }],
-                    file.id,
-                    EmbedModelProvider.Other,
-                    5
-                )
-                // make reference prompt
-                let content = `# Reference File ${countFile}\n`
-                content += `## File Info\nFile name: ${file.fileName}\nFile size: ${file.fileSize} Bytes\n`
-                content += '## Content\n'
-                // add resource to prompt
-                for (const i in pages) content += `### Section ${i}\n${pages[i].content}\n`
-                prompts.push({ role: USER, content })
+                // query resource, one time embedding
+                if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
+                const pages = await this.queryPages(file.id, embedding)
+                // make reference resource prompt
+                prompts.push({
+                    role: USER,
+                    content: `
+                        # Reference File
+                        ## File Info
+                        File name: ${file.fileName}
+                        File size: ${file.fileSize} Bytes
+                        Total pages: ${file.page}
+                        ## File Content
+                        ${pages.map(v => v.content).join('\n')}
+                    `
+                })
             } else prompts.push({ role: item.role, content: item.content })
         }
 
@@ -469,7 +455,7 @@ export default class Web extends Service {
 
             const img = task[0].imgs[0]
             const url = img
-                ? this.service.web.url(await $.putOSS(img), Date.now() + '.png')
+                ? ctx.service.util.url(await ctx.service.util.putOSS(img), Date.now() + '.png')
                 : 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
             const markdown = `<img src="${url}" width="${img ? '400px' : '50px'}"/>`
             data.content = `${markdown}\n${ctx.__('imagining')} ${progress}%`
@@ -527,9 +513,20 @@ export default class Web extends Service {
         if (!dialog.title) await dialog.update({ title: file.filename })
 
         const resource = await ctx.service.uniAI.upload(file, userId)
-        await ctx.service.uniAI.embedding(EmbedModelProvider.Other, resource.id)
+        await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)
         const chat = await ctx.model.Chat.create({ dialogId, role: ChatRoleEnum.USER, resourceId: resource.id })
         chat.resource = resource
         return chat
+    }
+
+    async queryPages(
+        resourceId: number,
+        embedding: number[],
+        limit: number = QUERY_PAGE_LIMIT,
+        provider: EmbedModelProvider = EmbedModelProvider.Other
+    ) {
+        if (provider === EmbedModelProvider.OpenAI)
+            return await this.ctx.model.Embedding1.similarFindAll(embedding, limit, { resourceId })
+        else return await this.ctx.model.Embedding2.similarFindAll(embedding, limit, { resourceId })
     }
 }

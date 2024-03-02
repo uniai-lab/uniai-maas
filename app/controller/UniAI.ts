@@ -13,7 +13,9 @@ import {
     UploadRequest,
     UploadResponse,
     AuditRequest,
-    ImgChangeRequest
+    ImgChangeRequest,
+    QueryResourcesRequest,
+    QueryResource
 } from '@interface/controller/UniAI'
 import auth from '@middleware/authB'
 import log from '@middleware/log'
@@ -50,9 +52,23 @@ export default class UniAI {
     }
 
     @Middleware(auth(), log())
+    @HTTPMethod({ path: '/find-resources', method: HTTPMethodEnum.POST })
+    async queryResources(@Context() ctx: EggContext, @HTTPBody() params: QueryResourcesRequest) {
+        const { resourceId, maxPage, provider, input } = params
+        if (!input.trim()) throw new Error('Empty query input')
+        if (typeof resourceId === 'number' && !resourceId) throw new Error('Invalid resource id')
+        else if (Array.isArray(resourceId) && !resourceId.length) throw new Error('Invalid resource ids')
+
+        const data = await ctx.service.uniAI.queryResources(input, resourceId, provider, maxPage)
+
+        ctx.service.res.success('Success to find resources', data)
+    }
+
+    @Middleware(auth(), log())
     @HTTPMethod({ path: '/find-resource', method: HTTPMethodEnum.POST })
     async queryResource(@Context() ctx: EggContext, @HTTPBody() params: QueryResourceRequest) {
-        const { prompts, resourceId, maxPage, provider } = params
+        const { resourceId, maxPage, provider } = params
+        const prompts = params.prompts.map(v => v.content).filter(v => v)
         if (!prompts.length) throw new Error('Empty prompts')
 
         const data = await ctx.service.uniAI.queryResource(prompts, resourceId, provider, maxPage)
@@ -76,7 +92,7 @@ export default class UniAI {
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         const { provider, resourceId, content, fileName, filePath, fileExt, fileSize } = params
 
-        const { resource, embedding } = await ctx.service.uniAI.embedding(
+        const { resource, embedding } = await ctx.service.uniAI.embeddingResource(
             provider,
             resourceId,
             content,

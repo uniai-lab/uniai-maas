@@ -22,7 +22,6 @@ import {
 import auth from '@middleware/authC'
 import log from '@middleware/log'
 import transaction from '@middleware/transaction'
-import $ from '@util/util'
 
 @HTTPController({ path: '/pay' })
 export default class Pay {
@@ -59,7 +58,7 @@ export default class Pay {
         const data: CreatePayResponse = {
             id: res.id,
             transactionId: res.transactionId,
-            base64: await $.getQRCode(res.detail['code_url'])
+            base64: await ctx.service.util.getQRCode(res.detail['code_url'])
         }
         ctx.service.res.success('Success to create pay', data)
     }

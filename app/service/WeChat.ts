@@ -6,7 +6,6 @@ import { EggFile } from 'egg-multipart'
 import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { statSync } from 'fs'
-import { isIP } from 'net'
 import { AuditProvider } from '@interface/Enum'
 import { AdvCache, ChatStreamCache, WXAccessTokenCache, WXAppQRCodeCache } from '@interface/Cache'
 import {
@@ -21,14 +20,13 @@ import {
 } from '@interface/controller/WeChat'
 import $ from '@util/util'
 import FormData from 'form-data'
-import { ChatMessage, ChatModelProvider, ChatResponse, ChatRoleEnum, EmbedModelProvider, IFlyTekChatModel } from 'uniai'
+import { ChatMessage, ChatModel, ChatModelProvider, ChatResponse, ChatRoleEnum, EmbedModelProvider } from 'uniai'
 import { ChatResponse as WXChatResponse } from '@interface/controller/WeChat'
 import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Config'
 
 const ONE_DAY = 24 * 60 * 60 * 1000
-const PAGE_LIMIT = 6
 const CHAT_PAGE_SIZE = 10
-const CHAT_MAX_PAGE = 20
+const CHAT_PAGE_LIMIT = 20
 const DIALOG_PAGE_SIZE = 10
 const DIALOG_PAGE_LIMIT = 20
 const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
@@ -45,7 +43,7 @@ const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use 
 const WX_QR_CODE_URL = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit'
 const { WX_APP_ID, WX_APP_SECRET } = process.env
 const PROVIDER = ChatModelProvider.IFlyTek
-const MODEL = IFlyTekChatModel.SPARK_V3
+const MODEL = ChatModel.SPARK_V3
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
@@ -243,7 +241,7 @@ export default class WeChat extends Service {
             {
                 dialogId: dialog.id,
                 role: ChatRoleEnum.ASSISTANT,
-                content: $.contentFilter(content).text,
+                content: ctx.service.util.mintFilter(content).text,
                 model: PROVIDER,
                 subModel: MODEL
             }
@@ -276,7 +274,7 @@ export default class WeChat extends Service {
         if (!dialog) throw new Error('Can not find dialog')
 
         const res = await ctx.model.Chat.findAll({
-            limit: pageSize > CHAT_MAX_PAGE ? CHAT_MAX_PAGE : pageSize,
+            limit: pageSize > CHAT_PAGE_LIMIT ? CHAT_PAGE_LIMIT : pageSize,
             order: [['id', 'DESC']],
             where: {
                 dialogId: dialog.id,
@@ -330,24 +328,35 @@ export default class WeChat extends Service {
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
+        // add related resource if existed
+        const resourceId = dialog.resourceId
+        if (resourceId) {
+            // query resource pages by input prompt
+            const resources = await ctx.service.uniAI.queryResources(input, resourceId, EmbedModelProvider.Other, 3)
+            const { fileName, fileSize, page, pages } = resources[0]
+            prompts.push({
+                role: SYSTEM,
+                content: `
+                    # Reference File
+                    ## File Info
+                    File name: ${fileName}
+                    File size: ${fileSize} Bytes
+                    Total pages: ${page}
+                    ## File Content:
+                    ${$.subTokens(pages.map(v => v.content).join('\n'), 5000)}
+                    <hr>
+                    ${ctx.__('document content end')}
+                    ${ctx.__('answer according to')}
+                    `.replace('\t', '')
+            })
+        }
+
         // add user chat history
         for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
 
-        // add related resource
-        const resourceId = dialog.resourceId
-        if (resourceId) {
-            let content = ctx.__('document content start')
-            // query resource
-            const query = [{ role: USER, content: input }]
-            const embedModel = EmbedModelProvider.Other
-            const pages = await ctx.service.uniAI.queryResource(query, resourceId, embedModel, PAGE_LIMIT)
-            // add resource to prompt
-            for (const item of pages) content += `\n${item.content}`
-            content += `\n${ctx.__('document content end')}\n${ctx.__('answer according to')}`
-            prompts.push({ role: SYSTEM, content })
-        }
-
+        // add user current input
         prompts.push({ role: USER, content: input })
+        console.log(prompts)
 
         // WeChat require to audit input content
         const isEffect = (await ctx.service.uniAI.audit(input, AuditProvider.WX)).flag
@@ -512,7 +521,7 @@ export default class WeChat extends Service {
         let resource = await ctx.service.uniAI.upload(file, userId, typeId)
 
         // embed resource content
-        resource = (await ctx.service.uniAI.embedding(EmbedModelProvider.Other, resource.id)).resource
+        resource = (await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)).resource
 
         // audit resource content
         const { flag } = await ctx.service.uniAI.audit(resource.content)
@@ -544,21 +553,21 @@ export default class WeChat extends Service {
         // pages not found, generate pages
         if (!res.pages.length) {
             // get file
-            const path = await $.getFile(res.filePath)
+            const path = await ctx.service.util.getFile(res.filePath)
 
             // file not on minio server, upload
             if (!res.filePath.startsWith('minio/')) {
                 res.fileSize = statSync(path).size
-                res.filePath = await $.putOSS(path)
+                res.filePath = await ctx.service.util.putOSS(path)
             }
 
             // convert to page imgs
-            const imgs = await $.convertIMG(path)
+            const imgs = await ctx.service.util.convertIMG(path)
             if (!imgs.length) throw new Error('Fail to convert to imgs')
 
             // upload and save pages
             const pages: string[] = []
-            for (const i in imgs) pages.push(await $.putOSS(imgs[i]))
+            for (const i in imgs) pages.push(await ctx.service.util.putOSS(imgs[i]))
             res.pages = await ctx.model.Page.bulkCreate(
                 pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v }))
             )
@@ -566,15 +575,6 @@ export default class WeChat extends Service {
             await res.save()
         }
         return res
-    }
-
-    // generate file url
-    url(path: string, name?: string) {
-        const host = this.ctx.request.URL.host
-        return (
-            `${isIP(host) ? 'http://' : 'https://'}${host}/wechat/file?path=${path}` +
-            (name ? `&name=${encodeURIComponent(name)}` : '')
-        )
     }
 
     // use WX API to check content
@@ -641,7 +641,6 @@ export default class WeChat extends Service {
         const res = $.json<WXGetQRCodeResponse>(json)
         if (!res) return `data:image/png;base64,${base64}`
         else {
-            console.error(res)
             await this.app.redis.del('WX_ACCESS_TOKEN')
             throw new Error(res.errmsg)
         }

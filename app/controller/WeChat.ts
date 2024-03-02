@@ -23,7 +23,6 @@ import {
 import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
-import $ from '@util/util'
 import { basename } from 'path'
 import { statSync } from 'fs'
 import { ChatRoleEnum } from 'uniai'
@@ -62,7 +61,7 @@ export default class WeChat {
         if (!path) throw new Error('Path is null')
 
         // file stream
-        const data = await ctx.service.uniAI.fileStream(path)
+        const data = await ctx.service.util.getFileStream(path)
         ctx.service.res.file(data, name || basename(path))
     }
 
@@ -294,7 +293,7 @@ export default class WeChat {
             typeId: res.typeId,
             page: res.page,
             tokens: res.tokens,
-            fileName: $.contentFilter(res.fileName).text,
+            fileName: ctx.service.util.mintFilter(res.fileName).text,
             fileSize: res.fileSize,
             filePath: res.filePath,
             userId: res.userId,
@@ -355,15 +354,15 @@ export default class WeChat {
         const res = await ctx.service.weChat.resource(id)
 
         // filter file name
-        res.fileName = $.contentFilter(res.fileName).text
-        const path = ctx.service.weChat.url(res.filePath, res.fileName)
+        res.fileName = ctx.service.util.mintFilter(res.fileName).text
+        const path = ctx.service.util.url(res.filePath, res.fileName)
         const data: ResourceResponse = {
             id: res.id,
             name: res.fileName,
             size: res.fileSize,
             ext: res.fileExt,
             path,
-            pages: res.pages.map(v => ctx.service.weChat.url(v.filePath))
+            pages: res.pages.map(v => ctx.service.util.url(v.filePath))
         }
         ctx.service.res.success('Success to get resource', data)
     }
@@ -380,14 +379,14 @@ export default class WeChat {
             if (!resource) continue
             if (!resource.isEffect) resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
             // filter file name
-            resource.fileName = $.contentFilter(resource.fileName).text
+            resource.fileName = ctx.service.util.mintFilter(resource.fileName).text
             data.push({
                 dialogId: id,
                 resourceId: resource.id,
                 page: resource.page,
                 fileName: resource.fileName,
                 fileSize: resource.fileSize,
-                filePath: ctx.service.weChat.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
+                filePath: ctx.service.util.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
                 updatedAt: resource.updatedAt,
                 typeId: resource.type.id,
                 type: resource.type.name,

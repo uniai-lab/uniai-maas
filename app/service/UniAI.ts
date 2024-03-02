@@ -5,7 +5,8 @@ import { Service } from 'egg'
 import { statSync } from 'fs'
 import { EggFile } from 'egg-multipart'
 import { extname } from 'path'
-import { AIAuditResponse, AuditResponse, ResourcePage } from '@interface/controller/UniAI'
+import { PassThrough, Readable } from 'stream'
+import { AIAuditResponse, AuditResponse, QueryResource, ResourcePage } from '@interface/controller/UniAI'
 import AI, {
     ChatMessage,
     ChatModel,
@@ -22,13 +23,11 @@ import AI, {
 import { AuditProvider } from '@interface/Enum'
 import resourceType from '@data/resourceType'
 import userResourceTab from '@data/userResourceTab'
-
-import { Resource } from '@model/Resource'
-import { PassThrough, Readable } from 'stream'
 import { UserContext } from '@interface/Context'
-
 import fly from '@util/fly'
 import $ from '@util/util'
+import { encode } from 'gpt-tokenizer'
+import { literal } from 'sequelize'
 
 const {
     OPENAI_API,
@@ -62,13 +61,6 @@ const ai = new AI({
 })
 
 const MAX_PAGE = 10
-const SAME_DISTANCE = 0.01
-const TOKEN_PAGE_FIRST = 768
-const TOKEN_PAGE_SPLIT_L1 = 2048
-const TOKEN_PAGE_SPLIT_L2 = 1024
-const TOKEN_PAGE_SPLIT_L3 = 512
-const TOKEN_PAGE_TOTAL_L1 = TOKEN_PAGE_SPLIT_L1 * 1
-const TOKEN_PAGE_TOTAL_L2 = TOKEN_PAGE_SPLIT_L2 * 8
 const DEFAULT_RESOURCE_TYPE = resourceType[0].id
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 
@@ -93,9 +85,57 @@ export default class UniAI extends Service {
         return ai.models
     }
 
+    // query from multi resources
+    async queryResources(
+        input: string,
+        resourceId: number | number[],
+        provider: EmbedModelProvider = EmbedModelProvider.Other,
+        limit: number = MAX_PAGE
+    ) {
+        const { ctx } = this
+        const vector = await this.embedding(input, provider)
+        const id: number[] = typeof resourceId === 'number' ? [resourceId] : resourceId
+        const resources = await ctx.model.Resource.findAll({
+            where: { id },
+            attributes: ['id', 'page', 'fileName', 'fileSize'],
+            include: {
+                model: provider === EmbedModelProvider.OpenAI ? ctx.model.Embedding1 : ctx.model.Embedding2,
+                order: literal(`embedding <=> '${JSON.stringify(vector.embedding[0])}' ASC`),
+                attributes: ['id', 'page', 'content', 'tokens', 'embedding'],
+                limit
+            }
+        })
+        return resources
+            .map<QueryResource>(({ id, page, fileName, fileSize, embeddings1, embeddings2 }) => ({
+                id,
+                page,
+                fileName,
+                fileSize,
+                pages: [
+                    ...(embeddings1?.map(({ id, page, content, tokens, embedding }) => ({
+                        id,
+                        page,
+                        content,
+                        tokens,
+                        similar: $.cosine(vector.embedding[0], embedding || [])
+                    })) || []),
+                    ...(embeddings2?.map(({ id, page, content, tokens, embedding }) => ({
+                        id,
+                        page,
+                        content,
+                        tokens,
+                        similar: $.cosine(vector.embedding[0], embedding || [])
+                    })) || [])
+                ].sort((a, b) => a.page - b.page),
+                provider,
+                model: vector.model
+            }))
+            .sort((a, b) => id.indexOf(a.id) - id.indexOf(b.id))
+    }
+
     // query resource
     async queryResource(
-        prompts: ChatMessage[],
+        prompts: string | string[],
         resourceId?: number,
         provider: EmbedModelProvider = EmbedModelProvider.Other,
         maxPage: number = MAX_PAGE
@@ -117,15 +157,16 @@ export default class UniAI extends Service {
             else throw new Error('Model provider not support')
 
             // embedding not exist, create embeddings
-            if (!count) await this.embedding(provider, resourceId)
+            if (!count) await this.embeddingResource(provider, resourceId)
         }
 
         const pages: ResourcePage[] = []
+        if (typeof prompts === 'string') prompts = [prompts]
 
-        for (const { content } of prompts) {
+        for (const content of prompts) {
             if (typeof content !== 'string' || !content) continue
             const query = content.trim()
-            const data = await ai.embedding([query], { provider })
+            const data = await this.embedding(query, provider)
             const embedding = data.embedding[0]
 
             if (provider === EmbedModelProvider.OpenAI) {
@@ -186,11 +227,6 @@ export default class UniAI extends Service {
         return output as Readable
     }
 
-    // get file stream from path or url
-    async fileStream(path: string) {
-        return await $.getFileStream(path)
-    }
-
     // upload file
     async upload(
         file: EggFile,
@@ -204,34 +240,39 @@ export default class UniAI extends Service {
         const fileSize = statSync(file.filepath).size
         if (fileSize > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))) throw new Error('File size exceeds limit')
 
-        // get content
-        const { content, page } = await $.convertText(file.filepath)
+        // extract content
+        const { content, page } = await ctx.service.util.extractText(file.filepath)
         if (!content) throw new Error('Fail to extract content text')
+        const embedding = encode(content).concat(new Array(1024).fill(0)).slice(0, 1024)
 
-        // split and embed first page
-        const embedding = await this.embedFirstPage(content)
-        // find the similar resource and cover
-        const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
-        const filePath = resources[0] ? resources[0].filePath : await $.putOSS(file.filepath)
+        // upload to oss
+        const filePath = await ctx.service.util.putOSS(file.filepath)
+        // find similar or create new resource
+        return (
+            (await ctx.model.Resource.similarFindAll(embedding, 0.1, 1))[0] ||
+            (await ctx.model.Resource.create({
+                page,
+                content,
+                userId,
+                typeId,
+                tabId,
+                embedding,
+                fileName: file.filename,
+                filePath,
+                fileSize,
+                fileExt: extname(file.filepath).replace('.', ''),
+                tokens: $.countTokens(content)
+            }))
+        )
+    }
 
-        // find or create resource
-        return await ctx.model.Resource.create({
-            page,
-            content,
-            userId,
-            typeId,
-            tabId,
-            fileName: file.filename,
-            filePath,
-            fileSize,
-            fileExt: extname(file.filepath).replace('.', ''),
-            embedding,
-            tokens: $.countTokens(content)
-        })
+    async embedding(input: string | string[], provider: EmbedModelProvider = EmbedModelProvider.Other) {
+        // embedding resource by pages
+        return await ai.embedding(input, { provider })
     }
 
     // create embedding
-    async embedding(
+    async embeddingResource(
         provider: EmbedModelProvider = EmbedModelProvider.Other,
         resourceId?: number,
         content?: string,
@@ -244,28 +285,7 @@ export default class UniAI extends Service {
         tabId: number = DEFAULT_RESOURCE_TAB
     ) {
         const { ctx } = this
-        let resource: Resource | null = null
-        let embedding: number[] | null = null
-
-        // find by resource id
-        if (resourceId) {
-            resource = await ctx.model.Resource.findByPk(resourceId)
-            if (!resource) throw new Error('Can not find resource by id')
-
-            content = $.tinyText(resource.content)
-            fileName = resource.fileName
-            filePath = resource.filePath
-            fileSize = resource.fileSize
-            fileExt = resource.fileExt
-
-            // embed first page
-            embedding = await this.embedFirstPage(content)
-
-            resource.embedding = embedding
-        }
-        // find by resource content
-        else {
-            // check all resource info
+        if (!resourceId) {
             if (!content) throw new Error('File content is empty')
             if (!fileName) throw new Error('File name is empty')
             if (!filePath) throw new Error('File path is empty')
@@ -273,54 +293,29 @@ export default class UniAI extends Service {
             fileExt = fileExt || extname(filePath).replace('.', '')
             if (!fileExt) throw new Error('Can not detect file extension')
             content = $.tinyText(content)
-
-            // embed first page
-            embedding = await this.embedFirstPage(content)
-
-            // find resource by embedding
-            const resources = await ctx.model.Resource.similarFindAll(embedding, SAME_DISTANCE)
-            resource = resources[0]
-            if (resource) {
-                fileName = resource.fileName
-                filePath = resource.filePath
-                fileSize = resource.fileSize
-                fileExt = resource.fileExt
-                resource.embedding = embedding
-            }
         }
 
-        // check embedding
-        if (!embedding) throw new Error('Fail to embed first page')
+        const resource = resourceId
+            ? await ctx.model.Resource.findByPk(resourceId)
+            : await ctx.model.Resource.create({
+                  content,
+                  typeId,
+                  tabId,
+                  userId,
+                  fileName,
+                  filePath,
+                  fileSize,
+                  fileExt,
+                  tokens: $.countTokens(content!)
+              })
 
-        // split pages
-        const tokens = $.countTokens(content)
-        let split = TOKEN_PAGE_SPLIT_L1
-        if (tokens <= TOKEN_PAGE_TOTAL_L1) split = TOKEN_PAGE_SPLIT_L1
-        else if (tokens <= TOKEN_PAGE_TOTAL_L2) split = TOKEN_PAGE_SPLIT_L2
-        else split = TOKEN_PAGE_SPLIT_L3
-        const pages: string[] = $.splitPage(content, split)
-        if (!pages.length) throw new Error('Content can not be split')
+        if (!resource) throw new Error('Can not find resource by id')
 
-        if (!resource)
-            resource = await ctx.model.Resource.create({
-                page: pages.length,
-                content,
-                typeId,
-                tabId,
-                userId,
-                fileName,
-                filePath,
-                fileSize,
-                fileExt,
-                embedding,
-                tokens: $.countTokens(content)
-            })
+        const path = await ctx.service.util.getFile(resource.filePath)
+        const pages = await ctx.service.util.extractPages(path)
 
-        if (!resource) throw new Error('Fail to create resource for embedding')
-        resourceId = resource.id
-
-        // embedding resource
-        const res = await ai.embedding(pages, { provider })
+        // embedding resource by pages
+        const res = await this.embedding(pages, provider)
         if (provider === EmbedModelProvider.OpenAI) {
             await ctx.model.Embedding1.destroy({ where: { resourceId } })
             resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
@@ -345,7 +340,7 @@ export default class UniAI extends Service {
             )
         } else throw new Error('Embedding model not found')
 
-        return { resource: await resource.save(), embedding: res }
+        return { resource, embedding: res }
     }
 
     async imagine(
@@ -411,7 +406,7 @@ export default class UniAI extends Service {
                 res.data = e as Error
             }
         } else {
-            const result = $.contentFilter(content)
+            const result = ctx.service.util.mintFilter(content)
             res.flag = result.verify
             res.data = result
         }
@@ -420,14 +415,5 @@ export default class UniAI extends Service {
         await ctx.model.AuditLog.create({ provider, content, userId: ctx.user?.id, ...res })
 
         return res
-    }
-
-    // split the content and embedding the first page
-    async embedFirstPage(content: string) {
-        const page = $.splitPage(content, TOKEN_PAGE_FIRST)
-        if (!page.length) throw new Error('Fail to split first page')
-        const { embedding } = await ai.embedding([page[0]], { provider: EmbedModelProvider.Other })
-        if (!embedding.length) throw new Error('Fail to embed first page')
-        return embedding[0]
     }
 }
