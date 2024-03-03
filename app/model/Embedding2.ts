@@ -19,6 +19,7 @@ import {
     Default
 } from 'sequelize-typescript'
 import { Resource } from './Resource'
+import { EmbedModel } from 'uniai'
 
 const EMBED_DIM = 1024
 
@@ -86,6 +87,9 @@ export class Embedding2 extends Model {
     @Default(0)
     @Column(DataType.INTEGER)
     tokens: number
+
+    @Column(DataType.STRING)
+    model: EmbedModel | string | null
 
     /** Belongs to the associated resource. */
     @BelongsTo(() => Resource)

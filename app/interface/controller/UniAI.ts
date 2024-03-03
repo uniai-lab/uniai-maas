@@ -112,7 +112,14 @@ export interface EmbeddingResponse {
     id: number
     page: number
     tokens: number
-    model: EmbedModel
+    provider: EmbedModelProvider
+    embedding: {
+        id: number
+        content: string
+        tokens: number
+        page: number
+        model: EmbedModel | string | null
+    }[]
 }
 
 export interface ResourcePage {

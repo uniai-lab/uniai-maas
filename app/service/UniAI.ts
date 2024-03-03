@@ -266,8 +266,8 @@ export default class UniAI extends Service {
         )
     }
 
+    // simply embedding string or array of string
     async embedding(input: string | string[], provider: EmbedModelProvider = EmbedModelProvider.Other) {
-        // embedding resource by pages
         return await ai.embedding(input, { provider })
     }
 
@@ -282,7 +282,8 @@ export default class UniAI extends Service {
         fileSize?: number,
         userId: number = 0,
         typeId: number = DEFAULT_RESOURCE_TYPE,
-        tabId: number = DEFAULT_RESOURCE_TAB
+        tabId: number = DEFAULT_RESOURCE_TAB,
+        reset: boolean = false
     ) {
         const { ctx } = this
         if (!resourceId) {
@@ -295,52 +296,75 @@ export default class UniAI extends Service {
             content = $.tinyText(content)
         }
 
-        const resource = resourceId
-            ? await ctx.model.Resource.findByPk(resourceId)
-            : await ctx.model.Resource.create({
-                  content,
-                  typeId,
-                  tabId,
-                  userId,
-                  fileName,
-                  filePath,
-                  fileSize,
-                  fileExt,
-                  tokens: $.countTokens(content!)
-              })
-
-        if (!resource) throw new Error('Can not find resource by id')
-
-        const path = await ctx.service.util.getFile(resource.filePath)
-        const pages = await ctx.service.util.extractPages(path)
-
-        // embedding resource by pages
-        const res = await this.embedding(pages, provider)
         if (provider === EmbedModelProvider.OpenAI) {
-            await ctx.model.Embedding1.destroy({ where: { resourceId } })
-            resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
-                res.embedding.map((embedding, i) => ({
-                    resourceId,
-                    page: i + 1,
-                    embedding,
-                    content: pages[i],
-                    tokens: $.countTokens(pages[i])
-                }))
-            )
-        } else if (provider === EmbedModelProvider.Other) {
-            await ctx.model.Embedding2.destroy({ where: { resourceId } })
-            resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(
-                res.embedding.map((embedding, i) => ({
-                    resourceId,
-                    page: i + 1,
-                    embedding,
-                    content: pages[i],
-                    tokens: $.countTokens(pages[i])
-                }))
-            )
-        } else throw new Error('Embedding model not found')
+            const include = ctx.model.Embedding1
 
-        return { resource, embedding: res }
+            // find or create a resource
+            const resource = resourceId
+                ? await ctx.model.Resource.findByPk(resourceId, { include })
+                : await ctx.model.Resource.create(
+                      { content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt },
+                      { include }
+                  )
+            if (!resource) throw new Error('Can not create or find resource by id')
+
+            if (!resource.embeddings1.length || reset) {
+                // extract page of content from the file
+                const path = await ctx.service.util.getFile(resource.filePath)
+                const pages = await ctx.service.util.extractPages(path)
+                resource.page = pages.length
+                resource.tokens = $.countTokens(resource.content)
+                if (reset) await ctx.model.Embedding1.destroy({ where: { resourceId } })
+                // embedding content
+                const { model, embedding } = await this.embedding(pages, provider)
+                resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
+                    embedding.map((embedding, i) => ({
+                        resourceId,
+                        page: i + 1,
+                        embedding,
+                        model,
+                        content: pages[i],
+                        tokens: $.countTokens(pages[i])
+                    }))
+                )
+                await resource.save()
+            }
+            return { resource, provider }
+        } else if (provider === EmbedModelProvider.Other) {
+            const include = ctx.model.Embedding2
+
+            // find or create a resource
+            const resource = resourceId
+                ? await ctx.model.Resource.findByPk(resourceId, { include })
+                : await ctx.model.Resource.create(
+                      { content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt },
+                      { include }
+                  )
+            if (!resource) throw new Error('Can not create or find resource by id')
+
+            if (!resource.embeddings2.length || reset) {
+                // extract page of content from the file
+                const path = await ctx.service.util.getFile(resource.filePath)
+                const pages = await ctx.service.util.extractPages(path)
+                resource.page = pages.length
+                resource.tokens = $.countTokens(resource.content)
+                if (reset) await ctx.model.Embedding2.destroy({ where: { resourceId } })
+                // embedding content
+                const { model, embedding } = await this.embedding(pages, provider)
+                resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(
+                    embedding.map((embedding, i) => ({
+                        resourceId,
+                        page: i + 1,
+                        embedding,
+                        model,
+                        content: pages[i],
+                        tokens: $.countTokens(pages[i])
+                    }))
+                )
+                await resource.save()
+            }
+            return { resource, provider }
+        } else throw new Error('Embedding provider and model not found')
     }
 
     async imagine(

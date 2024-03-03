@@ -92,7 +92,7 @@ export default class UniAI {
     async embedding(@Context() ctx: EggContext, @HTTPBody() params: EmbeddingRequest) {
         const { provider, resourceId, content, fileName, filePath, fileExt, fileSize } = params
 
-        const { resource, embedding } = await ctx.service.uniAI.embeddingResource(
+        const res = await ctx.service.uniAI.embeddingResource(
             provider,
             resourceId,
             content,
@@ -101,8 +101,19 @@ export default class UniAI {
             fileExt,
             fileSize
         )
-        const { id, tokens, page } = resource
-        const data: EmbeddingResponse = { id, tokens, page, model: embedding.model }
+        const { id, page, tokens } = res.resource
+        const embeddings1 = res.resource.embeddings1 || []
+        const embeddings2 = res.resource.embeddings2 || []
+        const data: EmbeddingResponse = {
+            id,
+            page,
+            tokens,
+            provider: res.provider,
+            embedding: [
+                ...embeddings1?.map(({ id, content, page, tokens, model }) => ({ id, content, page, tokens, model })),
+                ...embeddings2?.map(({ id, content, page, tokens, model }) => ({ id, content, page, tokens, model }))
+            ]
+        }
         ctx.service.res.success('Success to embed text', data)
     }
 

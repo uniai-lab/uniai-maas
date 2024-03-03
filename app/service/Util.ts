@@ -104,13 +104,14 @@ export default class Util extends Service {
         if (ext === '.xls' || ext === '.xlsx') {
             const res = xlsx.readFile(path)
             const pages: string[] = []
-            for (const i in res.Sheets) pages.push(`Sheet name: ${i}, CSV:\n${xlsx.utils.sheet_to_csv(res.Sheets[i])}`)
+            for (const i in res.Sheets)
+                pages.push(`**Sheet Name: ${i}**<hr>${xlsx.utils.sheet_to_csv(res.Sheets[i])}<hr>`)
             return pages
         } else {
             const buffer =
                 extname(path) === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
             const pages = await pdf2md(buffer)
-            return pages.map((v, i) => `**Page ${i + 1}**<hr>${v}<hr>`)
+            return pages.map((v, i) => `**Page Number: ${i + 1}**<hr>${v}<hr>`)
         }
     }
 

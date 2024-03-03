@@ -349,9 +349,11 @@ export default class Web extends Service {
         // add history chat including resource files
         // add reference resource
         let embedding: number[] | null = null
+        let count = 0
         for (const item of chats) {
             const file = item.resource
             if (file) {
+                count++
                 // query resource, one time embedding
                 if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
                 const pages = await this.queryPages(file.id, embedding)
@@ -359,13 +361,15 @@ export default class Web extends Service {
                 prompts.push({
                     role: USER,
                     content: `
-                        # Reference File
+                        # Reference File ${count}
                         ## File Info
                         File name: ${file.fileName}
                         File size: ${file.fileSize} Bytes
                         Total pages: ${file.page}
                         ## File Content
                         ${pages.map(v => v.content).join('\n')}
+                        ## Note
+                        All the data in CSV format needs to be converted to Markdown Table before responding.
                     `
                 })
             } else prompts.push({ role: item.role, content: item.content })
