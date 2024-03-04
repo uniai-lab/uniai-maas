@@ -52,6 +52,9 @@ export class Chat extends Model {
     resourceId: number | null
 
     @Column(DataType.STRING)
+    resourceName: string | null
+
+    @Column(DataType.STRING)
     model: ModelProvider | null
 
     @Column(DataType.STRING)

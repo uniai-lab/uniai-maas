@@ -181,23 +181,26 @@ export default class Web {
 
         const res = await ctx.service.web.listChat(user.id, dialogId, id, lastId, pageSize)
         const data: ChatResponse[] = []
-        for (const { id, dialogId, role, content, resourceId, model, subModel, isEffect, resource } of res)
+        for (const item of res)
             data.push({
-                chatId: id,
+                chatId: item.id,
                 dialogId,
-                avatar: role === ChatRoleEnum.USER ? user.avatar : await ctx.service.web.getConfig('DEFAULT_AVATAR_AI'),
-                role,
-                content,
-                resourceId,
-                model,
-                subModel,
-                isEffect,
-                file: resource
+                avatar:
+                    item.role === ChatRoleEnum.USER
+                        ? user.avatar
+                        : await ctx.service.web.getConfig('DEFAULT_AVATAR_AI'),
+                role: item.role,
+                content: item.content,
+                resourceId: item.resourceId,
+                model: item.model,
+                subModel: item.subModel,
+                isEffect: item.isEffect,
+                file: item.resource
                     ? {
-                          name: resource.fileName,
-                          ext: resource.fileExt,
-                          size: resource.fileSize,
-                          url: ctx.service.util.url(resource.filePath, resource.fileName)
+                          name: item.resourceName || item.resource.fileName,
+                          ext: item.resource.fileExt,
+                          size: item.resource.fileSize,
+                          url: ctx.service.util.url(item.resource.filePath, item.resourceName || item.resource.fileName)
                       }
                     : null
             })
@@ -208,10 +211,14 @@ export default class Web {
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
     async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
-        const { id } = ctx.user!
+        const { id, level } = ctx.user!
         const { input, dialogId, provider, model, system, assistant, mode } = params
         if (!dialogId) throw new Error('Dialog id is null')
         if (!input) throw new Error('Input nothing')
+
+        // check user level access provider/model
+        const disable = await ctx.service.user.checkLevelModel(level, provider)
+        if (disable) throw new Error('Level no access to the provider model')
 
         const res = await ctx.service.web.chat(dialogId, id, input, system, assistant, provider, model, mode)
 
@@ -259,7 +266,7 @@ export default class Web {
             subModel: res.subModel,
             isEffect: res.isEffect,
             file: {
-                name: res.resource!.fileName,
+                name: res.resourceName || res.resource!.fileName,
                 ext: res.resource!.fileExt,
                 size: res.resource!.fileSize,
                 url: ctx.service.util.url(res.resource!.filePath, res.resource!.fileName)

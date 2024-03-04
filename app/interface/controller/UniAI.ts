@@ -97,15 +97,16 @@ export interface QueryResource {
     page: number
     fileName: string
     fileSize: number
+    filePath: string
     provider: EmbedModelProvider
-    pages: QueryPage[]
-}
-export interface QueryPage {
-    id: number
-    page: number
-    content: string
-    tokens: number
-    similar: number
+    pages: {
+        id: number
+        page: number
+        content: string
+        tokens: number
+        similar: number
+        model: EmbedModel | string | null
+    }[]
 }
 
 export interface EmbeddingResponse {
@@ -127,6 +128,7 @@ export interface ResourcePage {
     content: string
     similar: number
     page: number
+    model: EmbedModel | string | null
     resourceId: number
 }
 

@@ -24,7 +24,7 @@ import * as pdf2img from 'pdf-to-img'
 import QRCode from 'qrcode'
 import isBase64 from 'is-base64'
 import util from 'util'
-import { encode, decode } from 'iconv-lite'
+import { decode } from 'iconv-lite'
 import pdf2md from 'pdf2md-ts'
 
 import $ from '@util/util'
@@ -200,11 +200,8 @@ export default class Util extends Service {
 
     // generate file url
     url(path: string, name?: string) {
-        const host = this.ctx.request.URL.host
-        return (
-            `${isIP(host) ? 'http://' : 'https://'}${host}/wechat/file?path=${path}` +
-            (name ? `&name=${encodeURIComponent(name)}` : '')
-        )
+        const { hostname, host } = this.ctx.request.URL
+        return `${isIP(hostname) || hostname === 'localhost' ? 'http://' : 'https://'}${host}/wechat/file?path=${path}${name ? `&name=${encodeURIComponent(name)}` : ''}`
     }
 
     /**

@@ -16,6 +16,7 @@ import { encode, decode } from 'gpt-tokenizer'
 import { similarity } from 'ml-distance'
 import isBase64 from 'is-base64'
 import { Logger, ILogObj } from 'tslog'
+import moment from 'moment-timezone'
 
 const logger = new Logger<ILogObj>()
 // Minimum split size for text
@@ -229,6 +230,13 @@ export default {
             date.getSeconds(),
             date.getMilliseconds()
         )
+    },
+    formatDate(
+        date: Date = new Date(),
+        zone: string = 'America/New_York',
+        format: string = 'YYYY-MM-DD HH:mm:ss dddd'
+    ) {
+        return moment(date).tz(zone).format(format)
     },
     log(data: any) {
         return logger.silly(data)

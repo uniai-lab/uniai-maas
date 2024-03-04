@@ -15,7 +15,7 @@ import {
     ImagineModelProvider,
     ImagineModel
 } from 'uniai'
-import { ConfigVIP } from '@interface/Config'
+import { ConfigVIP, LevelModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
 import { WXAppQRCodeCache } from '@interface/Cache'
 import ali from '@util/aliyun'
@@ -36,8 +36,8 @@ const LOOP_WAIT = 1000 // imagine task request interval, ms
 // default provider and model
 const DEFAULT_CHAT_PROVIDER = ChatModelProvider.IFlyTek
 const DEFAULT_CHAT_MODEL = ChatModel.SPARK_V3
-const DEFAULT_IMG_PROVIDER = ImagineModelProvider.MidJourney
-const DEFAULT_IMG_MODEL = ImagineModel.MJ
+const DEFAULT_IMG_PROVIDER = ImagineModelProvider.StabilityAI
+const DEFAULT_IMG_MODEL = ImagineModel.SD_1_6
 
 const TITLE_SUB_TOKEN = 60 // dialog title limit length
 const QUERY_PAGE_LIMIT = 5 // query resource page limit
@@ -169,11 +169,6 @@ export default class Web extends Service {
     // delete a dialog
     async delDialog(userId: number, id: number) {
         const { ctx } = this
-        // keep one dialog
-        const count = await ctx.model.Dialog.count({
-            where: { userId, resourceId: null, isEffect: true, isDel: false }
-        })
-        if (count <= 1) throw new Error('Can not delete all the dialog')
 
         // find dialog
         const dialog = await ctx.model.Dialog.findOne({ where: { id, userId } })
@@ -183,6 +178,12 @@ export default class Web extends Service {
         dialog.isDel = true
         await dialog.save()
         await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
+
+        // keep one fresh dialog
+        const count = await ctx.model.Dialog.count({
+            where: { userId, resourceId: null, isEffect: true, isDel: false }
+        })
+        if (count <= 0) await this.addDialog(userId)
     }
 
     // list user all dialogs
@@ -224,10 +225,7 @@ export default class Web extends Service {
                 isDel: false,
                 isEffect: true
             },
-            include: {
-                model: ctx.model.Resource,
-                attributes: ['fileName', 'fileSize', 'fileExt', 'filePath']
-            }
+            include: { model: ctx.model.Resource, attributes: ['fileName', 'fileSize', 'fileExt', 'filePath'] }
         })
 
         return res.reverse()
@@ -240,8 +238,8 @@ export default class Web extends Service {
         input: string,
         system: string = '',
         assistant: string = '',
-        provider: ChatModelProvider = DEFAULT_CHAT_PROVIDER,
-        model: ChatModel = DEFAULT_CHAT_MODEL,
+        provider: ChatModelProvider | null = null,
+        model: ChatModel | null = null,
         mode = OutputMode.AUTO
     ) {
         const { ctx } = this
@@ -274,13 +272,11 @@ export default class Web extends Service {
             .then(select => {
                 switch (select) {
                     case 1:
-                        this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
-                        break
+                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                     case 2:
-                        this.doImagine(userId, dialogId, input, data, output)
-                        break
+                        return this.doImagine(userId, dialogId, input, data, output)
                     default:
-                        this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
+                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
                 }
             })
             .catch((e: Error) => output.destroy(e))
@@ -303,6 +299,86 @@ export default class Web extends Service {
         return parseInt(res.content) as OutputMode
     }
 
+    // select chat model by user messages
+    async selectChatModel(messages: ChatMessage[], userId: number, ext: string[] = []) {
+        // user info level
+        const user = await this.ctx.service.user.getUserCache(userId)
+        if (!user) throw new Error('User cache not found')
+        const options = await this.getConfig<LevelModel>('LEVEL_MODEL')
+        const { level } = user
+
+        // give default provider and model
+        let count = 0
+        for (const { content } of messages) count += $.countTokens(content)
+
+        // iFlyTek
+        let provider: ChatModelProvider = DEFAULT_CHAT_PROVIDER
+        let model: ChatModel = DEFAULT_CHAT_MODEL
+
+        if (count < 6000) {
+            provider = provider
+            model = model
+        }
+        // 8k
+        else if (count >= 6000 && count < 8000) {
+            if (level >= options.glm) {
+                provider = ChatModelProvider.GLM
+                model = ChatModel.GLM_3_TURBO
+            }
+            if (level >= options.moonshot) {
+                provider = ChatModelProvider.MoonShot
+                model = ChatModel.MOON_V1_8K
+            }
+            if (level >= options.openai) {
+                provider = ChatModelProvider.OpenAI
+                model = ChatModel.GPT3
+            }
+        }
+        // 16k input
+        else if (count >= 8000 && count < 16000) {
+            if (level >= options.moonshot) {
+                provider = ChatModelProvider.MoonShot
+                model = ChatModel.MOON_V1_32K
+            }
+            if (level >= options.google) {
+                provider = ChatModelProvider.Google
+                model = ChatModel.GEM_PRO
+            }
+            if (level >= options.openai) {
+                provider = ChatModelProvider.OpenAI
+                model = ChatModel.GPT3_16K
+            }
+        }
+        // 32k input
+        else if (count >= 16000 && count < 32000) {
+            if (level >= options.moonshot) {
+                provider = ChatModelProvider.MoonShot
+                model = ChatModel.MOON_V1_32K
+            }
+            if (level >= options.openai) {
+                provider = ChatModelProvider.OpenAI
+                model = ChatModel.GPT4_32K
+            }
+        }
+        // 128k input
+        else {
+            if (level >= options.moonshot) {
+                provider = ChatModelProvider.MoonShot
+                model = ChatModel.MOON_V1_128K
+            }
+        }
+
+        // handle excel
+        if (ext.includes('xlsx') || ext.includes('xls')) {
+            if (level >= options.openai) {
+                provider = ChatModelProvider.OpenAI
+                model = ChatModel.GPT4
+            }
+        }
+
+        return { provider, model }
+    }
+
     // translate input content
     async translate(input: string) {
         const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: 'Translate to English:' + input }]
@@ -317,8 +393,8 @@ export default class Web extends Service {
         input: string,
         system: string = '',
         assistant: string = '',
-        provider: ChatModelProvider,
-        model: ChatModel,
+        provider: ChatModelProvider | null = null,
+        model: ChatModel | null = null,
         data: ChatResponse,
         output: PassThrough
     ) {
@@ -335,7 +411,7 @@ export default class Web extends Service {
             order: [['id', 'desc']],
             attributes: ['id', 'role', 'content'],
             where: { dialogId, isDel: false, isEffect: true },
-            include: { model: ctx.model.Resource, attributes: ['id', 'fileName', 'fileSize', 'page'] }
+            include: { model: ctx.model.Resource, attributes: ['id', 'fileName', 'fileSize', 'page', 'fileExt'] }
         })
         chats.reverse()
 
@@ -343,17 +419,21 @@ export default class Web extends Service {
         const prompts: ChatMessage[] = []
 
         // system prompt and initial assistant prompt
-        prompts.push({ role: SYSTEM, content: ctx.__('Prompt', system || (await this.getConfig('SYSTEM_PROMPT'))) })
+        system = system || (await this.getConfig('SYSTEM_PROMPT'))
+        system += ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
+        prompts.push({ role: SYSTEM, content: ctx.__('Prompt', system) })
         if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
         // add history chat including resource files
         // add reference resource
         let embedding: number[] | null = null
         let count = 0
+        const fileExt: string[] = []
         for (const item of chats) {
             const file = item.resource
             if (file) {
                 count++
+                fileExt.push(file.fileExt)
                 // query resource, one time embedding
                 if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
                 const pages = await this.queryPages(file.id, embedding)
@@ -369,7 +449,7 @@ export default class Web extends Service {
                         ## File Content
                         ${pages.map(v => v.content).join('\n')}
                         ## Note
-                        All the data in CSV format needs to be converted to Markdown Table before responding.
+                        All the data in CSV format needs to be output in table format.
                     `
                 })
             } else prompts.push({ role: item.role, content: item.content })
@@ -378,6 +458,10 @@ export default class Web extends Service {
         // add user chat
         prompts.push({ role: USER, content: input })
         console.log(prompts)
+
+        const select = await this.selectChatModel(prompts, userId, fileExt)
+        provider = provider || select.provider
+        model = model || select.model
 
         // start chat stream
         const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
@@ -518,7 +602,12 @@ export default class Web extends Service {
 
         const resource = await ctx.service.uniAI.upload(file, userId)
         await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)
-        const chat = await ctx.model.Chat.create({ dialogId, role: ChatRoleEnum.USER, resourceId: resource.id })
+        const chat = await ctx.model.Chat.create({
+            dialogId,
+            role: ChatRoleEnum.USER,
+            resourceId: resource.id,
+            resourceName: file.filename
+        })
         chat.resource = resource
         return chat
     }

@@ -8,6 +8,7 @@ import { ConfigVIP, LevelModel } from '@interface/Config'
 import { UserCache } from '@interface/Cache'
 import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
+import { ModelProvider } from 'uniai'
 
 const FREE_SPLIT_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
 
@@ -132,17 +133,37 @@ export default class User extends Service {
 
     // get user models by level
     async getLevelModel(level: number) {
-        const res = await this.getConfig<LevelModel>('LEVEL_MODEL')
-
-        const disable = true
         const models = await this.service.uniAI.getModels()
-        return models
-            .map<Option>(v => ({
-                value: v.value,
-                label: v.provider,
-                disable: level >= res[v.value] ? false : true,
-                children: v.models.map(v => ({ disable, value: v, label: v }))
-            }))
-            .filter(v => !v.disable && v.children?.length)
+        const options = await Promise.all(
+            models.map<Promise<Option>>(async v => {
+                const disabled = await this.checkLevelModel(level, v.value)
+                return {
+                    value: v.value,
+                    label: v.provider,
+                    disabled,
+                    children: v.models.map(v => ({ disabled, value: v, label: v }))
+                }
+            })
+        )
+        options
+            .sort((a, b) => {
+                if (a.disabled && !b.disabled) return 1
+                if (!a.disabled && b.disabled) return -1
+                return 0
+            })
+            .unshift({
+                value: '',
+                label: this.ctx.__('auto provider'),
+                disabled: false,
+                children: [{ value: '', label: this.ctx.__('auto model'), disabled: false }]
+            })
+        return options
+    }
+
+    // check user level model, return disable or not
+    async checkLevelModel(level: number, provider?: ModelProvider) {
+        if (!provider) return false
+        const res = await this.getConfig<LevelModel>('LEVEL_MODEL')
+        return level >= res[provider] ? false : true
     }
 }

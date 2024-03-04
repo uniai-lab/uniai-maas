@@ -377,7 +377,10 @@ export default class WeChat {
         const data: DialogResponse[] = []
         for (const { id, resource } of res) {
             if (!resource) continue
-            if (!resource.isEffect) resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
+            if (!resource.isEffect) {
+                resource.filePath = await ctx.service.weChat.getConfig('WX_REVIEW_FILE')
+                resource.fileName = basename(resource.filePath)
+            }
             // filter file name
             resource.fileName = ctx.service.util.mintFilter(resource.fileName).text
             data.push({
@@ -386,7 +389,7 @@ export default class WeChat {
                 page: resource.page,
                 fileName: resource.fileName,
                 fileSize: resource.fileSize,
-                filePath: ctx.service.util.url(resource.filePath, resource.isEffect ? resource.fileName : ''),
+                filePath: ctx.service.util.url(resource.filePath, resource.fileName),
                 updatedAt: resource.updatedAt,
                 typeId: resource.type.id,
                 type: resource.type.name,

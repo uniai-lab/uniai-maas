@@ -69,20 +69,6 @@ export class Resource extends Model {
     })
     embedding: number[] | null
 
-    static async similarFindAll(vector: number[], distance?: number, limit: number = 1) {
-        const db = this.sequelize
-        return await this.findAll({
-            order: db?.literal(`embedding <=> '${JSON.stringify(vector)}' ASC`),
-            where: distance ? db?.literal(`embedding <=> '${JSON.stringify(vector)}' < ${distance}`) : undefined,
-            limit
-        })
-    }
-    static async similarCount(vector: number[], distance: number) {
-        return await this.count({
-            where: this.sequelize?.literal(`embedding <=> '${JSON.stringify(vector)}' < ${distance}`)
-        })
-    }
-
     @AllowNull(false)
     @Default('')
     @Column(DataType.TEXT)

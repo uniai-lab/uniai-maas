@@ -200,9 +200,9 @@ const USER_VIP: ConfigVIP[] = [
 ]
 
 const LEVEL_MODEL: LevelModel = {
-    [ChatModelProvider.Baidu]: 0,
     [ChatModelProvider.IFlyTek]: 0,
     [ChatModelProvider.GLM]: 0,
+    [ChatModelProvider.Baidu]: 0,
     [ChatModelProvider.MoonShot]: 1,
     [ChatModelProvider.Google]: 2,
     [ChatModelProvider.OpenAI]: 3

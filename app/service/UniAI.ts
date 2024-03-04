@@ -63,6 +63,7 @@ const ai = new AI({
 const MAX_PAGE = 10
 const DEFAULT_RESOURCE_TYPE = resourceType[0].id
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
+const SIMILAR_DISTANCE = 0.1
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
@@ -85,60 +86,12 @@ export default class UniAI extends Service {
         return ai.models
     }
 
-    // query from multi resources
-    async queryResources(
-        input: string,
-        resourceId: number | number[],
-        provider: EmbedModelProvider = EmbedModelProvider.Other,
-        limit: number = MAX_PAGE
-    ) {
-        const { ctx } = this
-        const vector = await this.embedding(input, provider)
-        const id: number[] = typeof resourceId === 'number' ? [resourceId] : resourceId
-        const resources = await ctx.model.Resource.findAll({
-            where: { id },
-            attributes: ['id', 'page', 'fileName', 'fileSize'],
-            include: {
-                model: provider === EmbedModelProvider.OpenAI ? ctx.model.Embedding1 : ctx.model.Embedding2,
-                order: literal(`embedding <=> '${JSON.stringify(vector.embedding[0])}' ASC`),
-                attributes: ['id', 'page', 'content', 'tokens', 'embedding'],
-                limit
-            }
-        })
-        return resources
-            .map<QueryResource>(({ id, page, fileName, fileSize, embeddings1, embeddings2 }) => ({
-                id,
-                page,
-                fileName,
-                fileSize,
-                pages: [
-                    ...(embeddings1?.map(({ id, page, content, tokens, embedding }) => ({
-                        id,
-                        page,
-                        content,
-                        tokens,
-                        similar: $.cosine(vector.embedding[0], embedding || [])
-                    })) || []),
-                    ...(embeddings2?.map(({ id, page, content, tokens, embedding }) => ({
-                        id,
-                        page,
-                        content,
-                        tokens,
-                        similar: $.cosine(vector.embedding[0], embedding || [])
-                    })) || [])
-                ].sort((a, b) => a.page - b.page),
-                provider,
-                model: vector.model
-            }))
-            .sort((a, b) => id.indexOf(a.id) - id.indexOf(b.id))
-    }
-
-    // query resource
+    // query from one resource
     async queryResource(
-        prompts: string | string[],
+        input: string | string[],
         resourceId?: number,
         provider: EmbedModelProvider = EmbedModelProvider.Other,
-        maxPage: number = MAX_PAGE
+        limit: number = MAX_PAGE
     ) {
         const { ctx } = this
 
@@ -161,38 +114,90 @@ export default class UniAI extends Service {
         }
 
         const pages: ResourcePage[] = []
-        if (typeof prompts === 'string') prompts = [prompts]
 
-        for (const content of prompts) {
+        if (typeof input === 'string') input = [input]
+        for (const content of input) {
             if (typeof content !== 'string' || !content) continue
             const query = content.trim()
             const data = await this.embedding(query, provider)
             const embedding = data.embedding[0]
 
             if (provider === EmbedModelProvider.OpenAI) {
-                const res = await ctx.model.Embedding1.similarFindAll(embedding, maxPage, where)
+                const res = await ctx.model.Embedding1.similarFindAll(embedding, limit, where)
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
                         id: item.id,
                         resourceId: item.resourceId,
                         page: item.page,
+                        model: item.model,
                         content: item.content,
                         similar: $.cosine(embedding, item.embedding || [])
                     })
             } else if (provider === ModelProvider.Other) {
-                const res = await ctx.model.Embedding2.similarFindAll(embedding, maxPage, where)
+                const res = await ctx.model.Embedding2.similarFindAll(embedding, limit, where)
                 for (const item of resourceId ? res.sort((a, b) => a.page - b.page) : res)
                     pages.push({
                         id: item.id,
                         resourceId: item.resourceId,
                         page: item.page,
+                        model: item.model,
                         content: item.content,
                         similar: $.cosine(embedding, item.embedding || [])
                     })
-            } else throw new Error('Embedding model not found')
+            } else throw new Error('Embedding provider and model not found')
         }
 
         return pages
+    }
+
+    // query from multi resources
+    async queryResources(
+        input: string,
+        resourceId: number | number[],
+        provider: EmbedModelProvider = EmbedModelProvider.Other,
+        limit: number = MAX_PAGE
+    ) {
+        const { ctx } = this
+        const vector = await this.embedding(input, provider)
+        const id = typeof resourceId === 'number' ? [resourceId] : resourceId
+        const resources = await ctx.model.Resource.findAll({
+            where: { id },
+            attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath'],
+            include: {
+                model: provider === EmbedModelProvider.OpenAI ? ctx.model.Embedding1 : ctx.model.Embedding2,
+                order: literal(`embedding <=> '${JSON.stringify(vector.embedding[0])}' ASC`),
+                attributes: ['id', 'page', 'content', 'tokens', 'embedding', 'model'],
+                limit
+            }
+        })
+        return resources
+            .map<QueryResource>(({ id, page, fileName, fileSize, filePath, embeddings1, embeddings2 }) => ({
+                id,
+                page,
+                fileName,
+                filePath,
+                fileSize,
+                pages: [
+                    ...(embeddings1 || []).map(({ id, page, content, tokens, embedding, model }) => ({
+                        id,
+                        page,
+                        content,
+                        tokens,
+                        model,
+                        similar: $.cosine(vector.embedding[0], embedding || [])
+                    })),
+                    ...(embeddings2 || []).map(({ id, page, content, tokens, embedding, model }) => ({
+                        id,
+                        page,
+                        content,
+                        tokens,
+                        model,
+                        similar: $.cosine(vector.embedding[0], embedding || [])
+                    }))
+                ].sort((a, b) => a.page - b.page),
+                provider
+            }))
+            .sort((a, b) => id.indexOf(a.id) - id.indexOf(b.id))
     }
 
     // chat to model
@@ -242,14 +247,14 @@ export default class UniAI extends Service {
 
         // extract content
         const { content, page } = await ctx.service.util.extractText(file.filepath)
-        if (!content) throw new Error('Fail to extract content text')
+        if (!page || !content.trim()) throw new Error('Fail to extract content text')
         const embedding = encode(content).concat(new Array(1024).fill(0)).slice(0, 1024)
 
-        // upload to oss
-        const filePath = await ctx.service.util.putOSS(file.filepath)
         // find similar or create new resource
         return (
-            (await ctx.model.Resource.similarFindAll(embedding, 0.1, 1))[0] ||
+            (await ctx.model.Resource.findOne({
+                where: literal(`embedding <=> '${JSON.stringify(embedding)}' < ${SIMILAR_DISTANCE}`)
+            })) ||
             (await ctx.model.Resource.create({
                 page,
                 content,
@@ -258,7 +263,7 @@ export default class UniAI extends Service {
                 tabId,
                 embedding,
                 fileName: file.filename,
-                filePath,
+                filePath: await ctx.service.util.putOSS(file.filepath),
                 fileSize,
                 fileExt: extname(file.filepath).replace('.', ''),
                 tokens: $.countTokens(content)

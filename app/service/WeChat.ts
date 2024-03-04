@@ -328,7 +328,7 @@ export default class WeChat extends Service {
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
-        // add related resource if existed
+        // add reference resource if existed
         const resourceId = dialog.resourceId
         if (resourceId) {
             // query resource pages by input prompt
@@ -347,12 +347,12 @@ export default class WeChat extends Service {
                     <hr>
                     ${ctx.__('document content end')}
                     ${ctx.__('answer according to')}
-                    `.replace('\t', '')
+                    `
             })
         }
 
         // add user chat history
-        for (const { role, content } of dialog.chats) prompts.push({ role, content } as ChatMessage)
+        for (const { role, content } of dialog.chats) prompts.push({ role, content })
 
         // add user current input
         prompts.push({ role: USER, content: input })

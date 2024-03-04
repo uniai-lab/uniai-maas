@@ -27,7 +27,7 @@
     "File content cannot be split": "File content cannot be split.",
     "title, copyright, abstract, authors": "title, copyright, abstract, authors",
     "File not support": "File not support.",
-    "Feel free to chat with me": "Feel free to chat with me!",
+    "Feel free to chat with me": "How can I help you today?",
     "searching": "Searching",
     "searched": "Searched",
     "today": "Current time and date:",
@@ -53,5 +53,8 @@
     "system detect imagine task": "Model recognizes: User intends to generate an image.",
     "selecting model for user": "System is intelligently selecting AI model for user...",
     "imagining": "Imagining",
-    "default dialog": "Default Dialog"
+    "default dialog": "Default Dialog",
+    "System Time": "Current System Time: %s",
+    "auto provider": "Model Select: Auto",
+    "auto model": "Auto select model"
 }

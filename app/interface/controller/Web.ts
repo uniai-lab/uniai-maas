@@ -53,9 +53,9 @@ export interface ConfigResponse {
 }
 
 export interface Option {
-    value: ModelProvider | ChatModel
-    label: keyof typeof ModelProvider | ChatModel
-    disable: boolean
+    value: ModelProvider | ChatModel | string
+    label: keyof typeof ModelProvider | ChatModel | string
+    disabled: boolean
     children?: Option[]
 }
 

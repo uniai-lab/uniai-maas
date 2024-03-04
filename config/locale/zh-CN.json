@@ -25,7 +25,7 @@
     "File content cannot be split": "文件不可分页。",
     "title, copyright, abstract, authors": "开头，标题，版权，出版商，概述，摘要和作者等：",
     "File not support": "文件类型不支持",
-    "feel free to chat": "来和我随便聊聊吧！",
+    "feel free to chat": "今天有什么可以帮到你的吗？",
     "searching": "搜索中",
     "searched": "搜索结束",
     "today": "当前日期和时间：",
@@ -51,5 +51,8 @@
     "system detect imagine task": "模型智能识别：用户生成图片",
     "selecting model for user": "系统正在进行AI模型智能选择...",
     "imagining": "图片生成进度",
-    "default dialog": "默认对话"
+    "default dialog": "默认对话",
+    "System Time": "当前时间：%s",
+    "auto provider": "模型选择：自动",
+    "auto model": "智能选择模型"
 }

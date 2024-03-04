@@ -58,6 +58,7 @@
         "mint-filter": "^4.0.3",
         "ml-distance": "^4.0.1",
         "moment": "^2.30.1",
+        "moment-timezone": "^0.5.45",
         "pdf-to-img": "^2.1.2",
         "pdf2md-ts": "^1.0.1",
         "pg": "^8.11.3",
