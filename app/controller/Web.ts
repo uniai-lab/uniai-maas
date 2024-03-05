@@ -81,6 +81,7 @@ export default class Web {
             token: user.token,
             tokenTime: user.tokenTime.getTime(),
             phone: user.phone,
+            score: user.score,
             chance: {
                 level: user.level,
                 levelExpiredAt: user.levelExpiredAt.getTime(),
@@ -88,8 +89,8 @@ export default class Web {
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.level),
-            models: await ctx.service.user.getLevelModel(user.level)
+            benefit: await ctx.service.user.getBenefit(user.id),
+            models: await ctx.service.user.getModel(user.id)
         }
         ctx.service.res.success('Success to login', data)
     }
@@ -100,7 +101,7 @@ export default class Web {
     async userInfo(@Context() ctx: UserContext) {
         const { id } = ctx.user!
 
-        await ctx.service.user.updateUserChance(id)
+        await ctx.service.user.updateUserFreeChance(id)
         const user = await ctx.service.user.getUserCache(id)
         if (!user) throw new Error('Can not find user cache')
 
@@ -112,6 +113,7 @@ export default class Web {
             token: user.token,
             tokenTime: user.tokenTime,
             phone: user.phone,
+            score: user.score,
             chance: {
                 level: user.level,
                 levelExpiredAt: user.levelExpiredAt,
@@ -119,10 +121,10 @@ export default class Web {
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.level),
-            models: await ctx.service.user.getLevelModel(user.level)
+            benefit: await ctx.service.user.getBenefit(user.id),
+            models: await ctx.service.user.getModel(user.id)
         }
-        ctx.service.res.success('User information', data)
+        ctx.service.res.success('Success to get user information', data)
     }
 
     @Middleware(auth())
@@ -142,6 +144,7 @@ export default class Web {
             token: user.token,
             tokenTime: user.tokenTime.getTime(),
             phone: user.phone,
+            score: user.score,
             chance: {
                 level: user.level,
                 levelExpiredAt: user.levelExpiredAt.getTime(),
@@ -149,8 +152,8 @@ export default class Web {
                 totalChatChance: user.chatChance + user.chatChanceFree,
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
-            benefit: await ctx.service.user.getLevelBenefit(user.level),
-            models: await ctx.service.user.getLevelModel(user.level)
+            benefit: await ctx.service.user.getBenefit(user.id),
+            models: await ctx.service.user.getModel(user.id)
         }
         ctx.service.res.success('Success to update user info', data)
     }
@@ -184,6 +187,7 @@ export default class Web {
         for (const item of res)
             data.push({
                 chatId: item.id,
+                userId: user.id,
                 dialogId,
                 avatar:
                     item.role === ChatRoleEnum.USER
@@ -257,8 +261,9 @@ export default class Web {
         const res = await ctx.service.web.upload(file, dialogId, user.id)
         const data: ChatResponse = {
             chatId: res.id,
-            content: res.content,
+            userId: user.id,
             dialogId: res.dialogId,
+            content: res.content,
             resourceId: res.resourceId,
             role: res.role,
             avatar: user.avatar,

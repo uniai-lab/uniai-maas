@@ -72,6 +72,11 @@ export class User extends Model {
     @AllowNull(false)
     @Default(0)
     @Column(DataType.INTEGER)
+    score: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
     level: number
 
     @AllowNull(false)

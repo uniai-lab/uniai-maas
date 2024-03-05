@@ -1,7 +1,7 @@
 /** @format */
 
 import { Benefit, ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP } from '@interface/Config'
-import { ChatModel, ChatRoleEnum, ModelProvider } from 'uniai'
+import { ChatModel, ChatModelProvider, ChatRoleEnum, ModelProvider } from 'uniai'
 
 export interface ChatRequest {
     input: string
@@ -16,7 +16,7 @@ export interface ChatResponse {
     chatId: number | null
     role: ChatRoleEnum
     avatar: string | null
-    model: ModelProvider | null
+    model: ChatModelProvider | string | null
     subModel: ChatModel | string | null
     isEffect: boolean
 }

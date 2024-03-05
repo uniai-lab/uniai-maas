@@ -1,6 +1,14 @@
 /** @format */
 
-import { ChatModel, ChatModelProvider, ChatRoleEnum, ModelProvider } from 'uniai'
+import {
+    ChatModel,
+    ChatModelProvider,
+    ChatRoleEnum,
+    ImagineModel,
+    ImagineModelProvider,
+    ModelModel,
+    ModelProvider
+} from 'uniai'
 import { Benefit, ConfigMenuV2, ConfigVIP } from '../Config'
 import { OutputMode } from '@interface/Enum'
 
@@ -27,6 +35,7 @@ export interface UserinfoResponse {
     username: string | null
     avatar: string | null
     phone: string | null
+    score: number
     chance: {
         level: number
         levelExpiredAt: number
@@ -53,8 +62,8 @@ export interface ConfigResponse {
 }
 
 export interface Option {
-    value: ModelProvider | ChatModel | string
-    label: keyof typeof ModelProvider | ChatModel | string
+    value: ModelProvider | ModelModel | null
+    label: keyof typeof ModelProvider | ModelModel | string
     disabled: boolean
     children?: Option[]
 }
@@ -64,20 +73,21 @@ export interface ChatRequest {
     dialogId: number
     system?: string
     assistant?: string
-    provider?: ChatModelProvider
-    model?: ChatModel
+    provider?: ChatModelProvider | ImagineModelProvider
+    model?: ChatModel | ImagineModel
     mode?: OutputMode
 }
 
 export interface ChatResponse {
-    content: string
-    dialogId: number
-    resourceId: number | null
     chatId: number | null
+    userId: number
+    dialogId: number
+    content: string
+    resourceId: number | null
     role: ChatRoleEnum
     avatar: string | null
-    model: ModelProvider | null
-    subModel: ChatModel | string | null
+    model: ChatModelProvider | ImagineModelProvider | string | null
+    subModel: ChatModel | ImagineModel | string | null
     file: {
         name: string
         size: number

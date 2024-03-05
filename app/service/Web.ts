@@ -238,8 +238,8 @@ export default class Web extends Service {
         input: string,
         system: string = '',
         assistant: string = '',
-        provider: ChatModelProvider | null = null,
-        model: ChatModel | null = null,
+        provider: ChatModelProvider | ImagineModelProvider | null = null,
+        model: ChatModel | ImagineModel | null = null,
         mode = OutputMode.AUTO
     ) {
         const { ctx } = this
@@ -256,9 +256,10 @@ export default class Web extends Service {
 
         const data: ChatResponse = {
             chatId: 0,
+            userId,
+            dialogId,
             role: ChatRoleEnum.ASSISTANT,
             content: '',
-            dialogId,
             resourceId: 0,
             model: provider,
             subModel: model,
@@ -268,15 +269,15 @@ export default class Web extends Service {
         }
         const output: PassThrough = new PassThrough()
 
-        this.selectMode(input, mode, data, output)
+        this.useOutputMode(input, mode, data, output)
             .then(select => {
                 switch (select) {
                     case 1:
-                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
+                        return this.doChat(input, system, assistant, data, output)
                     case 2:
-                        return this.doImagine(userId, dialogId, input, data, output)
+                        return this.doImagine(input, data, output)
                     default:
-                        return this.doChat(userId, dialogId, input, system, assistant, provider, model, data, output)
+                        return this.doChat(input, system, assistant, data, output)
                 }
             })
             .catch((e: Error) => output.destroy(e))
@@ -284,8 +285,14 @@ export default class Web extends Service {
         return output as Readable
     }
 
-    // select a model
-    async selectMode(input: string, mode: OutputMode, data: ChatResponse, output: PassThrough) {
+    /**
+     * Selects an output mode, either image or text
+     * @param input Input string
+     * @param mode Output mode
+     * @param data Chat response data
+     * @param output PassThrough stream for output
+     */
+    async useOutputMode(input: string, mode: OutputMode, data: ChatResponse, output: PassThrough) {
         if (mode) return mode
 
         data.content = this.ctx.__('selecting model for user')
@@ -299,27 +306,34 @@ export default class Web extends Service {
         return parseInt(res.content) as OutputMode
     }
 
-    // select chat model by user messages
-    async selectChatModel(messages: ChatMessage[], userId: number, ext: string[] = []) {
-        // user info level
-        const user = await this.ctx.service.user.getUserCache(userId)
-        if (!user) throw new Error('User cache not found')
+    /**
+     * Auto select a chat model based on user messages
+     * @param messages Chat messages
+     * @param level User level
+     * @param exts Array of file extensions, defaults to an empty array
+     */
+    async useChatModel(messages: ChatMessage[], level: number, exts: string[]) {
+        // level options and count tokens
         const options = await this.getConfig<LevelModel>('LEVEL_MODEL')
-        const { level } = user
+        const count = messages.reduce((acc, v) => (acc += $.countTokens(v.content)), 0)
+        console.log('count', count)
 
-        // give default provider and model
-        let count = 0
-        for (const { content } of messages) count += $.countTokens(content)
-
-        // iFlyTek
+        // default provider and model
         let provider: ChatModelProvider = DEFAULT_CHAT_PROVIDER
         let model: ChatModel = DEFAULT_CHAT_MODEL
 
+        // 6k
         if (count < 6000) {
-            provider = provider
-            model = model
+            if (level >= options.iflytek) {
+                provider = ChatModelProvider.IFlyTek
+                model = ChatModel.SPARK_V3
+            }
+            if (level >= options.google) {
+                provider = ChatModelProvider.Google
+                model = ChatModel.GEM_PRO
+            }
         }
-        // 8k
+        // 8k input
         else if (count >= 6000 && count < 8000) {
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
@@ -361,18 +375,18 @@ export default class Web extends Service {
             }
         }
         // 128k input
-        else {
+        else if (count >= 32000 && count < 128000) {
             if (level >= options.moonshot) {
                 provider = ChatModelProvider.MoonShot
                 model = ChatModel.MOON_V1_128K
             }
-        }
+        } else throw new Error('Context too long')
 
-        // handle excel
-        if (ext.includes('xlsx') || ext.includes('xls')) {
+        // handle excel table
+        if (exts.includes('xlsx') || exts.includes('xls') || exts.includes('csv')) {
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4
+                model = count < 8000 ? ChatModel.GPT4 : ChatModel.GPT4_32K
             }
         }
 
@@ -381,27 +395,19 @@ export default class Web extends Service {
 
     // translate input content
     async translate(input: string) {
-        const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: 'Translate to English:' + input }]
+        const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `Translate to English: ${input}` }]
         const res = await this.ctx.service.uniAI.chat(prompt)
         if (res instanceof Readable) throw new Error('Chat response is stream')
         return res.content
     }
 
-    async doChat(
-        userId: number,
-        dialogId: number,
-        input: string,
-        system: string = '',
-        assistant: string = '',
-        provider: ChatModelProvider | null = null,
-        model: ChatModel | null = null,
-        data: ChatResponse,
-        output: PassThrough
-    ) {
+    async doChat(input: string, system: string, assistant: string, data: ChatResponse, output: PassThrough) {
         const { ctx } = this
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
+        const user = await ctx.model.User.findByPk(data.userId, {
+            attributes: ['id', 'chatChanceFree', 'chatChance', 'level']
+        })
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
@@ -410,8 +416,8 @@ export default class Web extends Service {
             limit: CHAT_PAGE_SIZE,
             order: [['id', 'desc']],
             attributes: ['id', 'role', 'content'],
-            where: { dialogId, isDel: false, isEffect: true },
-            include: { model: ctx.model.Resource, attributes: ['id', 'fileName', 'fileSize', 'page', 'fileExt'] }
+            where: { dialogId: data.dialogId, isDel: false, isEffect: true },
+            include: { model: ctx.model.Resource, attributes: ['id', 'page', 'fileName', 'fileSize', 'fileExt'] }
         })
         chats.reverse()
 
@@ -428,12 +434,12 @@ export default class Web extends Service {
         // add reference resource
         let embedding: number[] | null = null
         let count = 0
-        const fileExt: string[] = []
+        const exts: string[] = []
         for (const item of chats) {
             const file = item.resource
             if (file) {
                 count++
-                fileExt.push(file.fileExt)
+                exts.push(file.fileExt)
                 // query resource, one time embedding
                 if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
                 const pages = await this.queryPages(file.id, embedding)
@@ -459,16 +465,19 @@ export default class Web extends Service {
         prompts.push({ role: USER, content: input })
         console.log(prompts)
 
-        const select = await this.selectChatModel(prompts, userId, fileExt)
-        provider = provider || select.provider
-        model = model || select.model
+        // auto select model
+        if (!data.model || !data.subModel) {
+            const select = await this.useChatModel(prompts, user.level, exts)
+            data.model = select.provider
+            data.subModel = select.model
+        }
+        const provider = data.model as ChatModelProvider
+        const model = data.subModel as ChatModel
 
         // start chat stream
+        data.content = ''
         const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
-
-        data.content = ''
-        output.write(JSON.stringify(data))
 
         res.on('data', (buff: Buffer) => {
             const obj = $.json<ChatResponse>(buff.toString())
@@ -482,7 +491,7 @@ export default class Web extends Service {
             // save user chat
             if (input)
                 await ctx.model.Chat.create({
-                    dialogId,
+                    dialogId: data.dialogId,
                     role: USER,
                     content: input,
                     model: data.model,
@@ -491,7 +500,7 @@ export default class Web extends Service {
             // save assistant chat
             if (data.content) {
                 const chat = await ctx.model.Chat.create({
-                    dialogId,
+                    dialogId: data.dialogId,
                     role: ASSISTANT,
                     content: data.content,
                     model: data.model,
@@ -508,28 +517,23 @@ export default class Web extends Service {
         res.on('error', e => output.destroy(e))
     }
 
-    async doImagine(userId: number, dialogId: number, input: string, data: ChatResponse, output: PassThrough) {
+    async doImagine(input: string, data: ChatResponse, output: PassThrough) {
         const { ctx } = this
+
         data.model = DEFAULT_IMG_PROVIDER
         data.subModel = DEFAULT_IMG_MODEL
         data.content = ctx.__('system detect imagine task')
         output.write(JSON.stringify(data))
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
+        const user = await ctx.model.User.findByPk(data.userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
         // imagine
-        const res = await ctx.service.uniAI.imagine(
-            await this.translate(input), // need translate for some models
-            '',
-            1,
-            1024,
-            1024,
-            data.model,
-            data.subModel as ImagineModel
-        )
+        const provider = data.model as ImagineModelProvider
+        const model = data.subModel as ImagineModel
+        const res = await ctx.service.uniAI.imagine(await this.translate(input), '', 1, 1024, 1024, provider, model)
         let loop = 0
         // watch task
         while (loop < LOOP_MAX) {
@@ -537,7 +541,6 @@ export default class Web extends Service {
             const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
             if (!task[0]) throw new Error('Task not found')
             if (task[0].fail) throw new Error(task[0].fail)
-
             const progress = task[0].progress
             if (isNaN(progress)) throw new Error('Can not get task progress')
 
@@ -554,7 +557,7 @@ export default class Web extends Service {
                 // save user chat
                 if (input)
                     await ctx.model.Chat.create({
-                        dialogId,
+                        dialogId: data.dialogId,
                         role: ChatRoleEnum.USER,
                         content: input,
                         model: data.model,
@@ -564,7 +567,7 @@ export default class Web extends Service {
                 if (data.content) {
                     data.content = markdown
                     const chat = await ctx.model.Chat.create({
-                        dialogId,
+                        dialogId: data.dialogId,
                         role: ChatRoleEnum.ASSISTANT,
                         content: data.content,
                         model: data.model,

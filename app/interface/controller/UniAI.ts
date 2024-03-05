@@ -8,8 +8,7 @@ import {
     EmbedModel,
     EmbedModelProvider,
     ImagineModel,
-    ImagineModelProvider,
-    ModelProvider
+    ImagineModelProvider
 } from 'uniai'
 
 export interface ChatRequest {
@@ -145,9 +144,4 @@ export interface AuditResponse {
 export interface AIAuditResponse {
     safe?: boolean
     description?: string
-}
-
-export interface ProviderItem {
-    provider: ModelProvider
-    models: ChatModel[]
 }

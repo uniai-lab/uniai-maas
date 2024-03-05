@@ -40,10 +40,10 @@ export default class User extends Service {
     }
 
     // user sign in (NOTE: refresh cache)
-    async signIn(userId: number) {
+    async signIn(id: number) {
         const { ctx } = this
 
-        const user = await ctx.model.User.findByPk(userId)
+        const user = await ctx.model.User.findByPk(id)
         // check banned or invalid user
         if (!user) throw new Error('Can not find user to sign in')
         if (user.isDel || !user.isEffect) throw new Error('User is invalid')
@@ -69,8 +69,8 @@ export default class User extends Service {
         return await user.save()
     }
 
-    // update user free chance
-    async updateUserChance(id: number) {
+    // update user free chance by level
+    async updateUserFreeChance(id: number) {
         const cache = await this.getUserCache(id)
         if (!cache) throw new Error('User cache not found')
 
@@ -82,9 +82,11 @@ export default class User extends Service {
             })
             if (!user) throw new Error('Can not find user')
 
+            const chatChance = await this.getConfig<number[]>('FREE_CHAT_CHANCE')
+            const uploadChance = await this.getConfig<number[]>('FREE_UPLOAD_CHANCE')
             // update db
-            user.chatChanceFree = (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0]
-            user.uploadChanceFree = (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0]
+            user.chatChanceFree = chatChance[user.level] || chatChance[chatChance.length - 1] || 0
+            user.uploadChanceFree = uploadChance[user.level] || uploadChance[chatChance.length - 1] || 0
             user.freeChanceUpdateAt = now
             await user.save()
         }
@@ -105,38 +107,55 @@ export default class User extends Service {
             freeChanceUpdateAt: user.freeChanceUpdateAt.getTime(),
             levelExpiredAt: user.levelExpiredAt.getTime()
         }
-        await app.redis.set(`user_${id}`, JSON.stringify(cache))
+        return await app.redis.set(`user_${id}`, JSON.stringify(cache))
+    }
+
+    // add user chance
+    async addUserChance(id: number, chance: number) {
+        const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'chatChance'] })
+        if (!user) throw new Error('Can not find the user')
+
+        user.chatChance += chance
+        return await user.save()
     }
 
     // update user level
-    async updateLevel(id: number, level: number) {
-        const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'level', 'levelExpiredAt'] })
+    async updateLevel(id: number, score: number) {
+        const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'score', 'level', 'levelExpiredAt'] })
         if (!user) throw new Error('Can not find the user')
-        user.level = level
+
+        // level updated by score
+        user.score += score
+        const levels = await this.getConfig<number[]>('LEVEL_SCORE')
+        for (const i in levels) if (user.score >= levels[i]) user.level = parseInt(i)
         user.levelExpiredAt = $.nextMonthSameTime()
-        return user.save()
+
+        return await user.save()
     }
 
-    // get user benefits by level
-    async getLevelBenefit(level: number) {
+    // get user benefits
+    async getBenefit(id: number) {
+        const cache = await this.getUserCache(id)
+        if (!cache) throw new Error('User cache not found')
+
         const vips = await this.getConfig<ConfigVIP[]>('USER_VIP')
         const images = await this.getConfig<string[]>('USER_MENU_VIP_ICON')
 
-        if (level < 0) level = 0
-        if (level >= vips.length) level = vips.length - 1
-
-        return vips[level].benefits.map((v, i) => {
+        return vips[Math.max(0, Math.min(vips.length - 1, cache.level))].benefits.map((v, i) => {
             v.image = images[i]
             return v
         })
     }
 
     // get user models by level
-    async getLevelModel(level: number) {
-        const models = await this.service.uniAI.getModels()
+    async getModel(id: number) {
+        const cache = await this.getUserCache(id)
+        if (!cache) throw new Error('User cache not found')
+
+        const models = await this.service.uniAI.getChatModels()
         const options = await Promise.all(
             models.map<Promise<Option>>(async v => {
-                const disabled = await this.checkLevelModel(level, v.value)
+                const disabled = await this.checkLevelModel(cache.level, v.value)
                 return {
                     value: v.value,
                     label: v.provider,
@@ -152,10 +171,10 @@ export default class User extends Service {
                 return 0
             })
             .unshift({
-                value: '',
+                value: null,
                 label: this.ctx.__('auto provider'),
                 disabled: false,
-                children: [{ value: '', label: this.ctx.__('auto model'), disabled: false }]
+                children: [{ value: null, label: this.ctx.__('auto model'), disabled: false }]
             })
         return options
     }

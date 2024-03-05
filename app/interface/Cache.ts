@@ -29,6 +29,7 @@ export interface UserCache {
     tokenTime: number
     level: number
     levelExpiredAt: number
+    score: number
     uploadSize: number
     chatChance: number
     chatChanceFree: number

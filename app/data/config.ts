@@ -14,8 +14,9 @@ const INIT_RESOURCE_ID = 449
 
 const { ADMIN_TOKEN } = process.env
 
-const FREE_CHAT_CHANCE: number[] = [19, 99, 199, 299]
+const FREE_CHAT_CHANCE: number[] = [18, 20, 50, 100]
 const FREE_UPLOAD_CHANCE: number[] = [5, 50, 100, 500]
+const LEVEL_SCORE: number[] = [0, 100, 500, 1000]
 
 const USER_MENU: ConfigMenu[] = [
     {
@@ -202,7 +203,7 @@ const USER_VIP: ConfigVIP[] = [
 const LEVEL_MODEL: LevelModel = {
     [ChatModelProvider.IFlyTek]: 0,
     [ChatModelProvider.GLM]: 0,
-    [ChatModelProvider.Baidu]: 0,
+    [ChatModelProvider.Baidu]: 1,
     [ChatModelProvider.MoonShot]: 1,
     [ChatModelProvider.Google]: 2,
     [ChatModelProvider.OpenAI]: 3
@@ -472,5 +473,10 @@ export default [
         id: 39,
         key: 'PROMPT_MODEL_SELECT',
         value: readFileSync(`${ROOT_PATH}/app/data/prompt-model-select.md`, 'utf-8')
+    },
+    {
+        id: 40,
+        key: 'LEVEL_SCORE',
+        value: JSON.stringify(LEVEL_SCORE)
     }
 ]

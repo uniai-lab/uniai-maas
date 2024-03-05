@@ -25,16 +25,15 @@ import transaction from '@middleware/transaction'
 
 @HTTPController({ path: '/pay' })
 export default class Pay {
-    // wechat pay callback
+    // pay callback
     @Middleware(transaction())
     @HTTPMethod({ path: '/callback', method: HTTPMethodEnum.POST })
     async index(@Context() ctx: EggContext, @HTTPBody() params: WXNotifyRequest) {
-        const res = await ctx.service.pay.callback(PayType.WeChat, params)
-        if (res && res.status) await ctx.service.user.updateLevel(res.userId, res.itemId)
+        await ctx.service.pay.callback(PayType.WeChat, params)
         ctx.service.res.success('Success to payment callback')
     }
 
-    // list pay
+    // list pay items
     @HTTPMethod({ path: '/list', method: HTTPMethodEnum.GET })
     async list(@Context() ctx: EggContext) {
         const res = await ctx.service.pay.list()
@@ -71,9 +70,7 @@ export default class Pay {
         const payId = parseInt(id)
         if (!payId) throw new Error('Invalid id')
 
-        const { transactionId, amount, currency, status, itemId } = await ctx.service.pay.check(payId, userId)
-        // update user level
-        if (status) await ctx.service.user.updateLevel(userId, itemId)
+        const { transactionId, amount, currency, status } = await ctx.service.pay.check(payId, userId)
 
         const data: CheckPayResponse = { transactionId, amount, currency, status }
         ctx.service.res.success('Success to check pay', data)

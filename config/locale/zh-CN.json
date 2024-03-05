@@ -52,7 +52,7 @@
     "selecting model for user": "系统正在进行AI模型智能选择...",
     "imagining": "图片生成进度",
     "default dialog": "默认对话",
-    "System Time": "当前时间：%s",
-    "auto provider": "模型选择：自动",
+    "System Time": "当前系统时间：%s",
+    "auto provider": "选择模型",
     "auto model": "智能选择模型"
 }

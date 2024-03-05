@@ -43,6 +43,16 @@ export class PayItem extends Model {
     price: Decimal
 
     @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    chance: number
+
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    score: number
+
+    @AllowNull(false)
     @Default(false)
     @Column(DataType.BOOLEAN)
     isDel: boolean

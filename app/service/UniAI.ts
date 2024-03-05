@@ -82,8 +82,8 @@ export default class UniAI extends Service {
         return $.json<T>(value) || (value as T)
     }
 
-    async getModels() {
-        return ai.models
+    async getChatModels() {
+        return ai.chatModels
     }
 
     // query from one resource

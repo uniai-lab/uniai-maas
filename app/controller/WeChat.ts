@@ -115,7 +115,7 @@ export default class WeChat {
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.user.getLevelBenefit(user.level)
+            benefit: await ctx.service.user.getBenefit(user.id)
         }
         ctx.service.res.success('Success to WeChat login', data)
     }
@@ -174,7 +174,7 @@ export default class WeChat {
     async userInfo(@Context() ctx: UserContext) {
         const { id } = ctx.user!
 
-        await ctx.service.user.updateUserChance(id)
+        await ctx.service.user.updateUserFreeChance(id)
         const user = await ctx.service.user.getUserCache(id)
         if (!user) throw new Error('Can not find user cache')
 
@@ -194,7 +194,7 @@ export default class WeChat {
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.user.getLevelBenefit(user.level)
+            benefit: await ctx.service.user.getBenefit(user.id)
         }
         ctx.service.res.success('User information', data)
     }
@@ -340,7 +340,7 @@ export default class WeChat {
                 totalUploadChance: user.uploadChance + user.uploadChanceFree
             },
             task: await ctx.service.weChat.getConfig<ConfigTask[]>('USER_TASK'),
-            benefit: await ctx.service.user.getLevelBenefit(user.level)
+            benefit: await ctx.service.user.getBenefit(user.id)
         }
         ctx.service.res.success('Success to update user information', data)
     }

@@ -25,8 +25,8 @@ export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
-            // await syncDatabase(app) // init database struct and data
-            // await syncConfigCache(app) // sync config cache
+            await syncDatabase(app) // init database struct and data
+            await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
         }
 
@@ -48,7 +48,7 @@ async function syncDatabase(app: Application, force: boolean = false) {
     await syncTableData(app.model.ResourceType, ResourceTypeData, ['name', 'description'])
     await syncTableData(app.model.PromptType, PromptTypeData, ['name', 'description'])
     await syncTableData(app.model.UserResourceTab, UserResourceTabData, ['name', 'desc', 'pid'])
-    await syncTableData(app.model.PayItem, PayItemData, ['title', 'description', 'price'])
+    await syncTableData(app.model.PayItem, PayItemData, ['title', 'description', 'price', 'score', 'chance'])
 }
 
 /**

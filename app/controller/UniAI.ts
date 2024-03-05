@@ -14,8 +14,7 @@ import {
     UploadResponse,
     AuditRequest,
     ImgChangeRequest,
-    QueryResourcesRequest,
-    QueryResource
+    QueryResourcesRequest
 } from '@interface/controller/UniAI'
 import auth from '@middleware/authB'
 import log from '@middleware/log'
@@ -27,7 +26,7 @@ export default class UniAI {
     @Middleware()
     @HTTPMethod({ path: '/models', method: HTTPMethodEnum.GET })
     async models(@Context() ctx: EggContext) {
-        const data = await ctx.service.uniAI.getModels()
+        const data = await ctx.service.uniAI.getChatModels()
         ctx.service.res.success(`Success to list models`, data)
     }
 

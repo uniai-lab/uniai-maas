@@ -35,8 +35,16 @@ export default class Pay extends Service {
                 const { ciphertext, associated_data, nonce } = result.resource
                 const res: WXPaymentResult = wx.decipher_gcm(ciphertext, associated_data, nonce, WX_PAY_PRIVATE)
                 // write to db
-                const payment = await ctx.model.Payment.findOne({ where: { transactionId: res.out_trade_no } })
+                const payment = await ctx.model.Payment.findOne({
+                    where: { transactionId: res.out_trade_no },
+                    include: { model: ctx.model.PayItem, attributes: ['id', 'score', 'chance'] }
+                })
                 if (!payment) throw new Error('Payment not found')
+                if (payment.status === 0) {
+                    // update user info
+                    await ctx.service.user.updateLevel(payment.userId, payment.item.score)
+                    await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
+                }
                 payment.status = 1
                 payment.result = res
                 payment.currency = res.amount.currency
@@ -48,8 +56,12 @@ export default class Pay extends Service {
 
     // check payment
     async check(id: number, userId: number) {
+        const { ctx } = this
         // find payment by id
-        const payment = await this.ctx.model.Payment.findOne({ where: { id, userId } })
+        const payment = await this.ctx.model.Payment.findOne({
+            where: { id, userId },
+            include: { model: ctx.model.PayItem, attributes: ['id', 'score', 'chance'] }
+        })
         if (!payment) throw new Error('Payment not found')
         if (payment.status === 1) return payment
 
@@ -59,6 +71,11 @@ export default class Pay extends Service {
             const res: WXPaymentResult = transaction.data
             // success, write to db
             if (res.trade_state === 'SUCCESS') {
+                if (payment.status === 0) {
+                    // update user info
+                    await ctx.service.user.updateLevel(payment.userId, payment.item.score)
+                    await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
+                }
                 payment.status = 1
                 payment.result = res
                 payment.currency = res.amount.currency

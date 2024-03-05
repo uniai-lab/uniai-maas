@@ -55,6 +55,6 @@
     "imagining": "Imagining",
     "default dialog": "Default Dialog",
     "System Time": "Current System Time: %s",
-    "auto provider": "Model Select: Auto",
-    "auto model": "Auto select model"
+    "auto provider": "Select Model",
+    "auto model": "Auto Select Model"
 }
