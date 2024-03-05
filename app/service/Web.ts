@@ -330,10 +330,6 @@ export default class Web extends Service {
                 provider = ChatModelProvider.IFlyTek
                 model = ChatModel.SPARK_V3
             }
-            if (level >= options.google) {
-                provider = ChatModelProvider.Google
-                model = ChatModel.GEM_PRO
-            }
         }
         // 8k input
         else if (count >= 6000 && count < 8000) {
