@@ -39,7 +39,7 @@ const DEFAULT_CHAT_MODEL = ChatModel.SPARK_V3
 const DEFAULT_IMG_PROVIDER = ImagineModelProvider.StabilityAI
 const DEFAULT_IMG_MODEL = ImagineModel.SD_1_6
 
-const TITLE_SUB_TOKEN = 60 // dialog title limit length
+const TITLE_SUB_TOKEN = 20 // dialog title limit length
 const QUERY_PAGE_LIMIT = 5 // query resource page limit
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -251,6 +251,8 @@ export default class Web extends Service {
         })
         if (!dialog) throw new Error('Dialog is not available')
 
+        console.log($.countTokens(input))
+        console.log($.subTokens(input, TITLE_SUB_TOKEN))
         // update title
         if (!dialog.title) await dialog.update({ title: $.subTokens(input, TITLE_SUB_TOKEN) })
 
