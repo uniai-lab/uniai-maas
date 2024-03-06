@@ -368,7 +368,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_32K
+                model = ChatModel.GPT4_TURBO
             }
         }
         // 128k input
@@ -377,13 +377,17 @@ export default class Web extends Service {
                 provider = ChatModelProvider.MoonShot
                 model = ChatModel.MOON_V1_128K
             }
+            if (level >= options.openai) {
+                provider = ChatModelProvider.OpenAI
+                model = ChatModel.GPT4_TURBO
+            }
         } else throw new Error('Context too long')
 
         // handle excel table
         if (exts.includes('xlsx') || exts.includes('xls') || exts.includes('csv')) {
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = count < 8000 ? ChatModel.GPT4 : ChatModel.GPT4_32K
+                model = count < 8000 ? ChatModel.GPT4 : ChatModel.GPT4_TURBO
             }
         }
 
