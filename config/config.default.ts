@@ -23,7 +23,21 @@ const {
 const ALLOW_ORIGIN = '*'
 const ALLOW_METHOD = ['GET', 'POST']
 const FILE_SIZE = '5mb'
-const WHITELIST = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.gif', '.xls', '.xlsx', '.ppt', '.pptx']
+const WHITELIST = [
+    '.txt',
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.wps'
+]
 
 export default (appInfo: EggAppInfo) => {
     // override config from framework / plugin

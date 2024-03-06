@@ -318,7 +318,6 @@ export default class Web extends Service {
         // level options and count tokens
         const options = await this.getConfig<LevelModel>('LEVEL_MODEL')
         const count = messages.reduce((acc, v) => (acc += $.countTokens(v.content)), 0)
-        console.log('count', count)
 
         // default provider and model
         let provider: ChatModelProvider = DEFAULT_CHAT_PROVIDER
