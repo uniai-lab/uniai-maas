@@ -474,7 +474,7 @@ export default class Web extends Service {
             where: { dialogId: data.dialogId, isDel: false, isEffect: true },
             include: {
                 model: ctx.model.Resource,
-                attributes: ['id', 'page', 'fileName', 'fileSize', 'fileExt', 'typeId']
+                attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'fileExt', 'typeId']
             }
         })
         chats.reverse()
