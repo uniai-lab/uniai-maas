@@ -28,8 +28,7 @@ export default class Pay extends Service {
     // payment callback notify
     async callback(type: PayType, result: WXNotifyRequest) {
         const { ctx } = this
-        if (type === PayType.WeChat) {
-            // success
+        if (type === PayType.WeChat)
             if (result.event_type === 'TRANSACTION.SUCCESS') {
                 // decrypt transaction detail
                 const { ciphertext, associated_data, nonce } = result.resource
@@ -40,18 +39,17 @@ export default class Pay extends Service {
                     include: { model: ctx.model.PayItem, attributes: ['id', 'score', 'chance'] }
                 })
                 if (!payment) throw new Error('Payment not found')
+                // update payment status and add user chance, score, level
                 if (payment.status === 0) {
-                    // update user info
                     await ctx.service.user.updateLevel(payment.userId, payment.item.score)
                     await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
+                    payment.status = 1
+                    payment.result = res
+                    payment.currency = res.amount.currency
+                    payment.type = res.trade_type
+                    await payment.save()
                 }
-                payment.status = 1
-                payment.result = res
-                payment.currency = res.amount.currency
-                payment.type = res.trade_type
-                return await payment.save()
-            }
-        } else throw new Error('Pay type not support')
+            } else throw new Error('Pay type not support')
     }
 
     // check payment
@@ -70,12 +68,9 @@ export default class Pay extends Service {
             const transaction = await wx.query({ out_trade_no: payment.transactionId })
             const res: WXPaymentResult = transaction.data
             // success, write to db
-            if (res.trade_state === 'SUCCESS') {
-                if (payment.status === 0) {
-                    // update user info
-                    await ctx.service.user.updateLevel(payment.userId, payment.item.score)
-                    await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
-                }
+            if (res.trade_state === 'SUCCESS' && payment.status === 0) {
+                await ctx.service.user.updateLevel(payment.userId, payment.item.score)
+                await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
                 payment.status = 1
                 payment.result = res
                 payment.currency = res.amount.currency

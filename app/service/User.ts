@@ -10,7 +10,7 @@ import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
 import { ModelProvider } from 'uniai'
 
-const FREE_SPLIT_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
+const FREE_CHANCE_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class User extends Service {
@@ -94,17 +94,17 @@ export default class User extends Service {
 
         const now = new Date()
         // refresh free chat chance
-        if (now.getTime() - cache.freeChanceUpdateAt > FREE_SPLIT_TIME) {
+        if (now.getTime() - cache.freeChanceUpdateAt > FREE_CHANCE_TIME) {
             const user = await this.ctx.model.User.findByPk(id, {
-                attributes: ['id', 'chatChanceFree', 'uploadChanceFree', 'freeChanceUpdateAt']
+                attributes: ['id', 'chatChanceFree', 'uploadChanceFree', 'freeChanceUpdateAt', 'level']
             })
             if (!user) throw new Error('Can not find user')
 
             const chatChance = await this.getConfig<number[]>('FREE_CHAT_CHANCE')
             const uploadChance = await this.getConfig<number[]>('FREE_UPLOAD_CHANCE')
             // update db
-            user.chatChanceFree = chatChance[user.level] || chatChance[chatChance.length - 1] || 0
-            user.uploadChanceFree = uploadChance[user.level] || uploadChance[chatChance.length - 1] || 0
+            user.chatChanceFree = chatChance[user.level] || 0
+            user.uploadChanceFree = uploadChance[user.level] || 0
             user.freeChanceUpdateAt = now
             await user.save()
         }

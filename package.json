@@ -31,7 +31,6 @@
         "@eggjs/tegg-eventbus-plugin": "^3.30.0",
         "@eggjs/tegg-plugin": "^3.30.0",
         "@eggjs/tegg-schedule-plugin": "^3.30.0",
-        "@mtamayo/office-text-extractor": "^3.0.4",
         "@openai-link/egg-sequelize-ts": "^1.1.1",
         "@server-sent-stream/node": "^1.0.5",
         "@stdlib/assert-is-json": "^0.1.1",

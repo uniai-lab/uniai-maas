@@ -26,7 +26,7 @@ import transaction from '@middleware/transaction'
 @HTTPController({ path: '/pay' })
 export default class Pay {
     // pay callback
-    @Middleware(transaction())
+    @Middleware(log(), transaction())
     @HTTPMethod({ path: '/callback', method: HTTPMethodEnum.POST })
     async index(@Context() ctx: EggContext, @HTTPBody() params: WXNotifyRequest) {
         await ctx.service.pay.callback(PayType.WeChat, params)
