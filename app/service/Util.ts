@@ -59,7 +59,9 @@ export default class Util extends Service {
     async convertIMG(path: string) {
         // If not a PDF, convert to PDF
         const buffer =
-            extname(path) === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
+            extname(path).toLowerCase() === '.pdf'
+                ? readFileSync(path)
+                : await convertSync(readFileSync(path), 'pdf', undefined)
 
         const imgs: string[] = []
         const pages = await pdf2img.pdf(buffer, { scale: 2 })
@@ -80,7 +82,7 @@ export default class Util extends Service {
      * @returns Extracted content from the file.
      */
     async extractText(path: string) {
-        const ext = extname(path).replace('.', '')
+        const ext = extname(path).replace('.', '').toLowerCase()
         let content = ''
         if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) return content
         else if (['xls', 'xlsx', 'et'].includes(ext)) {
@@ -105,7 +107,7 @@ export default class Util extends Service {
      * @returns An array of strings representing the extracted pages in markdown
      */
     async extractPages(path: string) {
-        const ext = extname(path).replace('.', '')
+        const ext = extname(path).replace('.', '').toLowerCase()
 
         if (['xls', 'xlsx', 'et'].includes(ext)) {
             const res = xlsx.readFile(path)
@@ -115,7 +117,9 @@ export default class Util extends Service {
             return arr
         } else {
             const buffer =
-                extname(path) === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
+                extname(path).toLowerCase() === '.pdf'
+                    ? readFileSync(path)
+                    : await convertSync(readFileSync(path), 'pdf', undefined)
             const pages = await pdf2md(buffer)
             return pages.map((v, i) => `**Page Number: ${i + 1}**<hr>${v}<hr>`)
         }

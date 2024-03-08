@@ -55,7 +55,6 @@ export default class WeChat {
         ctx.service.res.success('Success to list tab', data)
     }
 
-    @Middleware(log())
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
     async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         if (!path) throw new Error('Path is null')

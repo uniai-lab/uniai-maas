@@ -13,7 +13,8 @@ import {
     ChatModelProvider,
     EmbedModelProvider,
     ImagineModelProvider,
-    ImagineModel
+    ImagineModel,
+    ModelProvider
 } from 'uniai'
 import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
@@ -41,6 +42,9 @@ const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.g
 
 const IMAGINE_COST = 5
 const CHAT_COST = 1
+
+const TRANSLATE_PROVIDER = ModelProvider.Google
+const TRANSLATE_MODEL = ChatModel.GEM_PRO
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -274,7 +278,6 @@ export default class Web extends Service {
 
         this.useOutputMode(input, mode, data, output)
             .then(select => {
-                console.log(select)
                 switch (select) {
                     case 1:
                         return this.doChat(input, system, assistant, data, output)
@@ -451,7 +454,7 @@ export default class Web extends Service {
     // translate input content
     async translate(input: string) {
         const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `Translate to English: ${input}` }]
-        const res = await this.ctx.service.uniAI.chat(prompt)
+        const res = await this.ctx.service.uniAI.chat(prompt, false, TRANSLATE_PROVIDER, TRANSLATE_MODEL)
         if (res instanceof Readable) throw new Error('Chat response is stream')
         return res.content
     }
@@ -470,7 +473,7 @@ export default class Web extends Service {
         const chats = await ctx.model.Chat.findAll({
             limit: CHAT_PAGE_SIZE,
             order: [['id', 'desc']],
-            attributes: ['id', 'role', 'content'],
+            attributes: ['id', 'role', 'content', 'resourceId', 'resourceName'],
             where: { dialogId: data.dialogId, isDel: false, isEffect: true },
             include: {
                 model: ctx.model.Resource,
@@ -499,7 +502,11 @@ export default class Web extends Service {
                 if (file.typeId === ResourceType.IMAGE) {
                     prompts.push({
                         role: USER,
-                        content: `# Image\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`,
+                        content: `
+                        # Image
+                        File name: ${item.resourceName}
+                        File size: ${file.fileSize} Bytes
+                        `,
                         img: { url: ctx.service.util.fileURL(file.filePath) }
                     })
                 } else {

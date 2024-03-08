@@ -241,7 +241,7 @@ export default class UniAI extends Service {
 
         // limit upload file size
         const fileSize = statSync(file.filepath).size
-        const fileExt = extname(file.filename).replace('.', '')
+        const fileExt = extname(file.filename).replace('.', '').toLowerCase()
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
         /*
         if (fileSize > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))) throw new Error('File size exceeds limit')
