@@ -22,21 +22,32 @@ const {
 
 const ALLOW_ORIGIN = '*'
 const ALLOW_METHOD = ['GET', 'POST']
-const FILE_SIZE = '5mb'
+const FILE_SIZE = '20mb'
 const WHITELIST = [
-    '.txt',
+    // office
     '.pdf',
     '.doc',
     '.docx',
-    '.png',
-    '.jpg',
-    '.jpeg',
-    '.gif',
     '.xls',
     '.xlsx',
     '.ppt',
     '.pptx',
-    '.wps'
+    '.wps',
+    '.et',
+    '.csv',
+    '.odt',
+    '.odp',
+    '.ods',
+    // images
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.webp',
+    // pure text
+    '.json',
+    '.md',
+    '.txt'
 ]
 
 export default (appInfo: EggAppInfo) => {

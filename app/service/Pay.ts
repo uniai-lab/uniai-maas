@@ -100,7 +100,7 @@ export default class Pay extends Service {
             const res = await wx.transactions_native({
                 description: item.title,
                 out_trade_no: transactionId,
-                notify_url: 'https://api.test.uniai.cas-ll.cn/pay/callback',
+                notify_url: ctx.service.util.paybackURL(),
                 amount: { total: parseInt(item.price.mul(100).toFixed(0)) }
             })
             if (res.error) throw new Error(res.error)

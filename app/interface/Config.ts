@@ -1,6 +1,6 @@
 /** @format */
 
-import { ChatModelProvider, ModelProvider } from 'uniai'
+import { ChatModelProvider, ImagineModel, ModelModel, ModelProvider } from 'uniai'
 
 export interface ConfigTask {
     title: string
@@ -42,6 +42,10 @@ export interface Benefit {
     tipColor: string
 }
 
-export type LevelModel = {
+export type LevelChatProvider = {
     [key in ChatModelProvider]: number
+}
+
+export type LevelImagineModel = {
+    [key in ImagineModel]: number
 }

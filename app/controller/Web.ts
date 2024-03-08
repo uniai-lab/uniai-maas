@@ -24,6 +24,7 @@ import {
     DialogListResponse,
     ChatListRequest
 } from '@interface/controller/Web'
+import { ResourceType } from '@interface/Enum'
 import $ from '@util/util'
 
 @HTTPController({ path: '/web' })
@@ -101,8 +102,9 @@ export default class Web {
     async userInfo(@Context() ctx: UserContext) {
         const { id } = ctx.user!
 
-        await ctx.service.user.updateUserFreeChance(id)
-        const user = await ctx.service.user.getUserCache(id)
+        await ctx.service.user.updateFreeChance(id)
+        await ctx.service.user.updateLevel(id)
+        const user = await ctx.service.user.get(id)
         if (!user) throw new Error('Can not find user cache')
 
         const data: UserinfoResponse = {
@@ -202,9 +204,12 @@ export default class Web {
                 file: item.resource
                     ? {
                           name: item.resourceName || item.resource.fileName,
-                          ext: item.resource.fileExt,
+                          ext: (item.resource.typeId === ResourceType.IMAGE ? 'image/' : '') + item.resource.fileExt,
                           size: item.resource.fileSize,
-                          url: ctx.service.util.url(item.resource.filePath, item.resourceName || item.resource.fileName)
+                          url: ctx.service.util.fileURL(
+                              item.resource.filePath,
+                              item.resourceName || item.resource.fileName
+                          )
                       }
                     : null
             })
@@ -272,9 +277,9 @@ export default class Web {
             isEffect: res.isEffect,
             file: {
                 name: res.resourceName || res.resource!.fileName,
-                ext: res.resource!.fileExt,
+                ext: (res.resource!.typeId === ResourceType.IMAGE ? 'image/' : '') + res.resource!.fileExt,
                 size: res.resource!.fileSize,
-                url: ctx.service.util.url(res.resource!.filePath, res.resource!.fileName)
+                url: ctx.service.util.fileURL(res.resource!.filePath, res.resourceName || res.resource!.fileName)
             }
         }
 

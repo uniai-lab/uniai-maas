@@ -16,7 +16,7 @@ export default function auth() {
         const expire = appType === 'web' ? EXPIRE_7 : EXPIRE_1
 
         const now = Date.now()
-        const user = await ctx.service.user.getUserCache(id)
+        const user = await ctx.service.user.get(id)
 
         // find user in redis
         if (user && user.token === token && now - user.tokenTime < expire) ctx.user = user

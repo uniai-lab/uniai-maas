@@ -1,13 +1,15 @@
 /** @format */
 
+import { ResourceType } from '@interface/Enum'
+
 export default [
     {
-        id: 1,
+        id: ResourceType.TEXT,
         name: 'document',
         description: '文档'
     },
     {
-        id: 2,
+        id: ResourceType.IMAGE,
         name: 'image',
         description: '图片'
     },

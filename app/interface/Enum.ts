@@ -24,3 +24,8 @@ export enum OutputMode {
     TEXT,
     IMAGE
 }
+
+export enum ResourceType {
+    TEXT = 1,
+    IMAGE = 2
+}

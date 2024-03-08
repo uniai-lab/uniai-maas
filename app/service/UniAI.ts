@@ -20,8 +20,7 @@ import AI, {
     MJTaskType,
     ModelProvider
 } from 'uniai'
-import { AuditProvider } from '@interface/Enum'
-import resourceType from '@data/resourceType'
+import { AuditProvider, ResourceType } from '@interface/Enum'
 import userResourceTab from '@data/userResourceTab'
 import { UserContext } from '@interface/Context'
 import fly from '@util/fly'
@@ -61,9 +60,8 @@ const ai = new AI({
 })
 
 const MAX_PAGE = 10
-const DEFAULT_RESOURCE_TYPE = resourceType[0].id
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
-const SIMILAR_DISTANCE = 0.1
+const SIMILAR_DISTANCE = 0.000001
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
@@ -236,27 +234,30 @@ export default class UniAI extends Service {
     async upload(
         file: EggFile,
         userId?: number,
-        typeId: number = DEFAULT_RESOURCE_TYPE,
+        typeId: number = ResourceType.TEXT,
         tabId: number = DEFAULT_RESOURCE_TAB
     ) {
         const { ctx } = this
 
         // limit upload file size
         const fileSize = statSync(file.filepath).size
+        const fileExt = extname(file.filename).replace('.', '')
+        if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
+        /*
         if (fileSize > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))) throw new Error('File size exceeds limit')
+        */
 
         // extract content
-        const { content, page } = await ctx.service.util.extractText(file.filepath)
-        if (!page || !content.trim()) throw new Error('Fail to extract content text')
-        const embedding = encode(content).concat(new Array(1024).fill(0)).slice(0, 1024)
+        const content = await ctx.service.util.extractText(file.filepath)
+        const embedding = content ? encode(content).concat(new Array(1024).fill(0)).slice(0, 1024) : null
 
         // find similar or create new resource
         return (
-            (await ctx.model.Resource.findOne({
-                where: literal(`embedding <=> '${JSON.stringify(embedding)}' < ${SIMILAR_DISTANCE}`)
-            })) ||
+            (embedding &&
+                (await ctx.model.Resource.findOne({
+                    where: literal(`embedding <=> '${JSON.stringify(embedding)}' < ${SIMILAR_DISTANCE}`)
+                }))) ||
             (await ctx.model.Resource.create({
-                page,
                 content,
                 userId,
                 typeId,
@@ -265,7 +266,7 @@ export default class UniAI extends Service {
                 fileName: file.filename,
                 filePath: await ctx.service.util.putOSS(file.filepath),
                 fileSize,
-                fileExt: extname(file.filepath).replace('.', ''),
+                fileExt,
                 tokens: $.countTokens(content)
             }))
         )
@@ -276,7 +277,7 @@ export default class UniAI extends Service {
         return await ai.embedding(input, { provider })
     }
 
-    // create embedding
+    // create embedding for text content
     async embeddingResource(
         provider: EmbedModelProvider = EmbedModelProvider.Other,
         resourceId?: number,
@@ -286,11 +287,12 @@ export default class UniAI extends Service {
         fileExt?: string,
         fileSize?: number,
         userId: number = 0,
-        typeId: number = DEFAULT_RESOURCE_TYPE,
+        typeId: number = ResourceType.TEXT,
         tabId: number = DEFAULT_RESOURCE_TAB,
         reset: boolean = false
     ) {
         const { ctx } = this
+
         if (!resourceId) {
             if (!content) throw new Error('File content is empty')
             if (!fileName) throw new Error('File name is empty')
@@ -301,17 +303,16 @@ export default class UniAI extends Service {
             content = $.tinyText(content)
         }
 
-        if (provider === EmbedModelProvider.OpenAI) {
-            const include = ctx.model.Embedding1
+        // find or create a resource
+        const resource = resourceId
+            ? await ctx.model.Resource.findByPk(resourceId)
+            : await ctx.model.Resource.create({ content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt })
 
-            // find or create a resource
-            const resource = resourceId
-                ? await ctx.model.Resource.findByPk(resourceId, { include })
-                : await ctx.model.Resource.create(
-                      { content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt },
-                      { include }
-                  )
-            if (!resource) throw new Error('Can not create or find resource by id')
+        if (!resource) throw new Error('Can not create or find resource by id')
+        if (!resource.content) throw new Error('Can not extract content from resource')
+
+        if (provider === EmbedModelProvider.OpenAI) {
+            resource.embeddings1 = await ctx.model.Embedding1.findAll({ where: { resourceId } })
 
             if (!resource.embeddings1.length || reset) {
                 // extract page of content from the file
@@ -336,16 +337,7 @@ export default class UniAI extends Service {
             }
             return { resource, provider }
         } else if (provider === EmbedModelProvider.Other) {
-            const include = ctx.model.Embedding2
-
-            // find or create a resource
-            const resource = resourceId
-                ? await ctx.model.Resource.findByPk(resourceId, { include })
-                : await ctx.model.Resource.create(
-                      { content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt },
-                      { include }
-                  )
-            if (!resource) throw new Error('Can not create or find resource by id')
+            resource.embeddings2 = await ctx.model.Embedding2.findAll({ where: { resourceId } })
 
             if (!resource.embeddings2.length || reset) {
                 // extract page of content from the file

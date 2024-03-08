@@ -174,8 +174,8 @@ export default class WeChat {
     async userInfo(@Context() ctx: UserContext) {
         const { id } = ctx.user!
 
-        await ctx.service.user.updateUserFreeChance(id)
-        const user = await ctx.service.user.getUserCache(id)
+        await ctx.service.user.updateFreeChance(id)
+        const user = await ctx.service.user.get(id)
         if (!user) throw new Error('Can not find user cache')
 
         const data: UserinfoResponse = {
@@ -355,14 +355,14 @@ export default class WeChat {
 
         // filter file name
         res.fileName = ctx.service.util.mintFilter(res.fileName).text
-        const path = ctx.service.util.url(res.filePath, res.fileName)
+        const path = ctx.service.util.fileURL(res.filePath, res.fileName)
         const data: ResourceResponse = {
             id: res.id,
             name: res.fileName,
             size: res.fileSize,
             ext: res.fileExt,
             path,
-            pages: res.pages.map(v => ctx.service.util.url(v.filePath))
+            pages: res.pages.map(v => ctx.service.util.fileURL(v.filePath))
         }
         ctx.service.res.success('Success to get resource', data)
     }
@@ -389,7 +389,7 @@ export default class WeChat {
                 page: resource.page,
                 fileName: resource.fileName,
                 fileSize: resource.fileSize,
-                filePath: ctx.service.util.url(resource.filePath, resource.fileName),
+                filePath: ctx.service.util.fileURL(resource.filePath, resource.fileName),
                 updatedAt: resource.updatedAt,
                 typeId: resource.type.id,
                 type: resource.type.name,

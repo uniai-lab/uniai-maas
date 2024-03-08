@@ -15,13 +15,15 @@ import {
     ImagineModelProvider,
     ImagineModel
 } from 'uniai'
-import { ConfigVIP, LevelModel } from '@interface/Config'
+import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
 import { WXAppQRCodeCache } from '@interface/Cache'
 import ali from '@util/aliyun'
 import $ from '@util/util'
-import { OutputMode } from '@interface/Enum'
+import { OutputMode, ResourceType } from '@interface/Enum'
 import { EggFile } from 'egg-multipart'
+import { basename, extname } from 'path'
+import { statSync } from 'fs'
 
 const SMS_WAIT = 1 * 60 * 1000
 const SMS_EXPIRE = 5 * 60 * 1000
@@ -33,14 +35,12 @@ const DIALOG_PAGE_LIMIT = 20 // dialog max page size
 const LOOP_MAX = 600 // imagine task request max loop
 const LOOP_WAIT = 1000 // imagine task request interval, ms
 
-// default provider and model
-const DEFAULT_CHAT_PROVIDER = ChatModelProvider.IFlyTek
-const DEFAULT_CHAT_MODEL = ChatModel.SPARK_V3
-const DEFAULT_IMG_PROVIDER = ImagineModelProvider.StabilityAI
-const DEFAULT_IMG_MODEL = ImagineModel.SD_1_6
-
 const TITLE_SUB_TOKEN = 20 // dialog title limit length
 const QUERY_PAGE_LIMIT = 5 // query resource page limit
+const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
+
+const IMAGINE_COST = 5
+const CHAT_COST = 1
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -158,8 +158,8 @@ export default class Web extends Service {
                 dialogId: dialog.id,
                 role: ChatRoleEnum.ASSISTANT,
                 content,
-                model: DEFAULT_CHAT_PROVIDER,
-                subModel: DEFAULT_CHAT_MODEL
+                model: ChatModelProvider.IFlyTek,
+                subModel: ChatModel.SPARK_V3
             }
         ])
 
@@ -225,7 +225,10 @@ export default class Web extends Service {
                 isDel: false,
                 isEffect: true
             },
-            include: { model: ctx.model.Resource, attributes: ['fileName', 'fileSize', 'fileExt', 'filePath'] }
+            include: {
+                model: ctx.model.Resource,
+                attributes: ['fileName', 'fileSize', 'fileExt', 'filePath', 'typeId']
+            }
         })
 
         return res.reverse()
@@ -251,8 +254,6 @@ export default class Web extends Service {
         })
         if (!dialog) throw new Error('Dialog is not available')
 
-        console.log($.countTokens(input))
-        console.log($.subTokens(input, TITLE_SUB_TOKEN))
         // update title
         if (!dialog.title) await dialog.update({ title: $.subTokens(input, TITLE_SUB_TOKEN) })
 
@@ -273,6 +274,7 @@ export default class Web extends Service {
 
         this.useOutputMode(input, mode, data, output)
             .then(select => {
+                console.log(select)
                 switch (select) {
                     case 1:
                         return this.doChat(input, system, assistant, data, output)
@@ -282,7 +284,10 @@ export default class Web extends Service {
                         return this.doChat(input, system, assistant, data, output)
                 }
             })
-            .catch((e: Error) => output.destroy(e))
+            .catch((e: Error) => {
+                console.error(e)
+                output.destroy(e)
+            })
 
         return output as Readable
     }
@@ -297,6 +302,9 @@ export default class Web extends Service {
     async useOutputMode(input: string, mode: OutputMode, data: ChatResponse, output: PassThrough) {
         if (mode) return mode
 
+        const { ctx } = this
+
+        // send message to front, auto selecting mode
         data.content = this.ctx.__('selecting model for user')
         output.write(JSON.stringify(data))
 
@@ -305,7 +313,14 @@ export default class Web extends Service {
         ]
         const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
         if (res instanceof Readable) throw new Error('Chat response is stream')
-        return parseInt(res.content) as OutputMode
+        mode = parseInt(res.content)
+
+        // send message to front mode is selected
+        if (mode === OutputMode.IMAGE) {
+            data.content = ctx.__('system detect imagine task')
+            output.write(JSON.stringify(data))
+        }
+        return mode
     }
 
     /**
@@ -316,12 +331,12 @@ export default class Web extends Service {
      */
     async useChatModel(messages: ChatMessage[], level: number, exts: string[]) {
         // level options and count tokens
-        const options = await this.getConfig<LevelModel>('LEVEL_MODEL')
+        const options = await this.getConfig<LevelChatProvider>('LEVEL_CHAT_PROVIDER')
         const count = messages.reduce((acc, v) => (acc += $.countTokens(v.content)), 0)
 
         // default provider and model
-        let provider: ChatModelProvider = DEFAULT_CHAT_PROVIDER
-        let model: ChatModel = DEFAULT_CHAT_MODEL
+        let provider: ChatModelProvider = ChatModelProvider.IFlyTek
+        let model: ChatModel = ChatModel.SPARK_V3
 
         // 6k
         if (count < 6000) {
@@ -391,6 +406,45 @@ export default class Web extends Service {
             }
         }
 
+        // handle image chat
+        if (messages.some(v => v.img)) {
+            if (level >= options.glm) {
+                provider = ChatModelProvider.GLM
+                model = ChatModel.GLM_4V
+            }
+            if (level >= options.openai) {
+                provider = ChatModelProvider.OpenAI
+                model = ChatModel.GPT4_VISION
+            }
+        }
+
+        return { provider, model }
+    }
+
+    // use imagine model
+    async useImagineModel(level: number) {
+        const options = await this.getConfig<LevelImagineModel>('LEVEL_IMAGINE_MODEL')
+        let provider: ImagineModelProvider = ImagineModelProvider.StabilityAI
+        let model: ImagineModel = ImagineModel.SD_1_6
+
+        if (level >= options['stable-diffusion-v1-6']) {
+            provider = ImagineModelProvider.StabilityAI
+            model = ImagineModel.SD_1_6
+        }
+        if (level >= options['dall-e-2']) {
+            provider = ImagineModelProvider.OpenAI
+            model = ImagineModel.DALL_E_2
+        }
+        if (level >= options['dall-e-3']) {
+            provider = ImagineModelProvider.OpenAI
+            model = ImagineModel.DALL_E_3
+        }
+        /*
+        if (level >= options['midjourney']) {
+            provider = ImagineModelProvider.MidJourney
+            model = ImagineModel.MJ
+        }
+        */
         return { provider, model }
     }
 
@@ -410,7 +464,7 @@ export default class Web extends Service {
             attributes: ['id', 'chatChanceFree', 'chatChance', 'level']
         })
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
+        if (user.chatChanceFree + user.chatChance <= CHAT_COST) throw new Error('Chat chance not enough')
 
         // get chat history
         const chats = await ctx.model.Chat.findAll({
@@ -418,7 +472,10 @@ export default class Web extends Service {
             order: [['id', 'desc']],
             attributes: ['id', 'role', 'content'],
             where: { dialogId: data.dialogId, isDel: false, isEffect: true },
-            include: { model: ctx.model.Resource, attributes: ['id', 'page', 'fileName', 'fileSize', 'fileExt'] }
+            include: {
+                model: ctx.model.Resource,
+                attributes: ['id', 'page', 'fileName', 'fileSize', 'fileExt', 'typeId']
+            }
         })
         chats.reverse()
 
@@ -439,18 +496,25 @@ export default class Web extends Service {
         for (const item of chats) {
             const file = item.resource
             if (file) {
-                count++
-                exts.push(file.fileExt)
-                // query resource, one time embedding
-                if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
-                const pages = await this.queryPages(file.id, embedding)
-                // make reference resource prompt
-                prompts.push({
-                    role: USER,
-                    content: `
-                        # Reference File ${count}
+                if (file.typeId === ResourceType.IMAGE) {
+                    prompts.push({
+                        role: USER,
+                        content: `# Image\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`,
+                        img: { url: ctx.service.util.fileURL(file.filePath) }
+                    })
+                } else {
+                    count++
+                    exts.push(file.fileExt)
+                    // query resource, one time embedding
+                    if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
+                    const pages = await this.queryPages(file.id, embedding)
+                    // make reference resource prompt
+                    prompts.push({
+                        role: USER,
+                        content: `
+                        # File ${count}
                         ## File Info
-                        File name: ${file.fileName}
+                        File name: ${item.resourceName}
                         File size: ${file.fileSize} Bytes
                         Total pages: ${file.page}
                         ## File Content
@@ -458,7 +522,8 @@ export default class Web extends Service {
                         ## Note
                         All the data in CSV format needs to be output in table format.
                     `
-                })
+                    })
+                }
             } else prompts.push({ role: item.role, content: item.content })
         }
 
@@ -509,9 +574,9 @@ export default class Web extends Service {
                 })
                 data.chatId = chat.id
             }
-            // reduce user chat chance
-            if (user.chatChanceFree > 0) user.chatChanceFree--
-            else if (user.chatChance > 0) user.chatChance--
+            // reduce user chance, first cost free chance
+            user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
+            user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
             await user.save()
             output.end(JSON.stringify(data))
         })
@@ -521,22 +586,25 @@ export default class Web extends Service {
     async doImagine(input: string, data: ChatResponse, output: PassThrough) {
         const { ctx } = this
 
-        data.model = DEFAULT_IMG_PROVIDER
-        data.subModel = DEFAULT_IMG_MODEL
-        data.content = ctx.__('system detect imagine task')
+        // check user chat chance
+        const user = await ctx.model.User.findByPk(data.userId, {
+            attributes: ['id', 'chatChanceFree', 'chatChance', 'level']
+        })
+        if (!user) throw new Error('Fail to find user')
+        if (user.chatChanceFree + user.chatChance <= IMAGINE_COST) throw new Error('Imagine chance not enough')
+
+        // auto set provider and model
+        const { provider, model } = await this.useImagineModel(user.level)
+        data.model = provider
+        data.subModel = model
+        data.content = ctx.__('prepare to imagine')
+        data.file = { name: '', url: LOAD_IMG, size: 0, ext: 'image/gif' }
         output.write(JSON.stringify(data))
 
-        // check user chat chance
-        const user = await ctx.model.User.findByPk(data.userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
-        if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
-
         // imagine
-        const provider = data.model as ImagineModelProvider
-        const model = data.subModel as ImagineModel
         const res = await ctx.service.uniAI.imagine(await this.translate(input), '', 1, 1024, 1024, provider, model)
-        let loop = 0
         // watch task
+        let loop = 0
         while (loop < LOOP_MAX) {
             loop++
             const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
@@ -545,44 +613,61 @@ export default class Web extends Service {
             const progress = task[0].progress
             if (isNaN(progress)) throw new Error('Can not get task progress')
 
-            const img = task[0].imgs[0]
-            const url = img
-                ? ctx.service.util.url(await ctx.service.util.putOSS(img), Date.now() + '.png')
-                : 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
-            const markdown = `<img src="${url}" width="${img ? '400px' : '50px'}"/>`
-            data.content = `${markdown}\n${ctx.__('imagining')} ${progress}%`
+            data.content = `${ctx.__('imagining')} ${progress}%`
             data.subModel = task[0].model
-            output.write(JSON.stringify(data))
+            const img = task[0].imgs[0]
+            if (img) {
+                const filePath = await ctx.service.util.putOSS(img)
+                const fileName = basename(img)
+                const fileExt = extname(img).replace('.', '')
+                const fileSize = statSync(img).size
+                const url = ctx.service.util.fileURL(filePath)
+                data.file = { url, name: fileName, ext: `image/${fileExt}`, size: fileSize }
+                output.write(JSON.stringify(data))
 
-            if (progress === 100) {
-                // save user chat
-                if (input)
-                    await ctx.model.Chat.create({
-                        dialogId: data.dialogId,
-                        role: ChatRoleEnum.USER,
-                        content: input,
-                        model: data.model,
-                        subModel: data.subModel
-                    })
-                // save assistant chat
-                if (data.content) {
-                    data.content = markdown
-                    const chat = await ctx.model.Chat.create({
-                        dialogId: data.dialogId,
-                        role: ChatRoleEnum.ASSISTANT,
-                        content: data.content,
-                        model: data.model,
-                        subModel: data.subModel
-                    })
-                    data.chatId = chat.id
+                // complete imagining
+                if (progress === 100) {
+                    // save user chat
+                    if (input)
+                        await ctx.model.Chat.create({
+                            dialogId: data.dialogId,
+                            role: ChatRoleEnum.USER,
+                            content: input,
+                            model: data.model,
+                            subModel: data.subModel
+                        })
+                    // save assistant chat
+                    if (data.content) {
+                        const chat = await ctx.model.Chat.create(
+                            {
+                                dialogId: data.dialogId,
+                                role: ChatRoleEnum.ASSISTANT,
+                                model: data.model,
+                                subModel: data.subModel,
+                                resourceName: fileName,
+                                resource: {
+                                    fileName,
+                                    fileExt,
+                                    filePath,
+                                    fileSize,
+                                    typeId: ResourceType.IMAGE,
+                                    userId: data.userId,
+                                    tabId: 1
+                                }
+                            },
+                            { include: ctx.model.Resource }
+                        )
+                        data.chatId = chat.id
+                    }
+
+                    // reduce user chance, first cost free chance
+                    user.chatChanceFree = Math.max(user.chatChanceFree - IMAGINE_COST, 0)
+                    user.chatChance = Math.max(user.chatChance - Math.max(IMAGINE_COST - user.chatChanceFree, 0), 0)
+                    await user.save()
+
+                    output.end(JSON.stringify(data))
+                    break
                 }
-                // reduce user chance
-                if (user.chatChanceFree > 0) user.chatChanceFree--
-                else if (user.chatChance > 0) user.chatChance--
-                await user.save()
-
-                output.end(JSON.stringify(data))
-                break
             }
             await $.sleep(LOOP_WAIT)
         }
@@ -593,6 +678,15 @@ export default class Web extends Service {
     async upload(file: EggFile, dialogId: number, userId: number) {
         // upload resource to oss
         const { ctx } = this
+
+        // check user chat chance
+        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
+        if (!user) throw new Error('Fail to find user')
+        if (user.chatChanceFree + user.chatChance <= CHAT_COST) throw new Error('Chat chance not enough')
+        // reduce user chance, first cost free chance
+        user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
+        user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
+        await user.save()
 
         // check dialog is right
         const dialog = await ctx.model.Dialog.findOne({
@@ -605,7 +699,8 @@ export default class Web extends Service {
         if (!dialog.title) await dialog.update({ title: file.filename })
 
         const resource = await ctx.service.uniAI.upload(file, userId)
-        await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)
+        if (resource.typeId === ResourceType.TEXT)
+            await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)
         const chat = await ctx.model.Chat.create({
             dialogId,
             role: ChatRoleEnum.USER,
@@ -624,6 +719,8 @@ export default class Web extends Service {
     ) {
         if (provider === EmbedModelProvider.OpenAI)
             return await this.ctx.model.Embedding1.similarFindAll(embedding, limit, { resourceId })
-        else return await this.ctx.model.Embedding2.similarFindAll(embedding, limit, { resourceId })
+        else if (provider === EmbedModelProvider.Other)
+            return await this.ctx.model.Embedding2.similarFindAll(embedding, limit, { resourceId })
+        else throw new Error('Embed provider not found')
     }
 }

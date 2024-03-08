@@ -25,8 +25,9 @@ export default (app: Application) => {
     app.beforeStart(async () => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
-            // await syncDatabase(app) // init database struct and data
-            // await syncConfigCache(app) // sync config cache
+            // await syncDataStruct(app)
+            await syncDatabase(app) // init database struct and data
+            await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
         }
 
@@ -34,16 +35,18 @@ export default (app: Application) => {
     })
 }
 
+async function syncDataStruct(app: Application, force: boolean = false) {
+    console.log('================SYNC DATA STRUCT=====================')
+    await app.model.query('CREATE EXTENSION if not exists vector')
+    await app.model.sync({ force, alter: true })
+}
 /**
  * Synchronizes the database structure and initial data.
  * @param app - The Egg.js application instance.
  */
-async function syncDatabase(app: Application, force: boolean = false) {
-    console.log('================SYNC DATA STRUCT=====================')
-    await app.model.query('CREATE EXTENSION if not exists vector')
-    await app.model.sync({ force, alter: true })
-
+async function syncDatabase(app: Application) {
     console.log('==================SYNC INIT DATA=====================')
+    await app.model.Config.truncate({ force: true })
     await syncTableData(app.model.Config, Config, ['value', 'description'])
     await syncTableData(app.model.ResourceType, ResourceTypeData, ['name', 'description'])
     await syncTableData(app.model.PromptType, PromptTypeData, ['name', 'description'])

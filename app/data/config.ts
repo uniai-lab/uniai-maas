@@ -2,8 +2,16 @@
 
 import ROOT_PATH from 'app-root-path'
 import { readFileSync } from 'fs'
-import { ChatModelProvider } from 'uniai'
-import { ConfigMenu, ConfigMenuV2, ConfigTask, ConfigVIP, LevelModel } from '@interface/Config'
+import { ChatModelProvider, ImagineModel } from 'uniai'
+import {
+    ConfigMenu,
+    ConfigMenuV2,
+    ConfigTask,
+    ConfigVIP,
+    LevelChatProvider,
+    LevelImagineModel
+} from '@interface/Config'
+import payItem from './payItem'
 
 const ADV_REWARD_LIMIT_COUNT = 5
 const ADV_REWARD_CHAT_CHANCE = 10
@@ -14,9 +22,32 @@ const INIT_RESOURCE_ID = 449
 
 const { ADMIN_TOKEN } = process.env
 
-const FREE_CHAT_CHANCE: number[] = [18, 20, 50, 100]
-const FREE_UPLOAD_CHANCE: number[] = [5, 50, 100, 500]
-const LEVEL_SCORE: number[] = [0, 100, 500, 1000]
+const FREE_CHAT_CHANCE: number[] = [10, 10, 15, 30]
+const FREE_UPLOAD_CHANCE: number[] = [5, 10, 15, 30]
+/*
+ * Level 0 -> 0 score
+ * Level 1 -> 30 score
+ * Level 2 -> 100 score
+ * Level 3 -> 500 score
+ */
+const LEVEL_SCORE: number[] = [0, 30, 100, 500]
+
+const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
+    [ChatModelProvider.IFlyTek]: 0,
+    [ChatModelProvider.GLM]: 0,
+    [ChatModelProvider.Baidu]: 1,
+    [ChatModelProvider.MoonShot]: 1,
+    [ChatModelProvider.Google]: 2,
+    [ChatModelProvider.OpenAI]: 3
+}
+
+const LEVEL_IMAGINE_MODEL: LevelImagineModel = {
+    [ImagineModel.SD_1_6]: 0,
+    [ImagineModel.SD_XL_1024]: 0,
+    [ImagineModel.DALL_E_2]: 1,
+    [ImagineModel.DALL_E_3]: 2,
+    [ImagineModel.MJ]: 3
+}
 
 const USER_MENU: ConfigMenu[] = [
     {
@@ -199,15 +230,6 @@ const USER_VIP: ConfigVIP[] = [
         boxShadow: '2rpx 2rpx 16rpx rgba(44, 29, 0, 0.5)'
     }
 ]
-
-const LEVEL_MODEL: LevelModel = {
-    [ChatModelProvider.IFlyTek]: 0,
-    [ChatModelProvider.GLM]: 0,
-    [ChatModelProvider.Baidu]: 1,
-    [ChatModelProvider.MoonShot]: 1,
-    [ChatModelProvider.Google]: 2,
-    [ChatModelProvider.OpenAI]: 3
-}
 
 // write rows to config table
 export default [
@@ -465,9 +487,9 @@ export default [
     },
     {
         id: 38,
-        key: 'LEVEL_MODEL',
-        value: JSON.stringify(LEVEL_MODEL),
-        description: '等级模型对照表'
+        key: 'LEVEL_CHAT_PROVIDER',
+        value: JSON.stringify(LEVEL_CHAT_PROVIDER),
+        description: '文本模型等级对照表'
     },
     {
         id: 39,
@@ -478,5 +500,11 @@ export default [
         id: 40,
         key: 'LEVEL_SCORE',
         value: JSON.stringify(LEVEL_SCORE)
+    },
+    {
+        id: 41,
+        key: 'LEVEL_IMAGINE_MODEL',
+        value: JSON.stringify(LEVEL_IMAGINE_MODEL),
+        description: '生图模型等级对照表'
     }
 ]

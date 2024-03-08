@@ -4,7 +4,7 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
-import { ConfigVIP, LevelModel } from '@interface/Config'
+import { ConfigVIP, LevelChatProvider } from '@interface/Config'
 import { UserCache } from '@interface/Cache'
 import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
@@ -17,6 +17,24 @@ export default class User extends Service {
     // get config value by key
     async getConfig<T = string>(key: string) {
         return await this.service.uniAI.getConfig<T>(key)
+    }
+
+    // update user cache in redis
+    async get(id: number) {
+        return $.json<UserCache>(await this.app.redis.get(`user_${id}`))
+    }
+
+    async set(id: number) {
+        const { ctx, app } = this
+        const user = await ctx.model.User.findByPk(id)
+        if (!user) throw new Error('Can not find the user')
+        const cache: UserCache = {
+            ...user.dataValues,
+            tokenTime: user.tokenTime.getTime(),
+            freeChanceUpdateAt: user.freeChanceUpdateAt.getTime(),
+            levelExpiredAt: user.levelExpiredAt.getTime()
+        }
+        return await app.redis.set(`user_${id}`, JSON.stringify(cache))
     }
 
     // create user by phone, wx openid
@@ -34,7 +52,7 @@ export default class User extends Service {
         })
 
         // create finish, give share reward to fid user
-        if (fid) await this.shareRewardUser(fid)
+        if (fid) await this.shareReward(fid)
 
         return user
     }
@@ -59,7 +77,7 @@ export default class User extends Service {
     }
 
     // user share and another one sign up, add reward
-    async shareRewardUser(id: number) {
+    async shareReward(id: number) {
         const { ctx } = this
         const user = await ctx.model.User.findByPk(id)
         if (!user) throw Error('Fail to find reward user')
@@ -70,8 +88,8 @@ export default class User extends Service {
     }
 
     // update user free chance by level
-    async updateUserFreeChance(id: number) {
-        const cache = await this.getUserCache(id)
+    async updateFreeChance(id: number) {
+        const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
 
         const now = new Date()
@@ -92,24 +110,6 @@ export default class User extends Service {
         }
     }
 
-    // update user cache in redis
-    async getUserCache(id: number) {
-        return $.json<UserCache>(await this.app.redis.get(`user_${id}`))
-    }
-
-    async setUserCache(id: number) {
-        const { ctx, app } = this
-        const user = await ctx.model.User.findByPk(id)
-        if (!user) throw new Error('Can not find the user')
-        const cache: UserCache = {
-            ...user.dataValues,
-            tokenTime: user.tokenTime.getTime(),
-            freeChanceUpdateAt: user.freeChanceUpdateAt.getTime(),
-            levelExpiredAt: user.levelExpiredAt.getTime()
-        }
-        return await app.redis.set(`user_${id}`, JSON.stringify(cache))
-    }
-
     // add user chance
     async addUserChance(id: number, chance: number) {
         const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'chatChance'] })
@@ -120,22 +120,45 @@ export default class User extends Service {
     }
 
     // update user level
-    async updateLevel(id: number, score: number) {
-        const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'score', 'level', 'levelExpiredAt'] })
-        if (!user) throw new Error('Can not find the user')
+    async updateLevel(id: number, score: number = 0) {
+        const cache = await this.get(id)
+        if (!cache) throw new Error('User cache not found')
+        const now = Date.now()
+        const expired = cache.levelExpiredAt
+        console.log('updatelevel')
+        console.log('id', id)
+        console.log('score', score)
 
-        // level updated by score
-        user.score += score
-        const levels = await this.getConfig<number[]>('LEVEL_SCORE')
-        for (const i in levels) if (user.score >= levels[i]) user.level = parseInt(i)
-        user.levelExpiredAt = $.nextMonthSameTime()
+        if ((expired > 0 && now >= expired) || score) {
+            const { ctx } = this
+            const user = await ctx.model.User.findByPk(id, { attributes: ['id', 'score', 'level', 'levelExpiredAt'] })
+            if (!user) throw new Error('Can not find the user')
 
-        return await user.save()
+            if (expired > 0 && now >= expired) {
+                user.level = 0
+                user.levelExpiredAt = new Date(0)
+            }
+
+            if (score) {
+                // update level by score
+                user.score += score
+                const origin = user.level
+                const levels = await this.getConfig<number[]>('LEVEL_SCORE')
+                for (const i in levels) if (user.score >= levels[i]) user.level = parseInt(i)
+
+                // level upgraded, cost score, set expire time
+                if (user.level > origin) {
+                    user.score -= levels[user.level]
+                    user.levelExpiredAt = $.nextMonthSameTime()
+                } else user.level = origin
+            }
+            await user.save()
+        }
     }
 
     // get user benefits
     async getBenefit(id: number) {
-        const cache = await this.getUserCache(id)
+        const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
 
         const vips = await this.getConfig<ConfigVIP[]>('USER_VIP')
@@ -149,7 +172,7 @@ export default class User extends Service {
 
     // get user models by level
     async getModel(id: number) {
-        const cache = await this.getUserCache(id)
+        const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
 
         const models = await this.service.uniAI.getChatModels()
@@ -182,7 +205,7 @@ export default class User extends Service {
     // check user level model, return disable or not
     async checkLevelModel(level: number, provider?: ModelProvider) {
         if (!provider) return false
-        const res = await this.getConfig<LevelModel>('LEVEL_MODEL')
+        const res = await this.getConfig<LevelChatProvider>('LEVEL_CHAT_PROVIDER')
         return level >= res[provider] ? false : true
     }
 }

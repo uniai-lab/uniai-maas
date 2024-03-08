@@ -26,7 +26,7 @@ import isBase64 from 'is-base64'
 import util from 'util'
 import { decode } from 'iconv-lite'
 import pdf2md from 'pdf2md-ts'
-
+import { parseOfficeAsync } from 'officeparser'
 import $ from '@util/util'
 
 const convertSync = util.promisify(libreoffice.convert)
@@ -74,39 +74,45 @@ export default class Util extends Service {
     }
 
     /**
-     * Extracts content from an office file.
+     * Extract content from an office file.
      *
      * @param path - The path to the office file.
-     * @returns An object containing the extracted content and the number of pages.
+     * @returns Extracted content from the file.
      */
     async extractText(path: string) {
-        const ext = extname(path)
-        if (ext === '.xls' || ext === '.xlsx') {
+        const ext = extname(path).replace('.', '')
+        let content = ''
+        if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) return content
+        else if (['xls', 'xlsx', 'et'].includes(ext)) {
             const res = xlsx.readFile(path)
-            let content: string = ''
-            let page: number = 0
-            for (const i in res.Sheets) {
-                const txt = xlsx.utils.sheet_to_txt(res.Sheets[i], { FS: '\t' })
-                content += decode(Buffer.from(txt, 'binary'), 'utf-16')
-                page++
-            }
-            return { content, page }
-        } else {
-            const buffer = ext === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
-            const { text, numpages } = await pdf(buffer)
-            return { content: text, page: numpages }
-        }
+            content = Object.keys(res.Sheets)
+                .map(i => decode(Buffer.from(xlsx.utils.sheet_to_txt(res.Sheets[i]), 'binary'), 'utf-16'))
+                .join('\n')
+        } else if (['docx', 'pptx', 'odt', 'odp', 'ods'].includes(ext)) return await parseOfficeAsync(path)
+        else if (['doc', 'ppt', 'pdf'].includes(ext)) {
+            const buffer = readFileSync(path)
+            const { text } = await pdf(ext === 'pdf' ? buffer : await convertSync(buffer, 'pdf', undefined))
+            content = text
+        } else content = readFileSync(path).toString('utf-8')
+
+        if (!content.trim()) throw new Error('Fail to extract content text')
+        return content
     }
 
-    // extract pages from office file
+    /**
+     * Extract page content from office file
+     * @param path - The file path of the office file.
+     * @returns An array of strings representing the extracted pages in markdown
+     */
     async extractPages(path: string) {
-        const ext = extname(path)
-        if (ext === '.xls' || ext === '.xlsx') {
+        const ext = extname(path).replace('.', '')
+
+        if (['xls', 'xlsx', 'et'].includes(ext)) {
             const res = xlsx.readFile(path)
-            const pages: string[] = []
-            for (const i in res.Sheets)
-                pages.push(`**Sheet Name: ${i}**<hr>${xlsx.utils.sheet_to_csv(res.Sheets[i])}<hr>`)
-            return pages
+            const arr = Object.keys(res.Sheets).map(
+                i => `**Sheet Name: ${i}**<hr>${xlsx.utils.sheet_to_csv(res.Sheets[i])}<hr>`
+            )
+            return arr
         } else {
             const buffer =
                 extname(path) === '.pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
@@ -121,8 +127,8 @@ export default class Util extends Service {
      * @param path - The path to the file to upload.
      * @returns The URL of the uploaded file on oss, e.g., cos/aaa.pdf minio/bbb.pdf oss/ccc.pdf.
      */
-    async putOSS(path: string) {
-        const name = basename(path)
+    async putOSS(path: string, name?: string) {
+        name = name || basename(path)
         await this.app.minio.fPutObject(MINIO_BUCKET, name, path)
         return `minio/${name}`
     }
@@ -198,10 +204,24 @@ export default class Util extends Service {
         )
     }
 
-    // generate file url
-    url(path: string, name?: string) {
+    /**
+     * Dynamically generate file URL
+     * @param path - The path of the file
+     * @param name - Optional name of the file
+     * @returns The dynamically generated file URL
+     */
+    fileURL(path: string, name?: string): string {
         const { hostname, host } = this.ctx.request.URL
         return `${isIP(hostname) || hostname === 'localhost' ? 'http://' : 'https://'}${host}/wechat/file?path=${path}${name ? `&name=${encodeURIComponent(name)}` : ''}`
+    }
+
+    /**
+     * Dynamically generate pay callback URL
+     * @returns The dynamically generated pay callback URL
+     */
+    paybackURL(): string {
+        const { host } = this.ctx.request.URL
+        return `https://${host}/pay/callback`
     }
 
     /**
