@@ -26,8 +26,9 @@ export default (app: Application) => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
             // await syncDataStruct(app)
-            // await syncDatabase(app) // init database struct and data
-            // await syncConfigCache(app) // sync config cache
+            await syncDatabase(app) // init database struct and data
+            await syncConfigCache(app) // sync config cache
+            await syncPayItemCache(app)
             // await updateNewRows(app) // update some rows
         }
 
@@ -75,6 +76,14 @@ async function syncConfigCache(app: Application) {
         await app.redis.set(item.key, item.value)
         console.log(item.key, item.value)
     }
+}
+async function syncPayItemCache(app: Application) {
+    console.log('================SYNC CONFIG CACHE====================')
+    const items = await app.model.PayItem.findAll({
+        attributes: ['id', 'title', 'description', 'price', 'score', 'chance'],
+        where: { isEffect: true, isDel: false }
+    })
+    await app.redis.set('PAY_ITEM', JSON.stringify(items))
 }
 
 /**

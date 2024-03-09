@@ -1,5 +1,6 @@
 /** @format */
 
+import Decimal from 'decimal.js'
 import { ChatModel, ModelProvider } from 'uniai'
 
 export interface ChatStreamCache {
@@ -53,4 +54,13 @@ export interface AdvCache {
 export interface WXAppQRCodeCache {
     id: number
     token: string | null
+}
+
+export interface PayItemCache {
+    id: number
+    title: string
+    description: string[]
+    price: string
+    score: number
+    chance: number
 }

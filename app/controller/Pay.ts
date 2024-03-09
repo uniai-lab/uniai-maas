@@ -36,12 +36,7 @@ export default class Pay {
     @HTTPMethod({ path: '/list', method: HTTPMethodEnum.GET })
     async list(@Context() ctx: EggContext) {
         const res = await ctx.service.pay.list()
-        const data = res.map<PayItem>(({ id, title, price, description }) => ({
-            id,
-            title,
-            description,
-            price: price.toFixed(2)
-        }))
+        const data = res.map<PayItem>(({ id, title, price, description }) => ({ id, title, price, description }))
         ctx.service.res.success('Success to create pay', data)
     }
 

@@ -6,6 +6,9 @@ import { PayType } from '@interface/Enum'
 import { WXNotifyRequest, WXPaymentResult } from '@interface/controller/Pay'
 import { Service } from 'egg'
 import WxPay from 'wechatpay-node-v3'
+import $ from '@util/util'
+import { PayItemCache } from '@interface/Cache'
+import Decimal from 'decimal.js'
 const { WX_PAY_KEY, WX_PAY_CERT, WX_APP_ID, WX_MCH_ID, WX_PAY_PRIVATE } = process.env
 
 const wx = new WxPay({
@@ -17,38 +20,44 @@ const wx = new WxPay({
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Pay extends Service {
-    // list shop items
+    // get pay items from cache
+    async getPayItems(id?: number) {
+        const items = $.json<PayItemCache[]>(await this.app.redis.get('PAY_ITEM'))
+        if (!items) throw new Error('Can not find pay items')
+
+        if (typeof id === 'number') return items.filter(v => v.id === id)
+        else return items
+    }
+
+    // list pay items
     async list() {
-        return await this.ctx.model.PayItem.findAll({
-            attributes: ['id', 'title', 'description', 'price'],
-            where: { isEffect: true, isDel: false }
-        })
+        return await this.getPayItems()
     }
 
     // create a payment
     async create(id: number, type: PayType, userId: number = 0) {
         const { ctx } = this
         if (type === PayType.WeChat) {
-            const item = await ctx.model.PayItem.findByPk(id, { attributes: ['id', 'title', 'price'] })
-            if (!item) throw new Error('Can not find item')
+            const item = await this.getPayItems(id)
+            if (!item[0]) throw new Error('Can not find item by id')
 
             const transactionId = `${Date.now()}${userId}${Math.floor(Math.random() * 10000)}`.substring(0, 32)
 
             // generate a transaction, amount must be int, *100
             const res = await wx.transactions_native({
-                description: item.title,
+                description: item[0].title,
                 out_trade_no: transactionId,
                 notify_url: ctx.service.util.paybackURL(),
-                amount: { total: parseInt(item.price.mul(100).toFixed(0)) }
+                amount: { total: parseInt(new Decimal(item[0].price).mul(100).toFixed(0)) }
             })
             if (res.error) throw new Error(res.error)
 
             return await ctx.model.Payment.create({
                 userId,
-                itemId: item.id,
+                itemId: item[0].id,
                 platform: type,
                 type: 'naive',
-                amount: item.price,
+                amount: item[0].price,
                 currency: 'CNY',
                 transactionId,
                 detail: res.data
@@ -66,22 +75,17 @@ export default class Pay extends Service {
                 // decrypt transaction detail
                 const { ciphertext, associated_data, nonce } = result.resource
                 const res: WXPaymentResult = wx.decipher_gcm(ciphertext, associated_data, nonce, WX_PAY_PRIVATE)
+                const transactionId = res.out_trade_no
 
-                const update = await ctx.model.Payment.update(
-                    { status: 1 },
-                    { where: { transactionId: res.out_trade_no }, transaction }
-                )
+                // write to db
+                const payment = await ctx.model.Payment.findOne({ where: { transactionId }, transaction, lock: true })
+                if (!payment) throw new Error('Payment not found')
                 // update payment status and add user chance, score, level
-                if (update[0]) {
-                    // write to db
-                    const payment = await ctx.model.Payment.findOne({
-                        where: { transactionId: res.out_trade_no },
-                        include: { model: ctx.model.PayItem, attributes: ['id', 'score', 'chance'] },
-                        transaction
-                    })
-                    if (!payment) throw new Error('Payment not found')
-                    await ctx.service.user.updateLevel(payment.userId, payment.item.score)
-                    await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
+                if (!payment.status) {
+                    const item = (await this.getPayItems(payment.itemId))[0]
+                    if (!item) throw new Error('Pay item can not found by id')
+                    await ctx.service.user.updateLevel(payment.userId, item.score)
+                    await ctx.service.user.addUserChance(payment.userId, item.chance)
                     payment.status = 1
                     payment.result = res
                     payment.currency = res.amount.currency
@@ -97,11 +101,7 @@ export default class Pay extends Service {
         const { transaction } = ctx
 
         // find payment by id
-        const payment = await ctx.model.Payment.findOne({
-            where: { id, userId },
-            include: { model: ctx.model.PayItem, attributes: ['id', 'score', 'chance'] },
-            transaction
-        })
+        const payment = await ctx.model.Payment.findOne({ where: { id, userId }, transaction, lock: true })
         if (!payment) throw new Error('Payment not found')
         if (payment.status === 1) return payment
 
@@ -111,10 +111,11 @@ export default class Pay extends Service {
             const result: WXPaymentResult = res.data
             // success, write to db
             if (result.trade_state === 'SUCCESS') {
-                const update = await ctx.model.Payment.update({ status: 1 }, { where: { id }, transaction })
-                if (update[0]) {
-                    await ctx.service.user.updateLevel(payment.userId, payment.item.score)
-                    await ctx.service.user.addUserChance(payment.userId, payment.item.chance)
+                if (!payment.status) {
+                    const item = (await this.getPayItems(payment.itemId))[0]
+                    if (!item) throw new Error('Pay item can not found by id')
+                    await ctx.service.user.updateLevel(payment.userId, item.score)
+                    await ctx.service.user.addUserChance(payment.userId, item.chance)
                     payment.status = 1
                     payment.result = result
                     payment.currency = result.amount.currency
