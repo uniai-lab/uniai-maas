@@ -69,7 +69,7 @@ export default class Pay extends Service {
 
                 const update = await ctx.model.Payment.update(
                     { status: 1 },
-                    { where: { transactionId: res.transaction_id }, transaction }
+                    { where: { transactionId: res.out_trade_no }, transaction }
                 )
                 // update payment status and add user chance, score, level
                 if (update[0]) {
