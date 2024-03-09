@@ -11,13 +11,12 @@ import {
     LevelChatProvider,
     LevelImagineModel
 } from '@interface/Config'
-import payItem from './payItem'
 
 const ADV_REWARD_LIMIT_COUNT = 5
 const ADV_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_CHAT_CHANCE = 10
 const SHARE_REWARD_UPLOAD_CHANCE = 5
-const LIMIT_UPLOAD_SIZE = 5 * 1024 * 1024
+const LIMIT_UPLOAD_SIZE = 20 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 
 const { ADMIN_TOKEN } = process.env

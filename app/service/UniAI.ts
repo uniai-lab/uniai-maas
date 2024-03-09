@@ -26,6 +26,7 @@ import fly from '@util/fly'
 import $ from '@util/util'
 import { encode } from 'gpt-tokenizer'
 import { literal } from 'sequelize'
+// import sharp from 'sharp'
 
 const {
     OPENAI_API,
@@ -61,6 +62,7 @@ const ai = new AI({
 const MAX_PAGE = 10
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 const SIMILAR_DISTANCE = 0.000001
+const LIMIT_IMG_SIZE = 2 * 1024 * 1024
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
@@ -243,9 +245,14 @@ export default class UniAI extends Service {
         const fileSize = statSync(file.filepath).size
         const fileExt = extname(file.filename).replace('.', '').toLowerCase()
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
+        // compress image
         /*
-        if (fileSize > parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))) throw new Error('File size exceeds limit')
-        */
+        if (typeId === ResourceType.IMAGE && fileSize > LIMIT_IMG_SIZE)
+            await sharp(file.filepath)
+                .resize({ width: 800, withoutEnlargement: true })
+                .png({ quality: 60 })
+                .toFile(file.filepath)
+                */
 
         // extract content
         const content = await ctx.service.util.extractText(file.filepath)
