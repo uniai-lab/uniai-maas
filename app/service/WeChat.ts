@@ -298,7 +298,7 @@ export default class WeChat extends Service {
         }
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChance', 'chatChanceFree'] })
+        const user = await ctx.service.user.get(userId)
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= 0) throw new Error('Chat chance not enough')
 
@@ -316,7 +316,7 @@ export default class WeChat extends Service {
                 where: {
                     isEffect: true,
                     isDel: false,
-                    model: PROVIDER
+                    [Op.or]: [{ model: PROVIDER }, { model: null }]
                 }
             }
         })
@@ -390,11 +390,16 @@ export default class WeChat extends Service {
                 cache.content += e.message
                 cache.isEffect = false
             })
-            res.on('end', () => {
-                // reduce user chat chance
-                if (user.chatChanceFree > 0) user.chatChanceFree--
-                else if (user.chatChance > 0) user.chatChance--
-                user.save()
+            res.on('end', async () => {
+                const user = await ctx.model.User.findByPk(userId, {
+                    attributes: ['id', 'chatChance', 'chatChanceFree']
+                })
+                if (user) {
+                    // reduce user chat chance
+                    if (user.chatChanceFree > 0) user.chatChanceFree--
+                    else if (user.chatChance > 0) user.chatChance--
+                    await user.save()
+                }
             })
             res.on('close', async () => {
                 // save user chat
@@ -461,11 +466,16 @@ export default class WeChat extends Service {
                 chat.isEffect = false
                 chat.save()
             })
-            res.on('end', () => {
-                // reduce user chat chance
-                if (user.chatChanceFree > 0) user.chatChanceFree--
-                else if (user.chatChance > 0) user.chatChance--
-                user.save()
+            res.on('end', async () => {
+                const user = await ctx.model.User.findByPk(userId, {
+                    attributes: ['id', 'chatChance', 'chatChanceFree']
+                })
+                if (user) {
+                    // reduce user chat chance
+                    if (user.chatChanceFree > 0) user.chatChanceFree--
+                    else if (user.chatChance > 0) user.chatChance--
+                    await user.save()
+                }
             })
             res.on('close', async () => {
                 // save assistant response
