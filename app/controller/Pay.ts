@@ -10,7 +10,6 @@ import {
     Middleware,
     HTTPQuery
 } from '@eggjs/tegg'
-import { UserContext } from '@interface/Context'
 import { PayType } from '@interface/Enum'
 import {
     CheckPayResponse,
@@ -49,7 +48,7 @@ export default class Pay {
     // create payment
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/create', method: HTTPMethodEnum.POST })
-    async create(@Context() ctx: UserContext, @HTTPBody() params: CreatePayRequest) {
+    async create(@Context() ctx: EggContext, @HTTPBody() params: CreatePayRequest) {
         const { id, type } = params
         const userId = ctx.user!.id
         const res = await ctx.service.pay.create(id, type, userId)
@@ -65,7 +64,7 @@ export default class Pay {
     // check payment
     @Middleware(auth(), transaction())
     @HTTPMethod({ path: '/check', method: HTTPMethodEnum.GET })
-    async check(@Context() ctx: UserContext, @HTTPQuery() id: string) {
+    async check(@Context() ctx: EggContext, @HTTPQuery() id: string) {
         const userId = ctx.user!.id
         const payId = parseInt(id)
         if (!payId) throw new Error('Invalid id')

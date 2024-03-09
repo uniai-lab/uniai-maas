@@ -4,11 +4,11 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
+import { ModelProvider } from 'uniai'
 import { ConfigVIP, LevelChatProvider } from '@interface/Config'
 import { UserCache } from '@interface/Cache'
 import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
-import { ModelProvider } from 'uniai'
 
 const FREE_CHANCE_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
 
@@ -24,44 +24,48 @@ export default class User extends Service {
         return $.json<UserCache>(await this.app.redis.get(`user_${id}`))
     }
 
-    async set(id: number) {
-        const { ctx, app } = this
-        const user = await ctx.model.User.findByPk(id)
-        if (!user) throw new Error('Can not find the user')
-        const cache: UserCache = {
-            ...user.dataValues,
-            tokenTime: user.tokenTime.getTime(),
-            freeChanceUpdateAt: user.freeChanceUpdateAt.getTime(),
-            levelExpiredAt: user.levelExpiredAt.getTime()
-        }
-        return await app.redis.set(`user_${id}`, JSON.stringify(cache))
-    }
-
     // create user by phone, wx openid
     async create(phone: string | null = null, wxOpenId: string | null = null, fid: number = 0) {
         if (!phone && !wxOpenId) throw new Error('need one of phone, openid')
 
         const { ctx } = this
-        const user = await ctx.model.User.create({
-            wxOpenId,
-            phone,
-            avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
-            chatChanceFree: (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0],
-            uploadChanceFree: (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0],
-            uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
-        })
+        const { transaction } = ctx
 
-        // create finish, give share reward to fid user
-        if (fid) await this.shareReward(fid)
+        const user = await ctx.model.User.findOne({ where: { phone, wxOpenId }, attributes: ['id'], transaction })
+        if (user) return user
+        else {
+            const user = await ctx.model.User.create(
+                {
+                    wxOpenId,
+                    phone,
+                    avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
+                    chatChanceFree: (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0],
+                    uploadChanceFree: (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0],
+                    uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
+                },
+                { transaction }
+            )
 
-        return user
+            // create finish, give share reward to fid user
+            if (fid) {
+                const user = await ctx.model.User.findByPk(fid, { transaction })
+                if (!user) throw Error('Fail to find reward user')
+
+                user.uploadChance += parseInt(await this.getConfig('SHARE_REWARD_UPLOAD_CHANCE'))
+                user.chatChance += parseInt(await this.getConfig('SHARE_REWARD_CHAT_CHANCE'))
+                return await user.save({ transaction })
+            }
+
+            return user
+        }
     }
 
     // user sign in (NOTE: refresh cache)
     async signIn(id: number) {
         const { ctx } = this
+        const { transaction } = ctx
 
-        const user = await ctx.model.User.findByPk(id)
+        const user = await ctx.model.User.findByPk(id, { transaction })
         // check banned or invalid user
         if (!user) throw new Error('Can not find user to sign in')
         if (user.isDel || !user.isEffect) throw new Error('User is invalid')
@@ -73,30 +77,22 @@ export default class User extends Service {
         const now = new Date()
         user.token = md5(`${user.id}${now.getTime()}${randomUUID()}`)
         user.tokenTime = now
-        return await user.save()
-    }
-
-    // user share and another one sign up, add reward
-    async shareReward(id: number) {
-        const { ctx } = this
-        const user = await ctx.model.User.findByPk(id)
-        if (!user) throw Error('Fail to find reward user')
-
-        user.uploadChance += parseInt(await this.getConfig('SHARE_REWARD_UPLOAD_CHANCE'))
-        user.chatChance += parseInt(await this.getConfig('SHARE_REWARD_CHAT_CHANCE'))
-        return await user.save()
+        return await user.save({ transaction })
     }
 
     // update user free chance by level
     async updateFreeChance(id: number) {
+        const { ctx } = this
+        const { transaction } = ctx
         const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
 
         const now = new Date()
         // refresh free chat chance
         if (now.getTime() - cache.freeChanceUpdateAt > FREE_CHANCE_TIME) {
-            const user = await this.ctx.model.User.findByPk(id, {
-                attributes: ['id', 'chatChanceFree', 'uploadChanceFree', 'freeChanceUpdateAt', 'level']
+            const user = await ctx.model.User.findByPk(id, {
+                attributes: ['id', 'chatChanceFree', 'uploadChanceFree', 'freeChanceUpdateAt', 'level'],
+                transaction
             })
             if (!user) throw new Error('Can not find user')
 
@@ -106,17 +102,19 @@ export default class User extends Service {
             user.chatChanceFree = chatChance[user.level] || 0
             user.uploadChanceFree = uploadChance[user.level] || 0
             user.freeChanceUpdateAt = now
-            await user.save()
+            await user.save({ transaction })
         }
     }
 
     // add user chance
     async addUserChance(id: number, chance: number) {
-        const user = await this.ctx.model.User.findByPk(id, { attributes: ['id', 'chatChance'] })
+        const { ctx } = this
+        const { transaction } = ctx
+        const user = await ctx.model.User.findByPk(id, { attributes: ['id', 'chatChance'], transaction })
         if (!user) throw new Error('Can not find the user')
 
         user.chatChance += chance
-        return await user.save()
+        return await user.save({ transaction })
     }
 
     // update user level
@@ -125,13 +123,14 @@ export default class User extends Service {
         if (!cache) throw new Error('User cache not found')
         const now = Date.now()
         const expired = cache.levelExpiredAt
-        console.log('updatelevel')
-        console.log('id', id)
-        console.log('score', score)
 
         if ((expired > 0 && now >= expired) || score) {
             const { ctx } = this
-            const user = await ctx.model.User.findByPk(id, { attributes: ['id', 'score', 'level', 'levelExpiredAt'] })
+            const { transaction } = ctx
+            const user = await ctx.model.User.findByPk(id, {
+                attributes: ['id', 'score', 'level', 'levelExpiredAt'],
+                transaction
+            })
             if (!user) throw new Error('Can not find the user')
 
             if (expired > 0 && now >= expired) {
@@ -152,7 +151,7 @@ export default class User extends Service {
                     user.levelExpiredAt = $.nextMonthSameTime()
                 } else user.level = origin
             }
-            await user.save()
+            await user.save({ transaction })
         }
     }
 

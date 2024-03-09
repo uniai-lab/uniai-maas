@@ -5,12 +5,12 @@ import { Context } from 'egg'
 // handle and format user http request and response
 export default function transaction() {
     return async (ctx: Context, next: () => Promise<any>) => {
-        const transaction = await ctx.model.transaction()
         try {
+            ctx.transaction = await ctx.model.transaction()
             await next()
-            await transaction.commit()
+            await ctx.transaction?.commit()
         } catch (e) {
-            await transaction.rollback()
+            await ctx.transaction?.rollback()
             throw e
         }
     }

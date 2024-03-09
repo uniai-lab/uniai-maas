@@ -1,15 +1,16 @@
-/** @format */
-// This is a middleware to check personal user login auth, add to controller -> action
+/**
+ * @format by Prettier
+ * This is a middleware to check personal user login auth, add to controller -> action
+ * */
 
-// app/middleware/auth.ts
-import { UserContext } from '@interface/Context'
+import { Context } from 'egg'
 
 const EXPIRE_1 = 1 * 24 * 60 * 60 * 1000
 const EXPIRE_7 = 180 * 24 * 60 * 60 * 1000
 
 // check user auth
 export default function auth() {
-    return async (ctx: UserContext, next: () => Promise<any>) => {
+    return async (ctx: Context, next: () => Promise<any>) => {
         const id = parseInt(ctx.get('id'))
         const token = ctx.get('token')
         const appType = ctx.get('app-type')

@@ -1,7 +1,15 @@
 /** @format */
 
-import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, HTTPQuery } from '@eggjs/tegg'
-import { UserContext } from '@interface/Context'
+import {
+    HTTPController,
+    HTTPMethod,
+    HTTPMethodEnum,
+    Context,
+    HTTPBody,
+    Middleware,
+    HTTPQuery,
+    EggContext
+} from '@eggjs/tegg'
 import {
     UploadResponse,
     UserinfoResponse,
@@ -35,14 +43,14 @@ import { SMSCodeRequest, SMSCodeResponse } from '@interface/controller/Web'
 export default class WeChat {
     // app configs
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
-    async config(@Context() ctx: UserContext) {
+    async config(@Context() ctx: EggContext) {
         const data: ConfigResponse = await ctx.service.weChat.getUserConfig()
         ctx.service.res.success('Success to list config', data)
     }
 
     // app tabs
     @HTTPMethod({ path: '/tab', method: HTTPMethodEnum.GET })
-    async tab(@Context() ctx: UserContext, @HTTPQuery() pid: string) {
+    async tab(@Context() ctx: EggContext, @HTTPQuery() pid: string) {
         const res = await ctx.service.weChat.getTab(parseInt(pid))
 
         const data: TabResponse[] = []
@@ -56,7 +64,7 @@ export default class WeChat {
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
+    async file(@Context() ctx: EggContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         if (!path) throw new Error('Path is null')
 
         // file stream
@@ -66,7 +74,7 @@ export default class WeChat {
 
     // announcement
     @HTTPMethod({ path: '/announce', method: HTTPMethodEnum.GET })
-    async announce(@Context() ctx: UserContext) {
+    async announce(@Context() ctx: EggContext) {
         const res = await ctx.service.weChat.announce()
 
         const data: AnnounceResponse[] = res.map(({ id, title, content, closeable }) => ({
@@ -82,7 +90,7 @@ export default class WeChat {
     // send code message on h5
     @Middleware(log(), captcha())
     @HTTPMethod({ path: '/get-sms-code', method: HTTPMethodEnum.POST })
-    async getSMSCode(@Context() ctx: UserContext, @HTTPBody() params: SMSCodeRequest) {
+    async getSMSCode(@Context() ctx: EggContext, @HTTPBody() params: SMSCodeRequest) {
         const { id, phone } = await ctx.service.web.sendSMSCode(params.phone)
         const data: SMSCodeResponse = { id, phone }
         ctx.service.res.success('Success to WeChat login', data)
@@ -91,7 +99,7 @@ export default class WeChat {
     // WeChat/Phone login
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
-    async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {
+    async login(@Context() ctx: EggContext, @HTTPBody() params: LoginRequest) {
         const { code, fid, phone, token } = params
 
         const user = await ctx.service.weChat.login(code, phone, fid)
@@ -121,7 +129,7 @@ export default class WeChat {
 
     /* wechat register, get phone number
     @HTTPMethod({ path: '/register', method: HTTPMethodEnum.POST })
-    async register(@Context() ctx: UserContext, @HTTPBody() params: SignUpRequest) {
+    async register(@Context() ctx: EggContext, @HTTPBody() params: SignUpRequest) {
         try {
             const { code, openid, iv, encryptedData, fid } = params
             if (!code) throw new Error('Code can not be null')
@@ -170,7 +178,7 @@ export default class WeChat {
     // get user info
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
-    async userInfo(@Context() ctx: UserContext) {
+    async userInfo(@Context() ctx: EggContext) {
         const { id } = ctx.user!
 
         await ctx.service.user.updateFreeChance(id)
@@ -201,7 +209,7 @@ export default class WeChat {
     // send chat message and set/get stream
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
+    async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         const user = ctx.user!
         const { input, dialogId, sse } = params
         if (!input) throw new Error('Input nothing')
@@ -228,7 +236,7 @@ export default class WeChat {
     // get chat stream
     @Middleware(auth())
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
-    async getChat(@Context() ctx: UserContext) {
+    async getChat(@Context() ctx: EggContext) {
         const user = ctx.user!
 
         const res = await ctx.service.weChat.getChat(user.id)
@@ -251,7 +259,7 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
-    async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
+    async listChat(@Context() ctx: EggContext, @HTTPBody() params: ChatListRequest) {
         const user = ctx.user!
         const { dialogId, lastId, pageSize } = params
 
@@ -277,7 +285,7 @@ export default class WeChat {
 
     @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
-    async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
+    async upload(@Context() ctx: EggContext, @HTTPBody() params: UploadRequest) {
         const user = ctx.user!
         const file = ctx.request.files[0]
         if (!file) throw new Error('No file')
@@ -305,7 +313,7 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/upload-avatar', method: HTTPMethodEnum.POST })
-    async uploadAvatar(@Context() ctx: UserContext) {
+    async uploadAvatar(@Context() ctx: EggContext) {
         const user = ctx.user!
         const file = ctx.request.files[0]
         if (!file) throw new Error('No file')
@@ -319,7 +327,7 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
-    async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
+    async updateUser(@Context() ctx: EggContext, @HTTPBody() params: UpdateUserRequest) {
         const { id } = ctx.user!
         const user = await ctx.service.weChat.updateUser(id, { name: params.name })
 
@@ -346,7 +354,7 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/resource', method: HTTPMethodEnum.POST })
-    async resource(@Context() ctx: UserContext, @HTTPBody() params: ResourceRequest) {
+    async resource(@Context() ctx: EggContext, @HTTPBody() params: ResourceRequest) {
         const { id } = params
         if (!id) throw new Error('Resource ID is null')
 
@@ -368,7 +376,7 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/list-dialog-resource', method: HTTPMethodEnum.POST })
-    async listDialogResource(@Context() ctx: UserContext, @HTTPBody() params: DialogRequest) {
+    async listDialogResource(@Context() ctx: EggContext, @HTTPBody() params: DialogRequest) {
         const user = ctx.user!
 
         const res = await ctx.service.weChat.listDialog(user.id, params.lastId, params.pageSize)
@@ -400,7 +408,7 @@ export default class WeChat {
 
     @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
-    async delDialog(@Context() ctx: UserContext, @HTTPQuery() id?: number) {
+    async delDialog(@Context() ctx: EggContext, @HTTPQuery() id?: number) {
         const user = ctx.user!
         await ctx.service.weChat.delDialog(user.id, id)
         ctx.service.res.success('Success to delete a dialog')
@@ -408,7 +416,7 @@ export default class WeChat {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/watch-adv', method: HTTPMethodEnum.GET })
-    async watchAdv(@Context() ctx: UserContext) {
+    async watchAdv(@Context() ctx: EggContext) {
         const user = ctx.user!
         const res = await ctx.service.weChat.watchAdv(user.id)
         ctx.service.res.success('Success to get advertisement reward', res)

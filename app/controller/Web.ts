@@ -1,6 +1,15 @@
 /** @format */
 
-import { HTTPController, HTTPMethod, HTTPMethodEnum, Context, HTTPBody, Middleware, HTTPQuery } from '@eggjs/tegg'
+import {
+    HTTPController,
+    HTTPMethod,
+    HTTPMethodEnum,
+    Context,
+    HTTPBody,
+    Middleware,
+    HTTPQuery,
+    EggContext
+} from '@eggjs/tegg'
 import { Readable } from 'stream'
 import { basename } from 'path'
 import { ChatRoleEnum } from 'uniai'
@@ -9,7 +18,6 @@ import transaction from '@middleware/transaction'
 import log from '@middleware/log'
 import captcha from '@middleware/captcha'
 import shield from '@middleware/shield'
-import { UserContext } from '@interface/Context'
 import {
     SMSCodeRequest,
     SMSCodeResponse,
@@ -31,13 +39,13 @@ import $ from '@util/util'
 export default class Web {
     // app configs
     @HTTPMethod({ path: '/config', method: HTTPMethodEnum.GET })
-    async config(@Context() ctx: UserContext) {
+    async config(@Context() ctx: EggContext) {
         const data = await ctx.service.web.getUserConfig()
         ctx.service.res.success('Success to list config', data)
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: UserContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
+    async file(@Context() ctx: EggContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
         if (!path) throw new Error('Path is null')
 
         const data = await ctx.service.util.getFileStream(path)
@@ -46,7 +54,7 @@ export default class Web {
 
     @Middleware(log(), captcha())
     @HTTPMethod({ path: '/get-sms-code', method: HTTPMethodEnum.POST })
-    async getSMSCode(@Context() ctx: UserContext, @HTTPBody() params: SMSCodeRequest) {
+    async getSMSCode(@Context() ctx: EggContext, @HTTPBody() params: SMSCodeRequest) {
         const { id, phone } = await ctx.service.web.sendSMSCode(params.phone)
         const data: SMSCodeResponse = { id, phone }
         ctx.service.res.success('Success to get SMS code', data)
@@ -54,7 +62,7 @@ export default class Web {
 
     @Middleware(shield(50))
     @HTTPMethod({ path: '/get-qr-code', method: HTTPMethodEnum.GET })
-    async getQRCode(@Context() ctx: UserContext) {
+    async getQRCode(@Context() ctx: EggContext) {
         const res: getQRCodeResponse = await ctx.service.web.getQRCode()
         ctx.service.res.success('Success to get QR code', res)
     }
@@ -62,7 +70,7 @@ export default class Web {
     // WX QR code login
     @Middleware()
     @HTTPMethod({ path: '/verify-qr-code', method: HTTPMethodEnum.GET })
-    async verifyQRCode(@Context() ctx: UserContext, @HTTPQuery() token: string) {
+    async verifyQRCode(@Context() ctx: EggContext, @HTTPQuery() token: string) {
         const res = await ctx.service.web.verifyQRCode(token)
         ctx.service.res.success('Success to get QR code', res)
     }
@@ -70,7 +78,7 @@ export default class Web {
     // phone code login
     @Middleware(log(), transaction())
     @HTTPMethod({ path: '/login', method: HTTPMethodEnum.POST })
-    async login(@Context() ctx: UserContext, @HTTPBody() params: LoginRequest) {
+    async login(@Context() ctx: EggContext, @HTTPBody() params: LoginRequest) {
         const { phone, code, password, fid } = params
 
         const user = await ctx.service.web.login(phone, code, password, fid)
@@ -99,7 +107,7 @@ export default class Web {
     // get user info
     @Middleware(auth())
     @HTTPMethod({ path: '/userinfo', method: HTTPMethodEnum.GET })
-    async userInfo(@Context() ctx: UserContext) {
+    async userInfo(@Context() ctx: EggContext) {
         const { id } = ctx.user!
 
         await ctx.service.user.updateFreeChance(id)
@@ -131,7 +139,7 @@ export default class Web {
 
     @Middleware(auth())
     @HTTPMethod({ path: '/update-user', method: HTTPMethodEnum.POST })
-    async updateUser(@Context() ctx: UserContext, @HTTPBody() params: UpdateUserRequest) {
+    async updateUser(@Context() ctx: EggContext, @HTTPBody() params: UpdateUserRequest) {
         const { id } = ctx.user!
         const { avatar, name, password } = params
         if (avatar) if (!$.isBase64(avatar, true)) throw new Error('Avatar base64 not valid')
@@ -162,7 +170,7 @@ export default class Web {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/list-dialog', method: HTTPMethodEnum.POST })
-    async listDialog(@Context() ctx: UserContext, @HTTPBody() params: DialogListRequest) {
+    async listDialog(@Context() ctx: EggContext, @HTTPBody() params: DialogListRequest) {
         const user = ctx.user!
 
         const res = await ctx.service.web.listDialog(user.id, params.id, params.lastId, params.pageSize)
@@ -179,7 +187,7 @@ export default class Web {
 
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/list-chat', method: HTTPMethodEnum.POST })
-    async listChat(@Context() ctx: UserContext, @HTTPBody() params: ChatListRequest) {
+    async listChat(@Context() ctx: EggContext, @HTTPBody() params: ChatListRequest) {
         const user = ctx.user!
         const { id, dialogId, lastId, pageSize } = params
         if (!dialogId) throw new Error('Dialog id is null')
@@ -219,7 +227,7 @@ export default class Web {
     // send chat message and set stream
     @Middleware(auth(), log())
     @HTTPMethod({ path: '/chat-stream', method: HTTPMethodEnum.POST })
-    async chat(@Context() ctx: UserContext, @HTTPBody() params: ChatRequest) {
+    async chat(@Context() ctx: EggContext, @HTTPBody() params: ChatRequest) {
         const { id, level } = ctx.user!
         const { input, dialogId, provider, model, system, assistant, mode } = params
         if (!dialogId) throw new Error('Dialog id is null')
@@ -237,7 +245,7 @@ export default class Web {
 
     @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/del-dialog', method: HTTPMethodEnum.GET })
-    async delDialog(@Context() ctx: UserContext, @HTTPQuery() id: string) {
+    async delDialog(@Context() ctx: EggContext, @HTTPQuery() id: string) {
         const user = ctx.user!
         if (!parseInt(id)) throw new Error('Dialog id is null')
 
@@ -247,7 +255,7 @@ export default class Web {
 
     @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/add-dialog', method: HTTPMethodEnum.GET })
-    async addDialog(@Context() ctx: UserContext) {
+    async addDialog(@Context() ctx: EggContext) {
         const user = ctx.user!
         const { id, title, createdAt, updatedAt } = await ctx.service.web.addDialog(user.id)
         const data: DialogListResponse = { id, title, createdAt, updatedAt }
@@ -256,7 +264,7 @@ export default class Web {
 
     @Middleware(auth(), log(), transaction())
     @HTTPMethod({ path: '/upload', method: HTTPMethodEnum.POST })
-    async upload(@Context() ctx: UserContext, @HTTPBody() params: UploadRequest) {
+    async upload(@Context() ctx: EggContext, @HTTPBody() params: UploadRequest) {
         const user = ctx.user!
         const { dialogId } = params
         const file = ctx.request.files[0]

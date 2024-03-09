@@ -26,8 +26,8 @@ export default (app: Application) => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
             // await syncDataStruct(app)
-            await syncDatabase(app) // init database struct and data
-            await syncConfigCache(app) // sync config cache
+            // await syncDatabase(app) // init database struct and data
+            // await syncConfigCache(app) // sync config cache
             // await updateNewRows(app) // update some rows
         }
 

@@ -1,10 +1,10 @@
 /** @format */
 
-import { UserContext } from '@interface/Context'
+import { Context } from 'egg'
 
 // handle and format user http request and response
 export default function log() {
-    return async (ctx: UserContext, next: () => Promise<any>) => {
+    return async (ctx: Context, next: () => Promise<any>) => {
         const { method, header, body, query, files, url, headers } = ctx.request
         const ip = headers['x-forwarded-for'] || headers['x-real-ip'] || ctx.request.ip
 

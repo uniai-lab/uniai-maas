@@ -32,7 +32,7 @@ const plugin: EggPlugin = {
     },
     sequelize: {
         enable: true,
-        package: '@openai-link/egg-sequelize-ts'
+        package: 'egg-sequelize-typescript-test'
     },
     nunjucks: {
         enable: true,

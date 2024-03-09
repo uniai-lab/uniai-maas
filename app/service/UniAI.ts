@@ -22,7 +22,6 @@ import AI, {
 } from 'uniai'
 import { AuditProvider, ResourceType } from '@interface/Enum'
 import userResourceTab from '@data/userResourceTab'
-import { UserContext } from '@interface/Context'
 import fly from '@util/fly'
 import $ from '@util/util'
 import { encode } from 'gpt-tokenizer'
@@ -238,6 +237,7 @@ export default class UniAI extends Service {
         tabId: number = DEFAULT_RESOURCE_TAB
     ) {
         const { ctx } = this
+        const { transaction } = ctx
 
         // limit upload file size
         const fileSize = statSync(file.filepath).size
@@ -255,20 +255,24 @@ export default class UniAI extends Service {
         return (
             (embedding &&
                 (await ctx.model.Resource.findOne({
-                    where: literal(`embedding <=> '${JSON.stringify(embedding)}' < ${SIMILAR_DISTANCE}`)
+                    where: literal(`embedding <=> '${JSON.stringify(embedding)}' < ${SIMILAR_DISTANCE}`),
+                    transaction
                 }))) ||
-            (await ctx.model.Resource.create({
-                content,
-                userId,
-                typeId,
-                tabId,
-                embedding,
-                fileName: file.filename,
-                filePath: await ctx.service.util.putOSS(file.filepath),
-                fileSize,
-                fileExt,
-                tokens: $.countTokens(content)
-            }))
+            (await ctx.model.Resource.create(
+                {
+                    content,
+                    userId,
+                    typeId,
+                    tabId,
+                    embedding,
+                    fileName: file.filename,
+                    filePath: await ctx.service.util.putOSS(file.filepath),
+                    fileSize,
+                    fileExt,
+                    tokens: $.countTokens(content)
+                },
+                { transaction }
+            ))
         )
     }
 
@@ -292,6 +296,7 @@ export default class UniAI extends Service {
         reset: boolean = false
     ) {
         const { ctx } = this
+        const { transaction } = ctx
 
         if (!resourceId) {
             if (!content) throw new Error('File content is empty')
@@ -305,14 +310,17 @@ export default class UniAI extends Service {
 
         // find or create a resource
         const resource = resourceId
-            ? await ctx.model.Resource.findByPk(resourceId)
-            : await ctx.model.Resource.create({ content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt })
+            ? await ctx.model.Resource.findByPk(resourceId, { transaction })
+            : await ctx.model.Resource.create(
+                  { content, typeId, tabId, userId, fileName, filePath, fileSize, fileExt },
+                  { transaction }
+              )
 
         if (!resource) throw new Error('Can not create or find resource by id')
         if (!resource.content) throw new Error('Can not extract content from resource')
 
         if (provider === EmbedModelProvider.OpenAI) {
-            resource.embeddings1 = await ctx.model.Embedding1.findAll({ where: { resourceId } })
+            resource.embeddings1 = await ctx.model.Embedding1.findAll({ where: { resourceId }, transaction })
 
             if (!resource.embeddings1.length || reset) {
                 // extract page of content from the file
@@ -320,7 +328,7 @@ export default class UniAI extends Service {
                 const pages = await ctx.service.util.extractPages(path)
                 resource.page = pages.length
                 resource.tokens = $.countTokens(resource.content)
-                if (reset) await ctx.model.Embedding1.destroy({ where: { resourceId } })
+                if (reset) await ctx.model.Embedding1.destroy({ where: { resourceId }, transaction })
                 // embedding content
                 const { model, embedding } = await this.embedding(pages, provider)
                 resource.embeddings1 = await ctx.model.Embedding1.bulkCreate(
@@ -331,13 +339,14 @@ export default class UniAI extends Service {
                         model,
                         content: pages[i],
                         tokens: $.countTokens(pages[i])
-                    }))
+                    })),
+                    { transaction }
                 )
-                await resource.save()
+                await resource.save({ transaction })
             }
             return { resource, provider }
         } else if (provider === EmbedModelProvider.Other) {
-            resource.embeddings2 = await ctx.model.Embedding2.findAll({ where: { resourceId } })
+            resource.embeddings2 = await ctx.model.Embedding2.findAll({ where: { resourceId }, transaction })
 
             if (!resource.embeddings2.length || reset) {
                 // extract page of content from the file
@@ -345,7 +354,7 @@ export default class UniAI extends Service {
                 const pages = await ctx.service.util.extractPages(path)
                 resource.page = pages.length
                 resource.tokens = $.countTokens(resource.content)
-                if (reset) await ctx.model.Embedding2.destroy({ where: { resourceId } })
+                if (reset) await ctx.model.Embedding2.destroy({ where: { resourceId }, transaction })
                 // embedding content
                 const { model, embedding } = await this.embedding(pages, provider)
                 resource.embeddings2 = await ctx.model.Embedding2.bulkCreate(
@@ -356,9 +365,10 @@ export default class UniAI extends Service {
                         model,
                         content: pages[i],
                         tokens: $.countTokens(pages[i])
-                    }))
+                    })),
+                    { transaction }
                 )
-                await resource.save()
+                await resource.save({ transaction })
             }
             return { resource, provider }
         } else throw new Error('Embedding provider and model not found')
@@ -397,8 +407,8 @@ export default class UniAI extends Service {
         content = content.replace(/\r\n|\n/g, ' ').trim()
         if (!content) throw new Error('Audit content is empty')
 
+        const { ctx } = this
         const res: AuditResponse = { flag: true, data: null }
-        const ctx = this.ctx as UserContext
 
         if (provider === AuditProvider.WX) {
             const result = await ctx.service.weChat.contentCheck(content, ctx.user?.wxOpenId || '')

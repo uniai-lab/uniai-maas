@@ -89,15 +89,17 @@ export default class WeChat extends Service {
     // use WeChat to login, get code, return new user
     async login(code?: string, phone?: string, fid?: number) {
         const { ctx } = this
+        const { transaction } = ctx
         const where: { wxOpenId?: string; phone?: string } = {}
         // phone login
         if (phone) {
             const res = await ctx.model.PhoneCode.findOne({
                 where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - SMS_EXPIRE) } },
-                order: [['id', 'DESC']]
+                order: [['id', 'DESC']],
+                transaction
             })
             if (!res) throw new Error('Can not find the phone number')
-            await res.increment('count')
+            await res.increment('count', { transaction })
 
             // validate code
             if (res.count >= SMS_COUNT) throw new Error('Try too many times')
@@ -119,24 +121,21 @@ export default class WeChat extends Service {
         } else throw new Error('Phone or code can not be null')
 
         // find or create a user, then sign in
-        const { id } =
-            (await ctx.model.User.findOne({ where, attributes: ['id'] })) ||
-            (await ctx.service.user.create(where.phone, where.wxOpenId, fid))
+        const { id } = await ctx.service.user.create(where.phone, where.wxOpenId, fid)
         const user = await ctx.service.user.signIn(id)
 
         // add free chat dialog if not existed
-        if (
-            !(await ctx.model.Dialog.count({
-                where: { userId: user.id, resourceId: null, isEffect: true, isDel: false }
-            }))
-        )
-            await ctx.service.weChat.addDialog(user.id)
+        const count = await ctx.model.Dialog.count({
+            where: { userId: user.id, resourceId: null, isEffect: true, isDel: false },
+            transaction
+        })
+        if (!count) await ctx.service.weChat.addDialog(user.id)
 
         // add default resource dialog if not existed
         const resourceId = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
         if (
-            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId } })) &&
-            (await ctx.model.Resource.count({ where: { id: resourceId } }))
+            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId }, transaction })) &&
+            (await ctx.model.Resource.count({ where: { id: resourceId }, transaction }))
         )
             await ctx.service.weChat.addDialog(user.id, resourceId)
 
@@ -221,31 +220,27 @@ export default class WeChat extends Service {
     // find or add a dialog
     async addDialog(userId: number, resourceId: number | null = null) {
         const { ctx } = this
+        const { transaction } = ctx
 
         let fileName = ''
         // check resource
         if (resourceId) {
-            const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['fileName'] })
+            const resource = await ctx.model.Resource.findByPk(resourceId, { attributes: ['fileName'], transaction })
             if (!resource) throw new Error('Can not find the resource')
             fileName = resource.fileName
         }
 
-        // create a new dialog
-        const dialog = await ctx.model.Dialog.create({ userId, resourceId })
-
-        // create default dialog chats
+        // create dialog and chat
         const content =
             ctx.__('Im AI model') + (fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat'))
-
-        dialog.chats = await ctx.model.Chat.bulkCreate([
+        const dialog = await ctx.model.Dialog.create(
             {
-                dialogId: dialog.id,
-                role: ChatRoleEnum.ASSISTANT,
-                content: ctx.service.util.mintFilter(content).text,
-                model: PROVIDER,
-                subModel: MODEL
-            }
-        ])
+                userId,
+                resourceId,
+                chats: [{ role: ChatRoleEnum.ASSISTANT, content: ctx.service.util.mintFilter(content).text }]
+            },
+            { transaction, include: ctx.model.Chat }
+        )
 
         return dialog
     }
@@ -253,13 +248,17 @@ export default class WeChat extends Service {
     // delete a dialog
     async delDialog(userId: number, id: number | null = null) {
         const { ctx } = this
-        const dialog = await ctx.model.Dialog.findOne({ where: id ? { id, userId } : { userId, resourceId: null } })
+        const { transaction } = ctx
+        const dialog = await ctx.model.Dialog.findOne({
+            where: id ? { id, userId } : { userId, resourceId: null },
+            transaction
+        })
         if (!dialog) throw new Error('Can not find the dialog')
 
         if (id) {
             dialog.isDel = true
-            await dialog.save()
-        } else await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
+            await dialog.save({ transaction })
+        } else await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id }, transaction })
     }
 
     // list all the chats from a user and dialog
@@ -281,7 +280,7 @@ export default class WeChat extends Service {
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
                 isEffect: true,
                 isDel: false,
-                model: PROVIDER
+                [Op.or]: [{ model: PROVIDER }, { model: null }]
             }
         })
 
@@ -513,7 +512,12 @@ export default class WeChat extends Service {
     // add a new resource
     async upload(file: EggFile, userId: number, typeId: number) {
         const { ctx } = this
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'uploadChanceFree', 'uploadChance'] })
+        const { transaction } = ctx
+
+        const user = await ctx.model.User.findByPk(userId, {
+            attributes: ['id', 'uploadChanceFree', 'uploadChance'],
+            transaction
+        })
         if (!user) throw new Error('Fail to find user')
         if (user.uploadChance + user.uploadChanceFree <= 0) throw new Error('Upload chance not enough')
 
@@ -527,7 +531,7 @@ export default class WeChat extends Service {
         const { flag } = await ctx.service.uniAI.audit(resource.content)
         if (!flag) {
             resource.isEffect = flag
-            await resource.save()
+            await resource.save({ transaction })
         }
 
         // split pages as images
@@ -536,7 +540,7 @@ export default class WeChat extends Service {
         // reduce user upload chance
         if (user.uploadChanceFree > 0) user.uploadChanceFree--
         else if (user.uploadChance > 0) user.uploadChance--
-        await user.save()
+        await user.save({ transaction })
 
         return resource
     }
@@ -544,9 +548,12 @@ export default class WeChat extends Service {
     // find resource, pages by ID
     async resource(id: number) {
         const { ctx } = this
+        const { transaction } = ctx
+
         const res = await ctx.model.Resource.findByPk(id, {
             attributes: ['id', 'fileName', 'fileSize', 'fileExt', 'filePath', 'content', 'isEffect', 'isDel'],
-            include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] }
+            include: { model: ctx.model.Page, attributes: ['filePath'], order: ['page', 'asc'] },
+            transaction
         })
         if (!res) throw new Error('Can not find the resource by ID')
 
@@ -569,10 +576,11 @@ export default class WeChat extends Service {
             const pages: string[] = []
             for (const i in imgs) pages.push(await ctx.service.util.putOSS(imgs[i]))
             res.pages = await ctx.model.Page.bulkCreate(
-                pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v }))
+                pages.map((v, i) => ({ resourceId: res.id, page: i + 1, filePath: v })),
+                { transaction }
             )
             res.page = pages.length
-            await res.save()
+            await res.save({ transaction })
         }
         return res
     }

@@ -6,6 +6,9 @@ import { Op } from 'sequelize'
 import { PassThrough, Readable } from 'stream'
 import { randomUUID } from 'crypto'
 import md5 from 'md5'
+import { EggFile } from 'egg-multipart'
+import { basename, extname } from 'path'
+import { statSync } from 'fs'
 import {
     ChatMessage,
     ChatModel,
@@ -19,12 +22,9 @@ import {
 import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
 import { WXAppQRCodeCache } from '@interface/Cache'
+import { OutputMode, ResourceType } from '@interface/Enum'
 import ali from '@util/aliyun'
 import $ from '@util/util'
-import { OutputMode, ResourceType } from '@interface/Enum'
-import { EggFile } from 'egg-multipart'
-import { basename, extname } from 'path'
-import { statSync } from 'fs'
 
 const SMS_WAIT = 1 * 60 * 1000
 const SMS_EXPIRE = 5 * 60 * 1000
@@ -109,9 +109,14 @@ export default class Web extends Service {
     // login
     async login(phone: string, code?: string, password?: string, fid?: number) {
         const { ctx } = this
+        const { transaction } = ctx
         // password login
         if (password) {
-            const user = await ctx.model.User.findOne({ where: { phone }, attributes: ['id', 'password', 'createdAt'] })
+            const user = await ctx.model.User.findOne({
+                where: { phone },
+                attributes: ['id', 'password', 'createdAt'],
+                transaction
+            })
             if (!user) throw new Error('Can not find the phone number')
             if (user.password !== md5(`${user.id}${password}${user.createdAt}`)) throw new Error('Invalid password')
             return await ctx.service.user.signIn(user.id)
@@ -120,27 +125,24 @@ export default class Web extends Service {
         else if (code) {
             const res = await ctx.model.PhoneCode.findOne({
                 where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - SMS_EXPIRE) } },
-                order: [['id', 'DESC']]
+                order: [['id', 'DESC']],
+                transaction
             })
             if (!res) throw new Error('Can not find the phone number')
-            await res.increment('count')
-
-            // validate code
+            // limit code request times
+            await res.increment('count', { transaction })
             if (res.count >= SMS_COUNT) throw new Error('Try too many times')
             if (res.code !== code) throw new Error('Code is invalid')
 
             // find or create user
-            const { id } =
-                (await ctx.model.User.findOne({ where: { phone }, attributes: ['id'] })) ||
-                (await ctx.service.user.create(phone, null, fid))
+            const { id } = await ctx.service.user.create(phone, null, fid)
 
             // add a default free chat dialog if not existed
-            if (
-                !(await ctx.model.Dialog.count({
-                    where: { userId: id, resourceId: null, isEffect: true, isDel: false }
-                }))
-            )
-                await this.addDialog(id)
+            const count = await ctx.model.Dialog.count({
+                where: { userId: id, resourceId: null, isEffect: true, isDel: false },
+                transaction
+            })
+            if (!count) await this.addDialog(id)
 
             // sign in
             return await ctx.service.user.signIn(id)
@@ -150,42 +152,34 @@ export default class Web extends Service {
     // find or add a dialog
     async addDialog(userId: number) {
         const { ctx } = this
+        const { transaction } = ctx
 
-        // create a new dialog
-        const dialog = await ctx.model.Dialog.create({ userId })
-
-        // create default dialog chats
+        // create a new dialog and a chat message
         const content = ctx.__('Im AI model') + ctx.__('feel free to chat')
-
-        dialog.chats = await ctx.model.Chat.bulkCreate([
-            {
-                dialogId: dialog.id,
-                role: ChatRoleEnum.ASSISTANT,
-                content,
-                model: ChatModelProvider.IFlyTek,
-                subModel: ChatModel.SPARK_V3
-            }
-        ])
-
-        return dialog
+        return await ctx.model.Dialog.create(
+            { userId, chats: [{ role: ChatRoleEnum.ASSISTANT, content }] },
+            { include: ctx.model.Chat, transaction }
+        )
     }
 
     // delete a dialog
     async delDialog(userId: number, id: number) {
         const { ctx } = this
+        const { transaction } = ctx
 
         // find dialog
-        const dialog = await ctx.model.Dialog.findOne({ where: { id, userId } })
+        const dialog = await ctx.model.Dialog.findOne({ where: { id, userId }, transaction })
         if (!dialog) throw new Error('Can not find the dialog')
 
         // delete dialog
         dialog.isDel = true
-        await dialog.save()
-        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id } })
+        await dialog.save({ transaction })
+        await ctx.model.Chat.update({ isDel: true }, { where: { dialogId: dialog.id }, transaction })
 
         // keep one fresh dialog
         const count = await ctx.model.Dialog.count({
-            where: { userId, resourceId: null, isEffect: true, isDel: false }
+            where: { userId, resourceId: null, isEffect: true, isDel: false },
+            transaction
         })
         if (count <= 0) await this.addDialog(userId)
     }
@@ -463,9 +457,7 @@ export default class Web extends Service {
         const { ctx } = this
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(data.userId, {
-            attributes: ['id', 'chatChanceFree', 'chatChance', 'level']
-        })
+        const user = await ctx.service.user.get(data.userId)
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= CHAT_COST) throw new Error('Chat chance not enough')
 
@@ -502,11 +494,7 @@ export default class Web extends Service {
                 if (file.typeId === ResourceType.IMAGE) {
                     prompts.push({
                         role: USER,
-                        content: `
-                        # Image
-                        File name: ${item.resourceName}
-                        File size: ${file.fileSize} Bytes
-                        `,
+                        content: `# Image File\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`,
                         img: { url: ctx.service.util.fileURL(file.filePath) }
                     })
                 } else {
@@ -581,10 +569,17 @@ export default class Web extends Service {
                 })
                 data.chatId = chat.id
             }
+
             // reduce user chance, first cost free chance
-            user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
-            user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
-            await user.save()
+            const user = await ctx.model.User.findByPk(data.userId, {
+                attributes: ['id', 'chatChanceFree', 'chatChance']
+            })
+            if (user) {
+                user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
+                user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
+                await user.save()
+            }
+
             output.end(JSON.stringify(data))
         })
         res.on('error', e => output.destroy(e))
@@ -594,9 +589,7 @@ export default class Web extends Service {
         const { ctx } = this
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(data.userId, {
-            attributes: ['id', 'chatChanceFree', 'chatChance', 'level']
-        })
+        const user = await ctx.service.user.get(data.userId)
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= IMAGINE_COST) throw new Error('Imagine chance not enough')
 
@@ -668,9 +661,14 @@ export default class Web extends Service {
                     }
 
                     // reduce user chance, first cost free chance
-                    user.chatChanceFree = Math.max(user.chatChanceFree - IMAGINE_COST, 0)
-                    user.chatChance = Math.max(user.chatChance - Math.max(IMAGINE_COST - user.chatChanceFree, 0), 0)
-                    await user.save()
+                    const user = await ctx.model.User.findByPk(data.userId, {
+                        attributes: ['id', 'chatChanceFree', 'chatChance']
+                    })
+                    if (user) {
+                        user.chatChanceFree = Math.max(user.chatChanceFree - IMAGINE_COST, 0)
+                        user.chatChance = Math.max(user.chatChance - Math.max(IMAGINE_COST - user.chatChanceFree, 0), 0)
+                        await user.save()
+                    }
 
                     output.end(JSON.stringify(data))
                     break
@@ -685,35 +683,41 @@ export default class Web extends Service {
     async upload(file: EggFile, dialogId: number, userId: number) {
         // upload resource to oss
         const { ctx } = this
+        const { transaction } = ctx
 
         // check user chat chance
-        const user = await ctx.model.User.findByPk(userId, { attributes: ['id', 'chatChanceFree', 'chatChance'] })
+        const user = await ctx.model.User.findByPk(userId, {
+            attributes: ['id', 'chatChanceFree', 'chatChance'],
+            transaction
+        })
         if (!user) throw new Error('Fail to find user')
         if (user.chatChanceFree + user.chatChance <= CHAT_COST) throw new Error('Chat chance not enough')
         // reduce user chance, first cost free chance
         user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
         user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
-        await user.save()
+        await user.save({ transaction })
 
         // check dialog is right
         const dialog = await ctx.model.Dialog.findOne({
             where: { id: dialogId, userId, isEffect: true, isDel: false },
-            attributes: ['id', 'title']
+            attributes: ['id', 'title'],
+            transaction
         })
         if (!dialog) throw new Error('Dialog is not available')
 
         // update title
-        if (!dialog.title) await dialog.update({ title: file.filename })
+        if (!dialog.title) await dialog.update({ title: file.filename }, { transaction })
 
+        // upload and embedding resource
         const resource = await ctx.service.uniAI.upload(file, userId)
         if (resource.typeId === ResourceType.TEXT)
             await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)
-        const chat = await ctx.model.Chat.create({
-            dialogId,
-            role: ChatRoleEnum.USER,
-            resourceId: resource.id,
-            resourceName: file.filename
-        })
+
+        // add chat for resource
+        const chat = await ctx.model.Chat.create(
+            { dialogId, role: ChatRoleEnum.USER, resourceId: resource.id, resourceName: file.filename },
+            { transaction }
+        )
         chat.resource = resource
         return chat
     }
