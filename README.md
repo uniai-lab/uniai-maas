@@ -50,6 +50,7 @@ Ensure you have the following `NPM` libs installed:
 -   Docker & Docker-compose
 -   LibreOffice for document conversion (libreoffice-convert)
 -   pdf-to-img (canvas-node) - [Canvas NPM Package](https://www.npmjs.com/package/canvas)
+-   libvips (sharp) - [https://www.npmjs.com/package/sharp]
 
 ## Getting Started
 
@@ -167,6 +168,11 @@ npm -g install node-gyp
 
 -   Reference: [Canvas NPM Documentation](https://www.npmjs.com/package/canvas)
 -   Install dependencies as per your operating system.
+
+**Sharp Support**
+
+- Ubuntu: `sudo apt install libvips`
+- Mac: `brew install libvips`
 
 **Using Yarn (Recommended over npm)**
 

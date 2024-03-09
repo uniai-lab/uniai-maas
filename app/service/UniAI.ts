@@ -26,7 +26,7 @@ import fly from '@util/fly'
 import $ from '@util/util'
 import { encode } from 'gpt-tokenizer'
 import { literal } from 'sequelize'
-// import sharp from 'sharp'
+import sharp from 'sharp'
 
 const {
     OPENAI_API,
@@ -62,7 +62,9 @@ const ai = new AI({
 const MAX_PAGE = 10
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 const SIMILAR_DISTANCE = 0.000001
-const LIMIT_IMG_SIZE = 2 * 1024 * 1024
+const LIMIT_IMG_SIZE = 2 * 1024 * 1024 // images over 2mb need to compress
+const LIMIT_IMG_WIDTH = 800 // image compress width
+const LIMIT_IMG_QUALITY = 65 // image compress quality
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
@@ -246,13 +248,15 @@ export default class UniAI extends Service {
         const fileExt = extname(file.filename).replace('.', '').toLowerCase()
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
         // compress image
-        /*
-        if (typeId === ResourceType.IMAGE && fileSize > LIMIT_IMG_SIZE)
+        if (typeId === ResourceType.IMAGE && fileSize > LIMIT_IMG_SIZE) {
+            const path = file.filepath.replace(extname(file.filepath), '') + 'zip' + extname(file.filepath)
             await sharp(file.filepath)
-                .resize({ width: 800, withoutEnlargement: true })
-                .png({ quality: 60 })
-                .toFile(file.filepath)
-                */
+                .resize({ width: LIMIT_IMG_WIDTH, withoutEnlargement: true, fit: 'contain' })
+                .png({ quality: LIMIT_IMG_QUALITY })
+                .rotate()
+                .toFile(path)
+            file.filepath = path
+        }
 
         // extract content
         const content = await ctx.service.util.extractText(file.filepath)
