@@ -249,7 +249,7 @@ export default class UniAI extends Service {
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
         // compress image
         if (typeId === ResourceType.IMAGE && fileSize > LIMIT_IMG_SIZE) {
-            const path = file.filepath.replace(extname(file.filepath), '') + 'zip' + extname(file.filepath)
+            const path = file.filepath.replace(extname(file.filepath), '-') + 'zip' + extname(file.filepath)
             await sharp(file.filepath)
                 .resize({ width: LIMIT_IMG_WIDTH, withoutEnlargement: true, fit: 'contain' })
                 .png({ quality: LIMIT_IMG_QUALITY })

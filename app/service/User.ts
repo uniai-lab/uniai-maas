@@ -124,7 +124,7 @@ export default class User extends Service {
         const now = Date.now()
         const expired = cache.levelExpiredAt
 
-        if ((expired > 0 && now >= expired) || score) {
+        if (score || (expired > 0 && now >= expired)) {
             const { ctx } = this
             const { transaction } = ctx
             const user = await ctx.model.User.findByPk(id, {
@@ -138,19 +138,17 @@ export default class User extends Service {
                 user.levelExpiredAt = new Date(0)
             }
 
-            if (score) {
-                // update level by score
-                user.score += score
-                const origin = user.level
-                const levels = await this.getConfig<number[]>('LEVEL_SCORE')
-                for (const i in levels) if (user.score >= levels[i]) user.level = parseInt(i)
+            // update level by score
+            user.score += score
+            const origin = user.level
+            const levels = await this.getConfig<number[]>('LEVEL_SCORE')
+            for (const i in levels) if (user.score >= levels[i]) user.level = parseInt(i)
 
-                // level upgraded, cost score, set expire time
-                if (user.level > origin) {
-                    user.score -= levels[user.level]
-                    user.levelExpiredAt = $.nextMonthSameTime()
-                } else user.level = origin
-            }
+            // level upgraded, cost score, set expire time
+            if (user.level > origin) {
+                user.score -= levels[user.level]
+                user.levelExpiredAt = $.nextMonthSameTime()
+            } else user.level = origin
             await user.save({ transaction })
         }
     }
