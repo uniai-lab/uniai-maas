@@ -32,7 +32,7 @@ const plugin: EggPlugin = {
     },
     sequelize: {
         enable: true,
-        package: 'egg-sequelize-typescript-test'
+        package: 'egg-sequelize-typescript'
     },
     nunjucks: {
         enable: true,

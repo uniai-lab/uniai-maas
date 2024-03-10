@@ -43,7 +43,7 @@
         "egg-multipart": "^3.3.0",
         "egg-redis": "^2.5.0",
         "egg-scripts": "^2.17.0",
-        "egg-sequelize-typescript-test": "^1.0.0",
+        "egg-sequelize-typescript": "^2.0.0",
         "egg-tracer": "^2.1.0",
         "egg-view-nunjucks": "^2.3.0",
         "form-data": "^4.0.0",

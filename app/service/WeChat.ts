@@ -121,25 +121,26 @@ export default class WeChat extends Service {
         }
 
         // find or create a user, then sign in
-        const { id } = await ctx.service.user.create(where, fid)
-        const user = await ctx.service.user.signIn(id)
+        const { id } = await ctx.service.user.findOrCreate(where, fid)
 
         // add free chat dialog if not existed
-        const count = await ctx.model.Dialog.count({
-            where: { userId: user.id, resourceId: null, isEffect: true, isDel: false },
-            transaction
-        })
-        if (!count) await ctx.service.weChat.addDialog(user.id)
+        if (
+            !(await ctx.model.Dialog.count({
+                where: { userId: id, resourceId: null, isEffect: true, isDel: false },
+                transaction
+            }))
+        )
+            await ctx.service.weChat.addDialog(id)
 
         // add default resource dialog if not existed
         const resourceId = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
         if (
-            !(await ctx.model.Dialog.count({ where: { userId: user.id, resourceId }, transaction })) &&
+            !(await ctx.model.Dialog.count({ where: { userId: id, resourceId }, transaction })) &&
             (await ctx.model.Resource.count({ where: { id: resourceId }, transaction }))
         )
-            await ctx.service.weChat.addDialog(user.id, resourceId)
+            await ctx.service.weChat.addDialog(id, resourceId)
 
-        return user
+        return await ctx.service.user.signIn(id)
     }
 
     /* user sign phone number

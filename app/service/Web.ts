@@ -135,7 +135,7 @@ export default class Web extends Service {
             if (res.code !== code) throw new Error('Code is invalid')
 
             // find or create user
-            const { id } = await ctx.service.user.create({ phone }, fid)
+            const { id } = await ctx.service.user.findOrCreate({ phone }, fid)
 
             // add a default free chat dialog if not existed
             const count = await ctx.model.Dialog.count({

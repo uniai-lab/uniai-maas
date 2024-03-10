@@ -18,7 +18,7 @@ import 'egg-view';
 import '@eggjs/tegg-plugin';
 import '@eggjs/tegg-config';
 import '@eggjs/tegg-controller-plugin';
-import 'egg-sequelize-typescript-test';
+import 'egg-sequelize-typescript';
 import 'egg-view-nunjucks';
 import 'egg-cors';
 import 'egg-redis';
