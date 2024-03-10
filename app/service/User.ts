@@ -25,19 +25,18 @@ export default class User extends Service {
     }
 
     // create user by phone, wx openid
-    async create(phone: string | null = null, wxOpenId: string | null = null, fid: number = 0) {
-        if (!phone && !wxOpenId) throw new Error('need one of phone, openid')
+    async create(where: { wxOpenId?: string; phone?: string }, fid?: number) {
+        if (!where.phone && !where.wxOpenId) throw new Error('Need phone or openid')
 
         const { ctx } = this
         const { transaction } = ctx
 
-        const user = await ctx.model.User.findOne({ where: { phone, wxOpenId }, attributes: ['id'], transaction })
+        const user = await ctx.model.User.findOne({ where, attributes: ['id'], transaction })
         if (user) return user
         else {
             const user = await ctx.model.User.create(
                 {
-                    wxOpenId,
-                    phone,
+                    ...where,
                     avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
                     chatChanceFree: (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0],
                     uploadChanceFree: (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0],
@@ -49,7 +48,7 @@ export default class User extends Service {
             // create finish, give share reward to fid user
             if (fid) {
                 const user = await ctx.model.User.findByPk(fid, { transaction })
-                if (!user) throw Error('Fail to find reward user')
+                if (!user) throw new Error('Fail to find reward user')
 
                 user.uploadChance += parseInt(await this.getConfig('SHARE_REWARD_UPLOAD_CHANCE'))
                 user.chatChance += parseInt(await this.getConfig('SHARE_REWARD_CHAT_CHANCE'))

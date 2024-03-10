@@ -91,7 +91,7 @@ export default class WeChat extends Service {
         const { ctx } = this
         const { transaction } = ctx
         const where: { wxOpenId?: string; phone?: string } = {}
-        // phone login
+        // validate phone login
         if (phone) {
             const res = await ctx.model.PhoneCode.findOne({
                 where: { phone, createdAt: { [Op.gte]: new Date(Date.now() - SMS_EXPIRE) } },
@@ -106,8 +106,8 @@ export default class WeChat extends Service {
             if (res.code !== code) throw new Error('Code is invalid')
             where.phone = phone
         }
-        // wechat login
-        else if (code) {
+        // validate wx login
+        if (code) {
             // get access_token, openid, unionid from WeChat API
             const { openid } = await $.get<WXAuthCodeRequest, WXAuthCodeResponse>(WX_AUTH_URL, {
                 grant_type: 'authorization_code',
@@ -118,10 +118,10 @@ export default class WeChat extends Service {
             if (!openid) throw new Error('Fail to get WeChat openid')
             where.wxOpenId = openid
             // find user and sign in
-        } else throw new Error('Phone or code can not be null')
+        }
 
         // find or create a user, then sign in
-        const { id } = await ctx.service.user.create(where.phone, where.wxOpenId, fid)
+        const { id } = await ctx.service.user.create(where, fid)
         const user = await ctx.service.user.signIn(id)
 
         // add free chat dialog if not existed
