@@ -213,7 +213,8 @@ export default class WeChat extends Service {
             include: {
                 model: ctx.model.Resource,
                 attributes: ['id', 'page', 'fileName', 'fileSize', 'filePath', 'updatedAt', 'isEffect', 'isDel'],
-                include: [{ model: ctx.model.ResourceType, attributes: ['id', 'name', 'description'] }]
+                include: [{ model: ctx.model.ResourceType, attributes: ['id', 'name', 'description'] }],
+                required: true
             }
         })
     }
@@ -314,11 +315,7 @@ export default class WeChat extends Service {
                 limit: CHAT_PAGE_SIZE,
                 order: [['id', 'desc']],
                 attributes: ['role', 'content'],
-                where: {
-                    isEffect: true,
-                    isDel: false,
-                    [Op.or]: [{ model: PROVIDER }, { model: null }]
-                }
+                where: { isEffect: true, isDel: false, [Op.or]: [{ model: PROVIDER }, { model: null }] }
             }
         })
         if (!dialog) throw new Error('Dialog is not available')
@@ -337,14 +334,13 @@ export default class WeChat extends Service {
             prompts.push({
                 role: SYSTEM,
                 content: `
-                    # Reference File
-                    ## File Info
-                    File name: ${fileName}
-                    File size: ${fileSize} Bytes
-                    Total pages: ${page}
-                    ## File Content:
+                    # ${ctx.__('Reference File')}
+                    ## ${ctx.__('File Info')}
+                    ${ctx.__('File name:')}${fileName}
+                    ${ctx.__('File size:')}${fileSize} Bytes
+                    ${ctx.__('Total pages:')}${page}
+                    ## ${ctx.__('File Content:')}
                     ${$.subTokens(pages.map(v => v.content).join('\n'), 5000)}
-                    <hr>
                     ${ctx.__('document content end')}
                     ${ctx.__('answer according to')}
                     `

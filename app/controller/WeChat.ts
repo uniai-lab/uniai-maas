@@ -226,7 +226,7 @@ export default class WeChat {
                       resourceId: res.resourceId,
                       model: res.model,
                       subModel: res.subModel,
-                      avatar: user.avatar || (await ctx.service.weChat.getConfig('DEFAULT_AVATAR_USER')),
+                      avatar: user.avatar,
                       isEffect: res.isEffect
                   }
 

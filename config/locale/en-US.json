@@ -58,5 +58,12 @@
     "default dialog": "Default Dialog",
     "System Time": "Current System Time: %s",
     "auto provider": "Select Model",
-    "auto model": "Auto Select Model"
+    "auto model": "Auto Select Model",
+    "Reference File": "Reference File",
+    "File Info": "File Basic Info",
+    "File name:": "File Name: ",
+    "File size:": "File Size: ",
+    "Total pages:": "File Total Pages: ",
+    "File Content:": "File Content: ",
+    "Note": "Note"
 }

@@ -507,14 +507,14 @@ export default class Web extends Service {
                     prompts.push({
                         role: USER,
                         content: `
-                        # File ${count}
-                        ## File Info
-                        File name: ${item.resourceName}
-                        File size: ${file.fileSize} Bytes
-                        Total pages: ${file.page}
-                        ## File Content
+                        # ${ctx.__('File Reference')} ${count}
+                        ## ${ctx.__('File Info')}
+                        ${ctx.__('File name:')}${item.resourceName}
+                        ${ctx.__('File size:')}${file.fileSize} Bytes
+                        ${ctx.__('Total pages:')}${file.page}
+                        ## ${ctx.__('File Content')}
                         ${pages.map(v => v.content).join('\n')}
-                        ## Note
+                        ## ${ctx.__('Note')}
                         All the data in CSV format needs to be output in table format.
                     `
                     })

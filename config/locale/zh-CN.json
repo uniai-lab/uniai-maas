@@ -56,5 +56,12 @@
     "default dialog": "默认对话",
     "System Time": "当前系统时间：%s",
     "auto provider": "选择模型",
-    "auto model": "智能选择模型"
+    "auto model": "智能选择模型",
+    "Reference File": "参考文件",
+    "File Info": "文件基本信息",
+    "File name:": "文件名：",
+    "File size:": "文件大小：",
+    "Total pages:": "文件总页数：",
+    "File Content:": "文件内容：",
+    "Note": "注意"
 }
