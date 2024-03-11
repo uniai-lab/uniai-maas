@@ -421,15 +421,14 @@ export default class Web extends Service {
     // use imagine model
     async useImagineModel(level: number) {
         const options = await this.getConfig<LevelImagineModel>('LEVEL_IMAGINE_MODEL')
-        let provider: ImagineModelProvider = ImagineModelProvider.StabilityAI
-        let model: ImagineModel = ImagineModel.SD_1_6
+        let provider: ImagineModelProvider = ImagineModelProvider.MidJourney
+        let model: ImagineModel = ImagineModel.MJ
 
         /*
         if (level >= options['stable-diffusion-v1-6']) {
             provider = ImagineModelProvider.StabilityAI
             model = ImagineModel.SD_1_6
         }
-        */
         if (level >= options['dall-e-2']) {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_2
@@ -438,6 +437,7 @@ export default class Web extends Service {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_3
         }
+        */
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
@@ -602,7 +602,7 @@ export default class Web extends Service {
         output.write(JSON.stringify(data))
 
         // imagine
-        const res = await ctx.service.uniAI.imagine(await this.translate(input), '', 1, 1024, 1024, provider, model)
+        const res = await ctx.service.uniAI.imagine(input, '', 1, 1024, 1024, provider, model)
         // watch task
         let loop = 0
         while (loop < LOOP_MAX) {
@@ -621,7 +621,7 @@ export default class Web extends Service {
                 const fileName = basename(img)
                 const fileExt = extname(img).replace('.', '')
                 const fileSize = statSync(img).size
-                const url = ctx.service.util.fileURL(filePath)
+                const url = ctx.service.util.fileURL(filePath, `${progress}-${basename(img)}`)
                 data.file = { url, name: fileName, ext: `image/${fileExt}`, size: fileSize }
                 output.write(JSON.stringify(data))
 
