@@ -40,7 +40,7 @@ const TITLE_SUB_TOKEN = 20 // dialog title limit length
 const QUERY_PAGE_LIMIT = 5 // query resource page limit
 const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
 
-const IMAGINE_COST = 5
+const IMAGINE_COST = 10
 const CHAT_COST = 1
 
 const TRANSLATE_PROVIDER = ModelProvider.Google
@@ -424,10 +424,12 @@ export default class Web extends Service {
         let provider: ImagineModelProvider = ImagineModelProvider.StabilityAI
         let model: ImagineModel = ImagineModel.SD_1_6
 
+        /*
         if (level >= options['stable-diffusion-v1-6']) {
             provider = ImagineModelProvider.StabilityAI
             model = ImagineModel.SD_1_6
         }
+        */
         if (level >= options['dall-e-2']) {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_2
@@ -436,12 +438,10 @@ export default class Web extends Service {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_3
         }
-        /*
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
         }
-        */
         return { provider, model }
     }
 

@@ -29,7 +29,7 @@ const FREE_UPLOAD_CHANCE: number[] = [5, 5, 10, 15]
  * Level 2 -> 100 score
  * Level 3 -> 500 score
  */
-const LEVEL_SCORE: number[] = [0, 30, 100, 500]
+const LEVEL_SCORE: number[] = [0, 10, 100, 300]
 
 const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
     [ChatModelProvider.IFlyTek]: 0,
@@ -43,9 +43,9 @@ const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
 const LEVEL_IMAGINE_MODEL: LevelImagineModel = {
     [ImagineModel.SD_1_6]: 0,
     [ImagineModel.SD_XL_1024]: 0,
-    [ImagineModel.DALL_E_2]: 1,
-    [ImagineModel.DALL_E_3]: 2,
-    [ImagineModel.MJ]: 3
+    [ImagineModel.DALL_E_2]: 0,
+    [ImagineModel.DALL_E_3]: 1,
+    [ImagineModel.MJ]: 2
 }
 
 const USER_MENU: ConfigMenu[] = [
