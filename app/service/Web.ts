@@ -393,7 +393,7 @@ export default class Web extends Service {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_TURBO
             }
-        } else throw new Error('Context too long')
+        } else throw new Error('Context is too long')
 
         // handle excel table
         if (exts.includes('xlsx') || exts.includes('xls') || exts.includes('csv')) {
@@ -408,6 +408,10 @@ export default class Web extends Service {
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_4V
+            }
+            if (level >= options.google) {
+                provider = ChatModelProvider.Google
+                model = ChatModel.GEM_VISION
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
@@ -495,7 +499,7 @@ export default class Web extends Service {
                     prompts.push({
                         role: USER,
                         content: `# Image File\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`,
-                        img: { url: ctx.service.util.fileURL(file.filePath) }
+                        img: ctx.service.util.fileURL(file.filePath)
                     })
                 } else {
                     count++
