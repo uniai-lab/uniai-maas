@@ -540,7 +540,8 @@ export default class Web extends Service {
         const model = data.subModel as ChatModel
 
         // start chat stream
-        data.content = ''
+        data.content = ctx.__('model inputting')
+        output.write(JSON.stringify(data))
         const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
@@ -553,26 +554,25 @@ export default class Web extends Service {
             }
         })
         res.on('end', async () => {
+            if (!data.content.trim()) output.destroy(new Error('Model error, output nothing'))
+
             // save user chat
-            if (input)
-                await ctx.model.Chat.create({
-                    dialogId: data.dialogId,
-                    role: USER,
-                    content: input,
-                    model: data.model,
-                    subModel: data.subModel
-                })
+            await ctx.model.Chat.create({
+                dialogId: data.dialogId,
+                role: USER,
+                content: input,
+                model: data.model,
+                subModel: data.subModel
+            })
             // save assistant chat
-            if (data.content) {
-                const chat = await ctx.model.Chat.create({
-                    dialogId: data.dialogId,
-                    role: ASSISTANT,
-                    content: data.content,
-                    model: data.model,
-                    subModel: data.subModel
-                })
-                data.chatId = chat.id
-            }
+            const chat = await ctx.model.Chat.create({
+                dialogId: data.dialogId,
+                role: ASSISTANT,
+                content: data.content,
+                model: data.model,
+                subModel: data.subModel
+            })
+            data.chatId = chat.id
 
             // reduce user chance, first cost free chance
             const user = await ctx.model.User.findByPk(data.userId, {
