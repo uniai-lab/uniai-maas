@@ -463,7 +463,7 @@ export default class Web extends Service {
         // check user chat chance
         const user = await ctx.service.user.get(data.userId)
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= CHAT_COST) throw new Error('Chat chance not enough')
+        if (user.chatChanceFree + user.chatChance < CHAT_COST) throw new Error('Chat chance not enough')
 
         // get chat history
         const chats = await ctx.model.Chat.findAll({
@@ -595,7 +595,7 @@ export default class Web extends Service {
         // check user chat chance
         const user = await ctx.service.user.get(data.userId)
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= IMAGINE_COST) throw new Error('Imagine chance not enough')
+        if (user.chatChanceFree + user.chatChance < IMAGINE_COST) throw new Error('Imagine chance not enough')
 
         // auto set provider and model
         const { provider, model } = await this.useImagineModel(user.level)
@@ -623,46 +623,42 @@ export default class Web extends Service {
             if (img) {
                 const filePath = await ctx.service.util.putOSS(img)
                 const fileName = basename(img)
-                const fileExt = extname(img).replace('.', '')
+                const fileExt = extname(img).replace('.', '').toLowerCase()
                 const fileSize = statSync(img).size
                 const url = ctx.service.util.fileURL(filePath, `${progress}-${basename(img)}`)
                 data.file = { url, name: fileName, ext: `image/${fileExt}`, size: fileSize }
-                output.write(JSON.stringify(data))
 
                 // complete imagining
                 if (progress === 100) {
                     // save user chat
-                    if (input)
-                        await ctx.model.Chat.create({
+                    await ctx.model.Chat.create({
+                        dialogId: data.dialogId,
+                        role: ChatRoleEnum.USER,
+                        content: input,
+                        model: data.model,
+                        subModel: data.subModel
+                    })
+                    // save model chat response, image file
+                    const chat = await ctx.model.Chat.create(
+                        {
                             dialogId: data.dialogId,
-                            role: ChatRoleEnum.USER,
-                            content: input,
+                            role: ChatRoleEnum.ASSISTANT,
                             model: data.model,
-                            subModel: data.subModel
-                        })
-                    // save assistant chat
-                    if (data.content) {
-                        const chat = await ctx.model.Chat.create(
-                            {
-                                dialogId: data.dialogId,
-                                role: ChatRoleEnum.ASSISTANT,
-                                model: data.model,
-                                subModel: data.subModel,
-                                resourceName: fileName,
-                                resource: {
-                                    fileName,
-                                    fileExt,
-                                    filePath,
-                                    fileSize,
-                                    typeId: ResourceType.IMAGE,
-                                    userId: data.userId,
-                                    tabId: 1
-                                }
-                            },
-                            { include: ctx.model.Resource }
-                        )
-                        data.chatId = chat.id
-                    }
+                            subModel: data.subModel,
+                            resourceName: fileName,
+                            resource: {
+                                fileName,
+                                fileExt,
+                                filePath,
+                                fileSize,
+                                typeId: ResourceType.IMAGE,
+                                userId: data.userId,
+                                tabId: 1
+                            }
+                        },
+                        { include: ctx.model.Resource }
+                    )
+                    data.chatId = chat.id
 
                     // reduce user chance, first cost free chance
                     const user = await ctx.model.User.findByPk(data.userId, {
@@ -678,6 +674,7 @@ export default class Web extends Service {
                     break
                 }
             }
+            output.write(JSON.stringify(data))
             await $.sleep(LOOP_WAIT)
         }
         if (loop >= LOOP_MAX) throw new Error('Waiting imagine task timeout')

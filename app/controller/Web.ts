@@ -231,7 +231,7 @@ export default class Web {
         const { id, level } = ctx.user!
         const { input, dialogId, provider, model, system, assistant, mode } = params
         if (!dialogId) throw new Error('Dialog id is null')
-        if (!input) throw new Error('Input nothing')
+        if (!input.trim()) throw new Error('Input nothing')
 
         // check user level access provider/model
         const disable = await ctx.service.user.checkLevelModel(level, provider)
