@@ -545,6 +545,7 @@ export default class Web extends Service {
         const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
+        data.content = ''
         res.on('data', (buff: Buffer) => {
             const obj = $.json<ChatResponse>(buff.toString())
             if (obj && obj.content) {
