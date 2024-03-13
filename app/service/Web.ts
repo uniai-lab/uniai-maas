@@ -451,7 +451,7 @@ export default class Web extends Service {
 
     // translate input content
     async translate(input: string) {
-        const prompt = await this.getConfig('PROMPT_IMAGINE')
+        const prompt = await this.getConfig('IMAGINE_PROMPT')
         const message: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `${prompt}\n${input}` }]
         const res = await this.ctx.service.uniAI.chat(message, false, TRANSLATE_PROVIDER, TRANSLATE_MODEL)
         if (res instanceof Readable) throw new Error('Chat response is stream')
