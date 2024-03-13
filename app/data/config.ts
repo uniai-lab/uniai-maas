@@ -505,5 +505,11 @@ export default [
         key: 'LEVEL_IMAGINE_MODEL',
         value: JSON.stringify(LEVEL_IMAGINE_MODEL),
         description: '生图模型等级对照表'
+    },
+    {
+        id: 42,
+        key: 'IMAGINE_PROMPT',
+        value: readFileSync(`${ROOT_PATH}/app/data/prompt-imagine.md`, 'utf-8'),
+        description: '图片生成优化'
     }
 ]

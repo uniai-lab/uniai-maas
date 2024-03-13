@@ -16,8 +16,7 @@ import {
     ChatModelProvider,
     EmbedModelProvider,
     ImagineModelProvider,
-    ImagineModel,
-    ModelProvider
+    ImagineModel
 } from 'uniai'
 import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
@@ -43,8 +42,8 @@ const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.g
 const IMAGINE_COST = 10
 const CHAT_COST = 1
 
-const TRANSLATE_PROVIDER = ModelProvider.Google
-const TRANSLATE_MODEL = ChatModel.GEM_PRO
+const TRANSLATE_PROVIDER = ChatModelProvider.OpenAI
+const TRANSLATE_MODEL = ChatModel.GPT3
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -332,8 +331,8 @@ export default class Web extends Service {
         const count = messages.reduce((acc, v) => (acc += $.countTokens(v.content)), 0)
 
         // default provider and model
-        let provider: ChatModelProvider = ChatModelProvider.IFlyTek
-        let model: ChatModel = ChatModel.SPARK_V3
+        let provider: ChatModelProvider | null = null
+        let model: ChatModel | null = null
 
         // 6k
         if (count < 6000) {
@@ -418,6 +417,7 @@ export default class Web extends Service {
                 model = ChatModel.GPT4_VISION
             }
         }
+        if (!provider || !model) throw new Error('Context is too long or invalid')
 
         return { provider, model }
     }
@@ -451,8 +451,9 @@ export default class Web extends Service {
 
     // translate input content
     async translate(input: string) {
-        const prompt: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `Translate to English: ${input}` }]
-        const res = await this.ctx.service.uniAI.chat(prompt, false, TRANSLATE_PROVIDER, TRANSLATE_MODEL)
+        const prompt = await this.getConfig('PROMPT_IMAGINE')
+        const message: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `${prompt}\n${input}` }]
+        const res = await this.ctx.service.uniAI.chat(message, false, TRANSLATE_PROVIDER, TRANSLATE_MODEL)
         if (res instanceof Readable) throw new Error('Chat response is stream')
         return res.content
     }
@@ -606,18 +607,17 @@ export default class Web extends Service {
         output.write(JSON.stringify(data))
 
         // imagine
-        const res = await ctx.service.uniAI.imagine(input, '', 1, 1024, 1024, provider, model)
+        const res = await ctx.service.uniAI.imagine(await this.translate(input), '', 1, 1024, 1024, provider, model)
         // watch task
         let loop = 0
         while (loop < LOOP_MAX) {
             loop++
             // check task status
             const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
-            const progress = task[0].progress
             if (!task[0]) throw new Error('Task not found')
             if (task[0].fail) throw new Error(task[0].fail)
-            if (isNaN(progress)) throw new Error('Invalid task progress')
 
+            const progress = task[0].progress || 0
             data.content = `${ctx.__('imagining')} ${progress}%`
             data.subModel = task[0].model
             const img = task[0].imgs[0]
