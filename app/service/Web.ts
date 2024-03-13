@@ -488,7 +488,6 @@ export default class Web extends Service {
         if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
         // add history chat including resource files
-        // add reference resource
         let embedding: number[] | null = null
         let count = 0
         const exts: string[] = []
@@ -555,7 +554,7 @@ export default class Web extends Service {
             }
         })
         res.on('end', async () => {
-            if (!data.content.trim()) output.destroy(new Error('Model error, output nothing'))
+            if (!data.content.trim()) return output.destroy(new Error('Unknown error, model output nothing'))
 
             // save user chat
             await ctx.model.Chat.create({
@@ -575,6 +574,8 @@ export default class Web extends Service {
             })
             data.chatId = chat.id
 
+            output.end(JSON.stringify(data))
+
             // reduce user chance, first cost free chance
             const user = await ctx.model.User.findByPk(data.userId, {
                 attributes: ['id', 'chatChanceFree', 'chatChance']
@@ -584,8 +585,6 @@ export default class Web extends Service {
                 user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
                 await user.save()
             }
-
-            output.end(JSON.stringify(data))
         })
         res.on('error', e => output.destroy(e))
     }
@@ -612,11 +611,12 @@ export default class Web extends Service {
         let loop = 0
         while (loop < LOOP_MAX) {
             loop++
+            // check task status
             const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
+            const progress = task[0].progress
             if (!task[0]) throw new Error('Task not found')
             if (task[0].fail) throw new Error(task[0].fail)
-            const progress = task[0].progress
-            if (isNaN(progress)) throw new Error('Can not get task progress')
+            if (isNaN(progress)) throw new Error('Invalid task progress')
 
             data.content = `${ctx.__('imagining')} ${progress}%`
             data.subModel = task[0].model
@@ -661,6 +661,8 @@ export default class Web extends Service {
                     )
                     data.chatId = chat.id
 
+                    output.end(JSON.stringify(data))
+
                     // reduce user chance, first cost free chance
                     const user = await ctx.model.User.findByPk(data.userId, {
                         attributes: ['id', 'chatChanceFree', 'chatChance']
@@ -670,8 +672,6 @@ export default class Web extends Service {
                         user.chatChance = Math.max(user.chatChance - Math.max(IMAGINE_COST - user.chatChanceFree, 0), 0)
                         await user.save()
                     }
-
-                    output.end(JSON.stringify(data))
                     break
                 }
             }
