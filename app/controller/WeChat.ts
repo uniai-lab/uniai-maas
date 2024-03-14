@@ -68,19 +68,24 @@ export default class WeChat {
         @Context() ctx: EggContext,
         @HTTPQuery() path: string,
         @HTTPQuery() name: string,
-        @HTTPQuery() zip: string // only compress image
+        @HTTPQuery() zip: string
     ) {
-        if (!path) throw new Error('Path is null')
+        name = name || basename(path)
+        if (!path) throw new Error('Path is invalid')
+        if (!name) throw new Error('Name is invalid')
 
         // get file stream
         const data = await ctx.service.util.getFileStream(path)
-        // if need compress
-        if (
-            parseInt(zip) === 1 &&
-            ['png', 'jpg', 'jpeg', 'webp'].includes(extname(path).replace('.', '').toLowerCase())
-        )
-            return ctx.service.res.file(ctx.service.util.compressImgStream(data, 800, 70), name || basename(path))
-        return ctx.service.res.file(data, name || basename(path))
+        const exts = ['png', 'jpg', 'jpeg', 'webp']
+
+        // if zip, only compress image
+        if (parseInt(zip) === 1 && exts.includes(extname(path).replace('.', '').toLowerCase()))
+            return ctx.service.res.file(
+                ctx.service.util.compressStreamImage(data),
+                name.replace(extname(name), `.webp`)
+            )
+
+        return ctx.service.res.file(data, name)
     }
 
     // announcement

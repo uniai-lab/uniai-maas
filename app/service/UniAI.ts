@@ -61,7 +61,7 @@ const ai = new AI({
 const MAX_PAGE = 10
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 const SIMILAR_DISTANCE = 0.000001
-const LIMIT_IMG_SIZE = 2 * 1024 * 1024 // images over 2mb need to compress
+const LIMIT_IMG_SIZE = 1 * 1024 * 1024 // image over 1mb need compress
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {

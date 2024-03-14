@@ -41,7 +41,7 @@ const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.g
 
 const IMAGINE_COST = 10
 const CHAT_COST = 1
-const LIMIT_IMG_SIZE = 2 * 1024 * 1024 // images over 2mb need to compress
+const LIMIT_IMG_SIZE = 1 * 1024 * 1024 // image over 1mb need compress
 
 const TRANSLATE_PROVIDER = ChatModelProvider.OpenAI
 const TRANSLATE_MODEL = ChatModel.GPT3
@@ -497,11 +497,9 @@ export default class Web extends Service {
             const file = item.resource
             if (file) {
                 if (file.typeId === ResourceType.IMAGE) {
-                    prompts.push({
-                        role: USER,
-                        content: `# Image File\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`,
-                        img: ctx.service.util.fileURL(file.filePath, file.fileName, file.fileSize > LIMIT_IMG_SIZE)
-                    })
+                    const content = `# Image File\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`
+                    const img = ctx.service.util.fileURL(file.filePath, file.fileName, file.fileSize > LIMIT_IMG_SIZE)
+                    prompts.push({ role: USER, content, img })
                 } else {
                     count++
                     exts.push(file.fileExt)
@@ -717,8 +715,9 @@ export default class Web extends Service {
             await ctx.service.uniAI.embeddingResource(EmbedModelProvider.Other, resource.id)
 
         // add chat for resource
+        const resourceName = file.filename.replace(extname(file.filename), `.${resource.fileExt}`)
         const chat = await ctx.model.Chat.create(
-            { dialogId, role: ChatRoleEnum.USER, resourceId: resource.id, resourceName: file.filename },
+            { dialogId, role: ChatRoleEnum.USER, resourceId: resource.id, resourceName },
             { transaction }
         )
         chat.resource = resource

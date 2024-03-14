@@ -304,6 +304,13 @@ export default class Util extends Service {
         return await QRCode.toDataURL(text)
     }
 
+    /**
+     * Asynchronously compress an image.
+     * @param path The path of the image.
+     * @param width The width of the image.
+     * @param quality The compression quality.
+     * @returns Promise<string> The path of the compressed webp image.
+     */
     async compressImage(path: string, width: number = ZIP_IMG_WIDTH, quality: number = ZIP_IMG_QUALITY) {
         const nPath = path.replace(extname(path), '-zip.webp')
         await sharp(path)
@@ -314,9 +321,16 @@ export default class Util extends Service {
         return nPath
     }
 
-    compressImgStream(stream: Readable, width: number = ZIP_IMG_WIDTH, quality: number = 100) {
+    /**
+     * Compress a streaming image.
+     * @param stream The readable stream.
+     * @param width The width of the image.
+     * @param quality The compression quality.
+     * @returns Readable The compressed webp image readable stream.
+     */
+    compressStreamImage(stream: Readable, width: number = ZIP_IMG_WIDTH, quality: number = ZIP_IMG_QUALITY) {
         return stream.pipe(
             sharp().resize({ width, withoutEnlargement: true, fit: 'contain' }).webp({ quality }).rotate()
-        )
+        ) as Readable
     }
 }
