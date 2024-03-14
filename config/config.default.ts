@@ -42,7 +42,6 @@ const WHITELIST = [
     '.png',
     '.jpg',
     '.jpeg',
-    '.gif',
     '.webp',
     // pure text
     '.json',

@@ -28,6 +28,7 @@ import { decode } from 'iconv-lite'
 import pdf2md from 'pdf2md-ts'
 import { parseOfficeAsync } from 'officeparser'
 import $ from '@util/util'
+import sharp from 'sharp'
 
 const convertSync = util.promisify(libreoffice.convert)
 
@@ -35,6 +36,9 @@ const { MINIO_BUCKET } = process.env
 
 // Sensitive words dictionary for mint filter
 const mint = new Mint(JSON.parse(readFileSync(`${ROOT_PATH}/app/data/sensitive.json`, 'utf-8')))
+
+const ZIP_IMG_QUALITY = 80
+const ZIP_IMG_WIDTH = 1024
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Util extends Service {
@@ -84,8 +88,7 @@ export default class Util extends Service {
     async extractText(path: string) {
         const ext = extname(path).replace('.', '').toLowerCase()
         let content = ''
-        if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) return content
-        else if (['xls', 'xlsx', 'et'].includes(ext)) {
+        if (['xls', 'xlsx', 'et'].includes(ext)) {
             const res = xlsx.readFile(path)
             content = Object.keys(res.Sheets)
                 .map(i => decode(Buffer.from(xlsx.utils.sheet_to_txt(res.Sheets[i]), 'binary'), 'utf-16'))
@@ -214,9 +217,12 @@ export default class Util extends Service {
      * @param name - Optional name of the file
      * @returns The dynamically generated file URL
      */
-    fileURL(path: string, name?: string): string {
+    fileURL(path: string, name?: string, zip: boolean = false): string {
         const { hostname, host } = this.ctx.request.URL
-        return `${isIP(hostname) || hostname === 'localhost' ? 'http://' : 'https://'}${host}/wechat/file?path=${path}${name ? `&name=${encodeURIComponent(name)}` : ''}`
+        let url = `${isIP(hostname) || hostname === 'localhost' ? 'http://' : 'https://'}${host}/wechat/file?path=${path}`
+        if (name) url += `&name=${encodeURIComponent(name)}`
+        if (zip) url += `&zip=1`
+        return url
     }
 
     /**
@@ -296,5 +302,21 @@ export default class Util extends Service {
      */
     async getQRCode(text: string): Promise<string> {
         return await QRCode.toDataURL(text)
+    }
+
+    async compressImage(path: string, width: number = ZIP_IMG_WIDTH, quality: number = ZIP_IMG_QUALITY) {
+        const nPath = path.replace(extname(path), '-zip.webp')
+        await sharp(path)
+            .resize({ width, withoutEnlargement: true, fit: 'contain' })
+            .webp({ quality })
+            .rotate()
+            .toFile(nPath)
+        return nPath
+    }
+
+    compressImgStream(stream: Readable, width: number = ZIP_IMG_WIDTH, quality: number = 100) {
+        return stream.pipe(
+            sharp().resize({ width, withoutEnlargement: true, fit: 'contain' }).webp({ quality }).rotate()
+        )
     }
 }

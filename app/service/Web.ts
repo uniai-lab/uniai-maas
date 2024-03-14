@@ -41,6 +41,7 @@ const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.g
 
 const IMAGINE_COST = 10
 const CHAT_COST = 1
+const LIMIT_IMG_SIZE = 2 * 1024 * 1024 // images over 2mb need to compress
 
 const TRANSLATE_PROVIDER = ChatModelProvider.OpenAI
 const TRANSLATE_MODEL = ChatModel.GPT3
@@ -499,7 +500,7 @@ export default class Web extends Service {
                     prompts.push({
                         role: USER,
                         content: `# Image File\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`,
-                        img: ctx.service.util.fileURL(file.filePath)
+                        img: ctx.service.util.fileURL(file.filePath, file.fileName, file.fileSize > LIMIT_IMG_SIZE)
                     })
                 } else {
                     count++

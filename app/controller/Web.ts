@@ -11,7 +11,7 @@ import {
     EggContext
 } from '@eggjs/tegg'
 import { Readable } from 'stream'
-import { basename } from 'path'
+import { basename, extname } from 'path'
 import { ChatRoleEnum } from 'uniai'
 import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
@@ -45,11 +45,23 @@ export default class Web {
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: EggContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
+    async file(
+        @Context() ctx: EggContext,
+        @HTTPQuery() path: string,
+        @HTTPQuery() name: string,
+        @HTTPQuery() zip: string // only compress image
+    ) {
         if (!path) throw new Error('Path is null')
 
+        // get file stream
         const data = await ctx.service.util.getFileStream(path)
-        ctx.service.res.file(data, name || basename(path))
+        // if need compress
+        if (
+            parseInt(zip) === 1 &&
+            ['png', 'jpg', 'jpeg', 'webp'].includes(extname(path).replace('.', '').toLowerCase())
+        )
+            return ctx.service.res.file(ctx.service.util.compressImgStream(data, 800, 70), name || basename(path))
+        return ctx.service.res.file(data, name || basename(path))
     }
 
     @Middleware(log(), captcha())

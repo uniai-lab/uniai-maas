@@ -31,7 +31,7 @@ import {
 import auth from '@middleware/authC'
 import transaction from '@middleware/transaction'
 import log from '@middleware/log'
-import { basename } from 'path'
+import { basename, extname } from 'path'
 import { statSync } from 'fs'
 import { ChatRoleEnum } from 'uniai'
 import { ConfigTask } from '@interface/Config'
@@ -64,12 +64,23 @@ export default class WeChat {
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })
-    async file(@Context() ctx: EggContext, @HTTPQuery() path: string, @HTTPQuery() name: string) {
+    async file(
+        @Context() ctx: EggContext,
+        @HTTPQuery() path: string,
+        @HTTPQuery() name: string,
+        @HTTPQuery() zip: string // only compress image
+    ) {
         if (!path) throw new Error('Path is null')
 
-        // file stream
+        // get file stream
         const data = await ctx.service.util.getFileStream(path)
-        ctx.service.res.file(data, name || basename(path))
+        // if need compress
+        if (
+            parseInt(zip) === 1 &&
+            ['png', 'jpg', 'jpeg', 'webp'].includes(extname(path).replace('.', '').toLowerCase())
+        )
+            return ctx.service.res.file(ctx.service.util.compressImgStream(data, 800, 70), name || basename(path))
+        return ctx.service.res.file(data, name || basename(path))
     }
 
     // announcement

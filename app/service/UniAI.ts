@@ -26,7 +26,6 @@ import fly from '@util/fly'
 import $ from '@util/util'
 import { encode } from 'gpt-tokenizer'
 import { literal } from 'sequelize'
-import sharp from 'sharp'
 
 const {
     OPENAI_API,
@@ -63,8 +62,6 @@ const MAX_PAGE = 10
 const DEFAULT_RESOURCE_TAB = userResourceTab[0].id
 const SIMILAR_DISTANCE = 0.000001
 const LIMIT_IMG_SIZE = 2 * 1024 * 1024 // images over 2mb need to compress
-const LIMIT_IMG_WIDTH = 600 // image compress width
-const LIMIT_IMG_QUALITY = 60 // image compress quality
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class UniAI extends Service {
@@ -244,23 +241,27 @@ export default class UniAI extends Service {
         const { transaction } = ctx
 
         // limit upload file size
-        const fileSize = statSync(file.filepath).size
-        const fileExt = extname(file.filename).replace('.', '').toLowerCase()
-        if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
+        let fileName = file.filename
+        let filePath = file.filepath
+        let fileSize = statSync(filePath).size
+        let fileExt = extname(filePath).replace('.', '').toLowerCase()
+        let content = ''
+        let embedding: number[] | null = null
+        if (['png', 'jpg', 'jpeg', 'webp'].includes(fileExt)) typeId = ResourceType.IMAGE
+
         // compress image
         if (typeId === ResourceType.IMAGE && fileSize > LIMIT_IMG_SIZE) {
-            const path = file.filepath.replace(extname(file.filepath), '-') + 'zip' + extname(file.filepath)
-            await sharp(file.filepath)
-                .resize({ width: LIMIT_IMG_WIDTH, withoutEnlargement: true, fit: 'contain' })
-                .png({ quality: LIMIT_IMG_QUALITY })
-                .rotate()
-                .toFile(path)
-            file.filepath = path
+            const path = await ctx.service.util.compressImage(file.filepath)
+            filePath = path
+            fileSize = statSync(filePath).size
+            fileExt = extname(filePath).replace('.', '').toLowerCase()
+            fileName = fileName.replace(extname(fileName), `.${fileExt}`) // replace file name ext
         }
-
         // extract content
-        const content = await ctx.service.util.extractText(file.filepath)
-        const embedding = content ? encode(content).concat(new Array(1024).fill(0)).slice(0, 1024) : null
+        if (typeId === ResourceType.TEXT) {
+            content = await ctx.service.util.extractText(filePath)
+            embedding = content ? encode(content).concat(new Array(1024).fill(0)).slice(0, 1024) : null
+        }
 
         // find similar or create new resource
         return (
@@ -276,8 +277,8 @@ export default class UniAI extends Service {
                     typeId,
                     tabId,
                     embedding,
-                    fileName: file.filename,
-                    filePath: await ctx.service.util.putOSS(file.filepath),
+                    fileName,
+                    filePath: await ctx.service.util.putOSS(filePath),
                     fileSize,
                     fileExt,
                     tokens: $.countTokens(content)
