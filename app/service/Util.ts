@@ -9,11 +9,9 @@ import { Service } from 'egg'
 import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { Readable } from 'stream'
 import { basename, extname, join } from 'path'
-import { createReadStream, createWriteStream, existsSync, readFileSync, writeFileSync } from 'fs'
+import { createWriteStream, readFileSync, writeFileSync } from 'fs'
 import { randomUUID } from 'crypto'
-import isJSON from '@stdlib/assert-is-json'
 import libreoffice from 'libreoffice-convert'
-import { similarity } from 'ml-distance'
 import { path as ROOT_PATH } from 'app-root-path'
 import { tmpdir } from 'os'
 import { isIP } from 'net'
@@ -22,13 +20,12 @@ import pdf from '@cyber2024/pdf-parse-fixed'
 import Mint from 'mint-filter'
 import * as pdf2img from 'pdf-to-img'
 import QRCode from 'qrcode'
-import isBase64 from 'is-base64'
 import util from 'util'
 import { decode } from 'iconv-lite'
 import pdf2md from 'pdf2md-ts'
 import { parseOfficeAsync } from 'officeparser'
-import $ from '@util/util'
 import sharp from 'sharp'
+import $ from '@util/util'
 
 const convertSync = util.promisify(libreoffice.convert)
 
@@ -162,17 +159,6 @@ export default class Util extends Service {
     }
 
     /**
-     * Synchronously creates a readable stream from a local file.
-     *
-     * @param filePath The path to the local file to be read.
-     * @returns A Readable stream of the file content.
-     */
-    getLocalFile(path: string) {
-        if (!existsSync(path)) throw new Error('File not found in local path')
-        return createReadStream(path)
-    }
-
-    /**
      * Gets a readable stream for a file located at the specified path.
      *
      * @param path - The path, url, oss to the file.
@@ -180,8 +166,8 @@ export default class Util extends Service {
      */
     async getFileStream(path: string) {
         if (path.startsWith('minio')) return await this.getOSSFile(path.split('/')[1])
-        else if (path.startsWith('http://') || path.startsWith('https://')) return await this.getHttpFile(path)
-        else return this.getLocalFile(path)
+        else if (path.startsWith('http')) return await this.getHttpFile(path)
+        else throw new Error('Invalid file path: use http or minio URL')
     }
 
     /**
@@ -219,7 +205,9 @@ export default class Util extends Service {
      */
     fileURL(path: string, name?: string, zip: boolean = false): string {
         const { hostname, host } = this.ctx.request.URL
-        let url = `${isIP(hostname) || hostname === 'localhost' ? 'http://' : 'https://'}${host}/wechat/file?path=${path}`
+        const http = isIP(hostname) || hostname === 'localhost' ? 'http' : 'https'
+        let url = `${http}://${host}/wechat/file`
+        url += `?path=${path}`
         if (name) url += `&name=${encodeURIComponent(name)}`
         if (zip) url += `&zip=1`
         return url
@@ -235,72 +223,12 @@ export default class Util extends Service {
     }
 
     /**
-     * Parses JSON from a string and returns it as a generic type T.
-     *
-     * @param str - The JSON string to parse.
-     * @returns The parsed JSON as a generic type T.
-     */
-    json<T>(str: string | null) {
-        if (isJSON(str)) return JSON.parse(str) as T
-        else return null
-    }
-
-    /**
-     * Calculates the cosine similarity between two numeric arrays.
-     *
-     * @param v1 - The first numeric array.
-     * @param v2 - The second numeric array.
-     * @returns The cosine similarity value between the two arrays.
-     */
-    cosine(v1: number[], v2: number[]) {
-        if (v1.length !== v2.length) return 0
-        else return similarity.cosine(v1, v2)
-    }
-
-    /**
-     * Converts a file to base64 encoding.
-     *
-     * @param file - The path to the file.
-     * @returns The base64 encoded string.
-     */
-    file2base64(file: string, mime: boolean = false) {
-        const base64 = readFileSync(file).toString('base64')
-        if (mime) return 'data:image/png;base64,' + base64
-        else return base64
-    }
-
-    /**
-     * Decodes a base64 encoded string and saves it as a file.
-     *
-     * @param base64str - A string encoded in base64 format.
-     * @param ext - (Optional) The extension of the file to be saved. If not provided, the file is saved without an extension.
-     * @returns A string representing the file path where the decoded content is saved. By default, the file is saved in the system's temporary directory.
-     */
-    base64toFile(base64str: string, ext?: string): string {
-        const buffer = Buffer.from(base64str, 'base64')
-        const output = join(tmpdir(), `${randomUUID()}${ext ? '.' + ext : ''}`)
-        writeFileSync(output, buffer)
-        return output
-    }
-
-    /**
-     * Checks if a string is a valid base64 encoded value.
-     *
-     * @param text - The string to check.
-     * @param allowMime - Optional flag to allow MIME types as part of the base64 string. Defaults to `false`.
-     * @returns `true` if the string is a valid base64 encoded value, otherwise `false`.
-     */
-    isBase64(text: string, allowMime: boolean = false): boolean {
-        return isBase64(text, { allowMime })
-    }
-
-    /**
      * Generates a QR code as a data URL from the provided text.
      *
      * @param text - The text to encode in the QR code.
      * @returns A promise that resolves to the data URL of the QR code.
      */
-    async getQRCode(text: string): Promise<string> {
+    async getQRCode(text: string) {
         return await QRCode.toDataURL(text)
     }
 

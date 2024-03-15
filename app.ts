@@ -78,7 +78,7 @@ async function syncConfigCache(app: Application) {
     }
 }
 async function syncPayItemCache(app: Application) {
-    console.log('================SYNC CONFIG CACHE====================')
+    console.log('================SYNC PAY ITEM CACHE====================')
     const items = await app.model.PayItem.findAll({
         attributes: ['id', 'title', 'description', 'price', 'score', 'chance'],
         where: { isEffect: true, isDel: false }

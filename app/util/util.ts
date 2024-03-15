@@ -7,7 +7,7 @@
 
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { readFileSync, writeFileSync } from 'fs'
+import { createReadStream, existsSync, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { randomUUID } from 'crypto'
 import isJSON from '@stdlib/assert-is-json'
@@ -212,6 +212,28 @@ export default {
     },
 
     /**
+     * Synchronously creates a readable stream from a local file.
+     *
+     * @param filePath The path to the local file to be read.
+     * @returns A Readable stream of the file content.
+     */
+    getLocalFileStream(path: string) {
+        if (!existsSync(path)) throw new Error('File not found in local path')
+        return createReadStream(path)
+    },
+
+    /**
+     * Synchronously reads the entire content of a local file into a buffer.
+     *
+     * @param path - The path to the local file to be read.
+     * @returns A Buffer containing the entire file content.
+     */
+    getLocalFileBuffer(path: string) {
+        if (!existsSync(path)) throw new Error('File not found in local path')
+        return readFileSync(path)
+    },
+
+    /**
      * Returns the date of the same time in the next month.
      *
      * @param date - The date from which to calculate the next month's date. Defaults to the current date.
@@ -231,6 +253,15 @@ export default {
             date.getMilliseconds()
         )
     },
+
+    /**
+     * Formats a Date object according to a given template.
+     *
+     * @param date - The Date object to format. Defaults to the current date.
+     * @param zone - The time zone to use for formatting. Defaults to 'America/New_York'.
+     * @param format - The format template string according to moment.js's formatting rules. Defaults to 'YYYY-MM-DD HH:mm:ss dddd'.
+     * @returns A string representing the formatted date according to the specified format.
+     */
     formatDate(
         date: Date = new Date(),
         zone: string = 'America/New_York',
@@ -244,6 +275,13 @@ export default {
     error(e: Error) {
         return logger.error(e)
     },
+
+    /**
+     * Waits for a given amount of time in milliseconds.
+     *
+     * @param time - The time in milliseconds to wait.
+     * @returns A Promise that resolves after the specified time has passed.
+     */
     sleep(time: number) {
         return new Promise(resolve => setTimeout(resolve, time))
     }

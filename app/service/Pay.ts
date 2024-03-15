@@ -70,7 +70,7 @@ export default class Pay extends Service {
         const { ctx } = this
         const { transaction } = ctx
 
-        if (type === PayType.WeChat)
+        if (type === PayType.WeChat) {
             if (result.event_type === 'TRANSACTION.SUCCESS') {
                 // decrypt transaction detail
                 const { ciphertext, associated_data, nonce } = result.resource
@@ -81,7 +81,7 @@ export default class Pay extends Service {
                 const payment = await ctx.model.Payment.findOne({ where: { transactionId }, transaction, lock: true })
                 if (!payment) throw new Error('Payment not found')
                 // update payment status and add user chance, score, level
-                if (!payment.status) {
+                if (payment.status === 0) {
                     const item = (await this.getPayItems(payment.itemId))[0]
                     if (!item) throw new Error('Pay item can not found by id')
                     await ctx.service.user.updateLevel(payment.userId, item.score)
@@ -92,7 +92,8 @@ export default class Pay extends Service {
                     payment.type = res.trade_type
                     await payment.save({ transaction })
                 }
-            } else throw new Error('Pay type not support')
+            }
+        } else throw new Error('Pay type not support')
     }
 
     // check payment
@@ -110,18 +111,16 @@ export default class Pay extends Service {
             const res = await wx.query({ out_trade_no: payment.transactionId })
             const result: WXPaymentResult = res.data
             // success, write to db
-            if (result.trade_state === 'SUCCESS') {
-                if (!payment.status) {
-                    const item = (await this.getPayItems(payment.itemId))[0]
-                    if (!item) throw new Error('Pay item can not found by id')
-                    await ctx.service.user.updateLevel(payment.userId, item.score)
-                    await ctx.service.user.addUserChance(payment.userId, item.chance)
-                    payment.status = 1
-                    payment.result = result
-                    payment.currency = result.amount.currency
-                    payment.type = result.trade_type
-                    await payment.save({ transaction })
-                } else return payment
+            if (result.trade_state === 'SUCCESS' && payment.status === 0) {
+                const item = (await this.getPayItems(payment.itemId))[0]
+                if (!item) throw new Error('Pay item can not found by id')
+                await ctx.service.user.updateLevel(payment.userId, item.score)
+                await ctx.service.user.addUserChance(payment.userId, item.chance)
+                payment.status = 1
+                payment.result = result
+                payment.currency = result.amount.currency
+                payment.type = result.trade_type
+                await payment.save({ transaction })
             }
         } else throw new Error('Pay type not support')
 
