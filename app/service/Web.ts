@@ -348,10 +348,12 @@ export default class Web extends Service {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_3_TURBO
             }
+            /*
             if (level >= options.moonshot) {
                 provider = ChatModelProvider.MoonShot
                 model = ChatModel.MOON_V1_8K
             }
+            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT3
@@ -359,6 +361,7 @@ export default class Web extends Service {
         }
         // 16k input
         else if (count >= 8000 && count < 16000) {
+            /*
             if (level >= options.moonshot) {
                 provider = ChatModelProvider.MoonShot
                 model = ChatModel.MOON_V1_32K
@@ -367,6 +370,7 @@ export default class Web extends Service {
                 provider = ChatModelProvider.Google
                 model = ChatModel.GEM_PRO
             }
+            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT3_16K
@@ -374,10 +378,12 @@ export default class Web extends Service {
         }
         // 32k input
         else if (count >= 16000 && count < 32000) {
+            /*
             if (level >= options.moonshot) {
                 provider = ChatModelProvider.MoonShot
                 model = ChatModel.MOON_V1_32K
             }
+            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_TURBO
@@ -385,10 +391,12 @@ export default class Web extends Service {
         }
         // 128k input
         else if (count >= 32000 && count < 128000) {
+            /*
             if (level >= options.moonshot) {
                 provider = ChatModelProvider.MoonShot
                 model = ChatModel.MOON_V1_128K
             }
+            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_TURBO
@@ -409,10 +417,12 @@ export default class Web extends Service {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_4V
             }
+            /*
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
                 model = ChatModel.GEM_VISION
             }
+            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_VISION

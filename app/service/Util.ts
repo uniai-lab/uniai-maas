@@ -35,7 +35,7 @@ const { MINIO_BUCKET } = process.env
 const mint = new Mint(JSON.parse(readFileSync(`${ROOT_PATH}/app/data/sensitive.json`, 'utf-8')))
 
 const ZIP_IMG_QUALITY = 80
-const ZIP_IMG_WIDTH = 1024
+const ZIP_IMG_WIDTH = 800
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Util extends Service {
