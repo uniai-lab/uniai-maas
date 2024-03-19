@@ -325,6 +325,28 @@ export default class WeChat extends Service {
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
+        // get pro version (temporarily)
+        if (input.includes(ctx.__('pro version'))) {
+            const cache: WXChatResponse = {
+                chatId: 0,
+                role: ChatRoleEnum.ASSISTANT,
+                content: await this.getConfig('APP_URL'),
+                dialogId,
+                resourceId: null,
+                model: PROVIDER,
+                subModel: MODEL,
+                avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
+                isEffect: true
+            }
+            const chat = await ctx.model.Chat.bulkCreate([
+                { dialogId, role: USER, content: input },
+                { dialogId, role: ASSISTANT, content: cache.content }
+            ])
+            cache.chatId = chat[1].id
+            await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+            return chat[0]
+        }
+
         // add reference resource if existed
         const resourceId = dialog.resourceId
         if (resourceId) {
@@ -485,6 +507,7 @@ export default class WeChat extends Service {
                         subModel: cache.subModel,
                         isEffect: cache.isEffect
                     })
+                    cache.content += `<hr>${ctx.__('visit pro version')}`
                     cache.chatId = chat.id
                     if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
                 } else app.redis.del(`chat_${userId}`)

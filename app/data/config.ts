@@ -241,7 +241,7 @@ export default [
     {
         id: 2,
         key: 'APP_URL',
-        value: 'https://iict.ac.cn',
+        value: 'https://lechat.cas-ll.cn',
         description: '应用官网'
     },
     {
