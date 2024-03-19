@@ -1,5 +1,3 @@
-<!-- @format -->
-
 <p align=center>
 <img src="./logo.png" width=100 height=100 />
 </p>
@@ -12,15 +10,14 @@
 <img src="./framework.png" width=100% />
 </p>
 
+
 ## Overview
 
 [Read this in Simplified Chinese (简体中文说明)](./README_CN.md) 🇨🇳
 
-UniAI is a unified model as a service platform, making streamlines interactions with diverse AI models.
+The platform project aims to streamline the integration of multiple models, reducing the complexity of the process for developers. This allows developers to focus more on developing business logic. The platform supports a vector database and enables users to upload, parse, and manipulate office documents. In addition to text generation models, it also offers various multimodal models such as image generation and recognition. Furthermore, the platform supports custom development for integration with platforms like WeChat Mini Programs. 
 
-UniAI integrates a range of AI models and utilities to facilitate easier access and management.
-
-UniAI is powered by the same-name nodejs library [npm](https://www.npmjs.com/package/uniai), [github](https://github.com/devilyouwei/UniAI).
+UniAI, powered by the node.js library of the same name **uniai**, provides seamless access and management of a diverse range of AI models and utilities. To incorporate UniAI into your project, you can install it via [npm](https://www.npmjs.com/package/uniai) or [Github](https://github.com/devilyouwei/UniAI).
 
 ## Integrated Models
 
@@ -28,29 +25,42 @@ UniAI integrates multiple AI models, including:
 
 -   [IFLYTEK/Spark](https://xinghuo.xfyun.cn)
 -   [THUDM/ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
--   [ZHIPU/ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
+-   [ZHIPU/GLM](https://github.com/THUDM/ChatGLM3)
+-   [MoonShot/moonshot](https://www.moonshot.cn/)
 -   [OpenAI/GPT](https://platform.openai.com)
--   [Baidu/wenxin workshop](https://cloud.baidu.com/product/wenxinworkshop)
--   [Google/wenxin workshop](https://makersuite.google.com/app/)
--   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+-   [Baidu/WenXin workshop](https://cloud.baidu.com/product/wenxinworkshop)
+-   [Google/Gemini](https://makersuite.google.com/app/)
+-   [Stability AI](https://platform.stability.ai/)
 -   [OpenAI/DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
 
-## Samples
+## 📱 Samples
 
 Discover how UniAI is utilized and experience it firsthand:
 
-![wechat miniapps](./miniapp-qrcode.png)
+### 💬 LeChat Mini Program
+
+![wechat miniapps](./qrcode.jpg)
+
+### ✨ LeChat Pro Version
+
+👍 We recommend: <https://lechat.cas-ll.cn>
+
+![LeChat Pro Preview](https://www.uniai.us/lechat-pro.gif)
+
+- Multi-model Chat
+- Office file upload and parse
+- Image generation
+- Image recognition
 
 ## System Requirements
 
 Ensure you have the following `NPM` libs installed:
 
--   Node.js (version 18 or higher) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
+-   Node.js (version >= 18) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
 -   Docker & Docker-compose
 -   LibreOffice for document conversion (libreoffice-convert)
 -   pdf-to-img (canvas-node) - [Canvas NPM Package](https://www.npmjs.com/package/canvas)
--   libvips (sharp) - [https://www.npmjs.com/package/sharp]
 
 ## Getting Started
 
@@ -67,20 +77,20 @@ Fill the `.env` file with the following environment variables:
 ```bash
 
 # Platform default admin token
-ADMIN_TOKEN=????
+ADMIN_TOKEN=
 
 # OPENAI GPT
 OPENAI_API= # openai proxy
 OPENAI_KEY= # openai key
 
 # Google AI studio
-GOOGLE_AI_KEY= # google key
 GOOGLE_AI_API= # google proxy
+GOOGLE_AI_KEY= # google key
 
 # ZHIPU AI
 # ZHIPU_AI_API= #zhipu proxy
 ZHIPU_AI_KEY= # zhipu key
-GLM_API= # local deployed glm
+GLM_API= # local deployed glm6b
 
 # SPARK
 FLY_APP_ID= # iflytek app id
@@ -100,8 +110,12 @@ MOONSHOT_KEY=
 STABLE_DIFFUSION_API=
 
 # Midjourney
-MJ_API=
-MJ_TOKEN=
+MJ_API= # https://github.com/novicezk/midjourney-proxy
+MJ_IMG_PROXY= # proxy to discord cdn images
+MJ_TOKEN= # mj token
+
+# stability ai
+STABILITY_KEY=
 
 # other models, local deployed models, opensource models
 OTHER_API=
@@ -123,6 +137,10 @@ REDIS_DB=0
 # WeChat
 WX_APP_ID= # wechat miniapp id
 WX_APP_SECRET= # wechat miniapp secret
+WX_MCH_ID=
+WX_PAY_PRIVATE=
+WX_PAY_CERT=
+WX_PAY_KEY=
 
 # MINIO storage
 MINIO_END_POINT=localhost
@@ -130,14 +148,6 @@ MINIO_ACCESS_KEY=
 MINIO_SECRET_KEY=
 MINIO_PORT=9000
 MINIO_BUCKET=uniai
-
-# For Docker start pgvector
-POSTGRES_DATA_PATH=./data
-
-# For Docker start Minio
-MINIO_DATA_PATH=./data
-MINIO_ROOT_USER=root
-MINIO_ROOT_PASS=12345678
 
 # gee code test
 GEE_TEST_ID=
@@ -148,6 +158,16 @@ ALI_KEY_ID=
 ALI_KEY_SECRET=
 ALI_SMS_TEMPLATE=
 ALI_SMS_SIGN=
+
+# For Docker start pgvector
+POSTGRES_DATA_PATH=./data
+
+# For Docker start Minio
+MINIO_DATA_PATH=./data
+MINIO_ROOT_USER=root
+MINIO_ROOT_PASS=12345678
+
+
 
 ```
 
@@ -169,16 +189,17 @@ npm -g install node-gyp
 -   Reference: [Canvas NPM Documentation](https://www.npmjs.com/package/canvas)
 -   Install dependencies as per your operating system.
 
-**Sharp Support**
-
-- Ubuntu: `sudo apt install libvips`
-- Mac: `brew install libvips`
-
 **Using Yarn (Recommended over npm)**
 
 ```bash
 npm -g install yarn
 yarn
+```
+
+**Sharp Support**
+
+```bash
+yarn add sharp --ignore-engines
 ```
 
 ### Starting the Database
@@ -264,6 +285,8 @@ UniAI is planning to expand its capabilities across:
 ## Contributing
 
 Youwei Huang <huangyw@iict.ac.cn>
+
+Institute of Intelligent Computing Technology, Suzhou, CAS
 
 ## License
 

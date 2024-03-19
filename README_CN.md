@@ -1,174 +1,237 @@
 <!-- @format -->
 
-# <img src="./logo.png" width=23 height=23 /> UniAI
+<p align=center>
+<img src="./logo.png" width=100 height=100 />
+</p>
 
-[阅读英文版 (Read this in English)](./README.md)
+<h1 align=center>UniAI MaaS平台 </h1>
 
-![框架](./framework.png)
+<p align=center>由同名node.js库 <a href="https://www.npmjs.com/package/uniai">uniai</a> 助力</p>
+
+<p align=center>
+<img src="./framework.png" width=100% />
+</p>
 
 ## 概述
 
-UniAI 是一个统一的 API 平台，旨在简化与多种复杂 AI 模型的交互。它集成了多种 AI 模型和工具，以便更轻松地访问和管理。
+[For English Reading](./README.md) 🇨🇳
+
+UniAI的平台项目旨在简化多模型的集成过程，减低目的开发者处理过程的复杂度，使他们更加专注于业务逻辑的开发。该平台支持向量数据库，并允许用户上传、解析、操控Office工具文件。除了文本生成模型，该平台也提供诸如图片生成和识别等多模态模型，具有支持自定义开发以与微信小程序等平台集成的能力。
+
+利用同名node.js库 **uniai**，UniAI提供了对各式各样AI模型以及实用工具的无缝存取和管理。为了在你的项目中融入UniAI，你可以通过[npm](https://www.npmjs.com/package/uniai) 或者[Github](https://github.com/devilyouwei/UniAI)来安装。
 
 ## 集成模型
 
-UniAI 集成了多个领先的 AI 模型，包括：
+UniAI集成了多个AI模型，已包括：
 
--   [OpenAI/GPT](https://platform.openai.com)
--   [IFLYTEK/Spark](https://xinghuo.xfyun.cn)
+-   [科大讯飞/星火大模型](https://xinghuo.xfyun.cn)
 -   [THUDM/ChatGLM-6B](https://github.com/THUDM/ChatGLM3)
--   [ZHIPU/ChatGLM-Turbo](https://github.com/THUDM/ChatGLM3)
--   [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+-   [智谱/GLM](https://github.com/THUDM/ChatGLM3)
+-   [月之暗面/moonshot](https://www.moonshot.cn/)
+-   [OpenAI/GPT](https://platform.openai.com)
+-   [百度/文心一言](https://cloud.baidu.com/product/wenxinworkshop)
+-   [Google/Gemini](https://makersuite.google.com/app/)
+-   [Stability AI](https://platform.stability.ai/)
 -   [OpenAI/DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
 
-## 样例
+## 案例
 
-探索 UniAI 的使用案例并体验：
+探索UniAI的使用，体验它:
 
-![微信小程序](./miniapp-qrcode.png)
+### 💬乐聊小程序
 
-## 系统要求
+![微信小程序](./qrcode.jpg)
 
-确保您已安装以下软件：
+### ✨乐聊Pro版本
 
--   Node.js（版本 16 或更高） - [nvm 安装指南](https://github.com/nvm-sh/nvm)
--   Docker 和 Docker-compose
--   LibreOffice 用于文档转换（libreoffice-convert）
--   pdf-to-img（canvas-node） - [Canvas NPM 包](https://www.npmjs.com/package/canvas)
+👍我们推荐：<https://lechat.cas-ll.cn>
+
+![LeChat Pro预览](https://www.uniai.us/lechat-pro.gif)
+
+-   多模型聊天
+-   办公室文件上传和解析
+-   图片生成
+-   图片识别
+
+## 系统需求
+
+确定你已经安装以下的`NPM`库：
+
+-   Node.js (版本 >= 18) - [nvm Installation Guide](https://github.com/nvm-sh/nvm)
+-   Docker & Docker-compose
+-   LibreOffice 文档转换版(libreoffice-convert)
+-   pdf-to-img (canvas-node) - [Canvas NPM Package](https://www.npmjs.com/package/canvas)
 
 ## 开始使用
 
 ### 配置
 
-在根目录创建 `.env` 文件：
+在项目的根目录下创建一个 `.env` 文件：
 
 ```bash
 touch ./.env
 ```
 
-在 `.env` 文件中填写以下环境变量：
+填充 `.env` 文件的以下环境变量：
 
 ```bash
-# Application Configuration
-ADMIN_TOKEN=                        # Default admin token, can be modified in config table
 
-# OPENAI GPT Configuration
-OPENAI_API=http://8.214.93.3        # OpenAI API URL or proxy
-OPENAI_API_VERSION=v1               # OpenAI API version (no need to modify)
-OPENAI_KEY=                     # OpenAI API key
+# 平台默认管理员令牌
+ADMIN_TOKEN=
 
-# GLM Configuration
-GLM_API=http://10.144.1.7:8100      # GLM API URL (https://github.com/uni-openai/GLM-API)
-GLM_API_REMOTE=https://open.bigmodel.cn     # Remote ZHIPU chatglm API
-GLM_API_KEY=                        # ZHIPU AI API key
+# OPENAI GPT
+OPENAI_API= # openai 代理
+OPENAI_KEY= # openai 密钥
 
-# IFLYTEK Spark Configuration
-SPARK_API=ws://spark-api.xf-yun.com
-SPARK_API_KEY=                      # IFLYTEK Spark API KEY
-SPARK_API_SECRET=                   # IFLYTEK Spark API Secret
-SPARK_APP_ID=                       # IFLYTEK Spark APP ID
+# Google AI 工作室
+GOOGLE_AI_API= # google 代理
+GOOGLE_AI_KEY= # google 密钥
 
-# PostgreSQL Database Configuration
+# 质普 AI
+# ZHIPU_AI_API= #zhipu 代理
+ZHIPU_AI_KEY= # zhipu 密钥
+GLM_API= # 本地部署的 glm6b
+
+# SPARK
+FLY_APP_ID= # 科大讯飞 app id
+FLY_API_KEY= # 科大讯飞 api 密钥
+FLY_API_SECRET= # 科大讯飞 api secret
+
+# 百度问心研究所
+# BAIDU_API=http://192.168.41.52:5300
+BAIDU_API_KEY=
+BAIDU_SECRET_KEY=
+
+# Moonshot
+# MOONSHOT_API=http://192.168.41.52:5400
+MOONSHOT_KEY=
+
+# Stable Diffusion
+STABLE_DIFFUSION_API=
+
+# Midjourney
+MJ_API= # https://github.com/novicezk/midjourney-proxy
+MJ_IMG_PROXY= # 代理到 discord cdn 图片
+MJ_TOKEN= # mj 令牌
+
+# stability ai
+STABILITY_KEY=
+
+# 其他模型，本地部署模型，开源模型
+OTHER_API=
+
+# PostgreSQL 数据库
 DB_DIALECT=postgres
-POSTGRES_HOST=localhost             # PostgreSQL host URL
-POSTGRES_PORT=5432                  # PostgreSQL port
-POSTGRES_USER=postgres              # PostgreSQL user
-POSTGRES_PASS=postgres              # PostgreSQL password
-POSTGRES_DB=uniai                   # PostgreSQL database name
-# For Docker start pgvector
-POSTGRES_DATA_PATH=/data/docker/pgvector/data
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASS=postgres
+POSTGRES_DB=uniai
 
-# Redis Cache Configuration
-REDIS_HOST=localhost                # Redis cache host URL
-REDIS_PORT=6379                     # Redis cache port
+# Redis 缓存
+REDIS_HOST=localhost
+REDIS_PORT=6379
 REDIS_PASS=redis
 REDIS_DB=0
 
-# WeChat Configuration
-WX_APP_ID=                          # WeChat app ID
-WX_APP_SECRET=                      # WeChat app secret
-WX_APP_AUTH_URL=https://api.weixin.qq.com/sns/jscode2session
-WX_APP_ACCESS_TOKEN_URL=https://api.weixin.qq.com/cgi-bin/token
-WX_APP_PHONE_URL=https://api.weixin.qq.com/wxa/business/getuserphonenumber
-WX_APP_MSG_CHECK=https://api.weixin.qq.com/wxa/msg_sec_check
+# 微信
+WX_APP_ID= # 微信小程序id
+WX_APP_SECRET= # 微信小程序密钥
+WX_MCH_ID=
+WX_PAY_PRIVATE=
+WX_PAY_CERT=
+WX_PAY_KEY=
 
-# MINIO Storage Configuration
+# MINIO 存储
+MINIO_END_POINT=localhost
 MINIO_ACCESS_KEY=
 MINIO_SECRET_KEY=
-MINIO_END_POINT=localhost
 MINIO_PORT=9000
 MINIO_BUCKET=uniai
-# For Docker start Minio
-MINIO_DATA_PATH=/data/docker/minio
+
+# 极验验证码测试
+GEE_TEST_ID=
+GEE_TEST_KEY=
+
+# 阿里云 SMS 账号
+ALI_KEY_ID=
+ALI_KEY_SECRET=
+ALI_SMS_TEMPLATE=
+ALI_SMS_SIGN=
+
+# 用于启动 Docker 的 pgvector
+POSTGRES_DATA_PATH=./data
+
+# 用于启动 Minio 的 Docker
+MINIO_DATA_PATH=./data
 MINIO_ROOT_USER=root
 MINIO_ROOT_PASS=12345678
-
-# Stable Diffusion Configuration
-STABLE_DIFFUSION_API=http://10.144.1.7:3400
-
-# Mid Journey Configuration
-MJ_API=                    # Visit https://github.com/novicezk/midjourney-proxy
-MJ_TOKEN=                  # MidJourney proxy token
 
 ```
 
 ### 安装步骤
 
-**安装 Node-gyp**
+**Node-gyp 安装**
 
 ```bash
 npm -g install node-gyp
 ```
 
-**安装 LibreOffice**
+**LibreOffice 安装**
 
--   Ubuntu：`sudo apt install libreoffice`
--   Mac：`brew install libreoffice`
+-   Ubuntu: `sudo apt install libreoffice`
+-   Mac: `brew install libreoffice`
 
-**安装 Node-Canvas 支持**
+**Node-Canvas 支持**
 
--   参考：[Canvas NPM 文档](https://www.npmjs.com/package/canvas)
--   根据操作系统安装依赖。
+-   参考: [Canvas NPM文档](https://www.npmjs.com/package/canvas)
+-   根据你的操作系统安装依赖。
 
-**使用 Yarn（推荐替代 npm）**
+**使用 Yarn (推荐在 npm 之上)**
 
 ```bash
 npm -g install yarn
 yarn
 ```
 
+**Sharp Support**
+
+```bash
+yarn add sharp --ignore-engines
+```
+
 ### 启动数据库
 
-如果您没有如 PostgresSQL (pgvector) 等向量数据库，可以使用 Docker 和 Docker-compose 进行设置：
+对于像PostgresSQL (pgvector) 这样的数据库，可以使用 Docker 和 Docker-compose 完成设置：
 
 ```bash
 sudo apt install docker.io docker-compose
 ```
 
-**数据库服务的 Docker 命令**
+**Docker 命令用于数据库服务**
 
--   启动 pgvector：`yarn docker up pgvector`
--   启动 Redis：`yarn docker up redis`
--   启动 Minio（本地 OSS）：`yarn docker up minio`
+-   开启 pgvector: `yarn docker up pgvector`
+-   开启 Redis: `yarn docker up redis`
+-   开启 Minio (本地 OSS): `yarn docker up minio`
 
-**重要说明**
+**重要提示**
 
--   确保 Docker 卷有正确的权限。
--   在 Docker 初始化 Minio 后进行配置。
--   默认的 Docker 设置在 `.env` 中可找到。
+-   确保 Docker 卷有适当的权限。
+-   Docker 初始化后配置 Minio。
+-   默认 Docker 设置在 `.env` 中可用。
 
-Minio 访问信息：
+Minio 访问:
 
--   URL：`http://localhost:9000`
--   默认用户名：`root`
--   默认密码：`12345678`
+-   链接: `http://localhost:9000`
+-   默认用户名: `root`
+-   默认密码: `12345678`
 
 ### 运行 UniAI
 
 **开发模式**
 
--   同时初始化数据库。
+-   初始化数据库。
 
 ```bash
 yarn dev
@@ -183,7 +246,7 @@ yarn tsc
 yarn start
 ```
 
-⚠️ **重要**：请避免在开发模式下编译 TypeScript 文件。如果之前运行过 `tsc`，请在 `yarn dev` 前使用 `yarn clean`。
+⚠️ **重要**: 避免在开发模式中编译 TypeScript 文件。如果之前运行过 `tsc`，请在 `yarn dev` 之前使用 `yarn clean`。
 
 ### 清理
 
@@ -193,35 +256,42 @@ yarn clean
 
 ## 文档
 
-通过常见的 Web HTTP 方法（包括 SSE）访问 UniAI 的 API。详细文档请访问 [UniAI API 文档](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J
-
-)。
+通过常见的 Web HTTP 方法访问 UniAI 的 APIs ，包括 SSE。 详细的文档，请访问 [UniAI API 文档](https://documenter.getpostman.com/view/9347507/2s93Y5Pf2J)。
 
 ## 可用模型
 
-UniAI 集成了多种 AI 模型，重点关注 NLP 和 CV 领域。特定模型需要独立部署。我们提供了下载链接和指南。
+UniAI 集成了多种 AI 模型，主要关注在 NLP 和 CV 领域。需要独立部署具体的模型，我们提供了下载链接和导引。
 
 ### NLP 模型
 
--   OpenAI GPT、GLM/ChatGLM、IFLYTEK/SPARK
+-   OpenAI GPT, GLM/ChatGLM, IFLYTEK/SPARK
 
 ### CV 模型
 
--   OpenAI DALL-E、Stable Diffusion、MidJourney
+-   OpenAI DALL-E, Stable Diffusion, MidJourney
 
-## 未来规划
+## 未来增强
 
-UniAI 计划在以下关键功能上扩展其 AI 能力：
+UniAI计划扩展其能力到：
 
 -   预测 API
 -   训练 API
 -   提示 API
--   知识库 API
+-   资源管理 API
 
-![未来功能](./future.png)
+![未来特点](./future.png)
 
 ## 贡献
 
-欢迎您的贡献！有关开发信息，请联系 Youwei：<huangyw@iict.ac.cn>。
+黄工 <huangyw@iict.ac.cn>
 
-_基于 [Egg.js](https://www.eggjs.org/) TypeScript 驱动_
+中科苏州智能计算技术研究院
+
+## 许可
+
+由 [Egg.js](https://www.eggjs.org/) 助力
+<img src="https://static-production.npmjs.com/255a118f56f5346b97e56325a1217a16.svg" height="20px"/>
+
+[MIT](./LICENSE)
+
+版权所有 © 2022至今, Youwei Huang
