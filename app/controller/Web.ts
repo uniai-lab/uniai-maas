@@ -270,11 +270,10 @@ export default class Web {
         ctx.service.res.success('Success to delete a dialog')
     }
 
-    @Middleware(auth(), log(), transaction())
+    @Middleware(auth(), log())
     @HTTPMethod({ path: '/add-dialog', method: HTTPMethodEnum.GET })
     async addDialog(@Context() ctx: EggContext) {
-        const user = ctx.user!
-        const { id, title, createdAt, updatedAt } = await ctx.service.web.addDialog(user.id)
+        const { id, title, createdAt, updatedAt } = await ctx.service.web.addDialog(ctx.user!.id)
         const data: DialogListResponse = { id, title, createdAt, updatedAt }
         ctx.service.res.success('Success to add a dialog', data)
     }

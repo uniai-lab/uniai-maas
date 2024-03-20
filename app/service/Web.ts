@@ -135,17 +135,13 @@ export default class Web extends Service {
             if (res.code !== code) throw new Error('Code is invalid')
 
             // find or create user
-            const { id } = await ctx.service.user.findOrCreate({ phone }, fid)
+            const { user, create } = await ctx.service.user.findOrCreate({ phone }, fid)
 
             // add a default free chat dialog if not existed
-            const count = await ctx.model.Dialog.count({
-                where: { userId: id, resourceId: null, isEffect: true, isDel: false },
-                transaction
-            })
-            if (!count) await this.addDialog(id)
+            if (create) await this.addDialog(user.id)
 
             // sign in
-            return await ctx.service.user.signIn(id)
+            return await ctx.service.user.signIn(user.id)
         } else throw new Error('Need phone code or password')
     }
 

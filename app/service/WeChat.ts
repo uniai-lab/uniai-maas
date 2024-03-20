@@ -121,26 +121,17 @@ export default class WeChat extends Service {
         }
 
         // find or create a user, then sign in
-        const { id } = await ctx.service.user.findOrCreate(where, fid)
+        const { user, create } = await ctx.service.user.findOrCreate(where, fid)
 
-        // add free chat dialog if not existed
-        if (
-            !(await ctx.model.Dialog.count({
-                where: { userId: id, resourceId: null, isEffect: true, isDel: false },
-                transaction
-            }))
-        )
-            await ctx.service.weChat.addDialog(id)
+        // add free chat dialog and default resource dialog
+        if (create) {
+            await ctx.service.weChat.addDialog(user.id)
+            const resourceId = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
+            if (await ctx.model.Resource.count({ where: { id: resourceId }, transaction }))
+                await ctx.service.weChat.addDialog(user.id, resourceId)
+        }
 
-        // add default resource dialog if not existed
-        const resourceId = parseInt(await this.getConfig('INIT_RESOURCE_ID'))
-        if (
-            !(await ctx.model.Dialog.count({ where: { userId: id, resourceId }, transaction })) &&
-            (await ctx.model.Resource.count({ where: { id: resourceId }, transaction }))
-        )
-            await ctx.service.weChat.addDialog(id, resourceId)
-
-        return await ctx.service.user.signIn(id)
+        return await ctx.service.user.signIn(user.id)
     }
 
     /* user sign phone number
@@ -235,16 +226,15 @@ export default class WeChat extends Service {
         // create dialog and chat
         const content =
             ctx.__('Im AI model') + (fileName ? ctx.__('finish reading', fileName) : ctx.__('feel free to chat'))
-        const dialog = await ctx.model.Dialog.create(
+
+        return await ctx.model.Dialog.create(
             {
                 userId,
                 resourceId,
                 chats: [{ role: ChatRoleEnum.ASSISTANT, content: ctx.service.util.mintFilter(content).text }]
             },
-            { transaction, include: ctx.model.Chat }
+            { include: ctx.model.Chat, transaction }
         )
-
-        return dialog
     }
 
     // delete a dialog

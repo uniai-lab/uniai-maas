@@ -32,7 +32,7 @@ export default class User extends Service {
         const { transaction } = ctx
 
         const user = await ctx.model.User.findOne({ where, attributes: ['id'], transaction })
-        if (user) return user
+        if (user) return { user, create: false }
         else {
             // create finish, give share reward to fid user
             if (fid) {
@@ -44,16 +44,19 @@ export default class User extends Service {
                 await user.save({ transaction })
             }
 
-            return await ctx.model.User.create(
-                {
-                    ...where,
-                    avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
-                    chatChanceFree: (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0],
-                    uploadChanceFree: (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0],
-                    uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
-                },
-                { transaction }
-            )
+            return {
+                user: await ctx.model.User.create(
+                    {
+                        ...where,
+                        avatar: await this.getConfig('DEFAULT_AVATAR_USER'),
+                        chatChanceFree: (await this.getConfig<number[]>('FREE_CHAT_CHANCE'))[0],
+                        uploadChanceFree: (await this.getConfig<number[]>('FREE_UPLOAD_CHANCE'))[0],
+                        uploadSize: parseInt(await this.getConfig('LIMIT_UPLOAD_SIZE'))
+                    },
+                    { transaction }
+                ),
+                create: true
+            }
         }
     }
 
