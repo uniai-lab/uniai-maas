@@ -498,7 +498,7 @@ export default class WeChat extends Service {
                     })
                     cache.content += `<hr>${ctx.__('visit pro version')}`
                     cache.chatId = chat.id
-                    if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                    if (isEffect) app.redis.setex(`chat_${userId}`, CHAT_STREAM_EXPIRE, JSON.stringify(cache))
                 } else app.redis.del(`chat_${userId}`)
             })
 
