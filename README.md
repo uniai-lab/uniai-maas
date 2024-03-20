@@ -1,21 +1,24 @@
 <p align=center>
-<img src="./logo.png" width=100 height=100 />
+<img src="./logo.png" width=80 height=80 />
 </p>
 
 <h1 align=center>UniAI MaaS Platform </h1>
 
-<p align=center>Powered by the eponymous node.js library <a href="https://www.npmjs.com/package/uniai">uniai</a></p>
+<p align=center>Powered by the eponymous node.js library <a href="https://www.npmjs.com/package/uniai">uniai</a> and <a href="https://www.eggjs.org/">egg.js</a>.</p>
 
-<p align=center>
 <img src="./framework.png" width=100% />
-</p>
-
 
 ## Overview
 
 [Read this in Simplified Chinese (简体中文说明)](./README_CN.md) 🇨🇳
 
-The platform project aims to streamline the integration of multiple models, reducing the complexity of the process for developers. This allows developers to focus more on developing business logic. The platform supports a vector database and enables users to upload, parse, and manipulate office documents. In addition to text generation models, it also offers various multimodal models such as image generation and recognition. Furthermore, the platform supports custom development for integration with platforms like WeChat Mini Programs. 
+This platform project aims to streamline the integration of multiple AI models, reducing the complexity of the process for developers. This allows developers to focus more on developing business logic.
+
+The platform supports a vector database and enables users to upload, parse, and manage office files.
+
+In addition to text generation models, it also offers multimodal models such as image generation and recognition.
+
+Furthermore, the platform supports custom development for integration with platforms like WeChat Mini Programs. 
 
 UniAI, powered by the node.js library of the same name **uniai**, provides seamless access and management of a diverse range of AI models and utilities. To incorporate UniAI into your project, you can install it via [npm](https://www.npmjs.com/package/uniai) or [Github](https://github.com/devilyouwei/UniAI).
 
@@ -38,20 +41,22 @@ UniAI integrates multiple AI models, including:
 
 Discover how UniAI is utilized and experience it firsthand:
 
-### 💬 LeChat Mini Program
+### LeChat Mini Program
 
-![wechat miniapps](./qrcode.jpg)
+To launch the mini app, use WeChat to scan the following QR code.
 
-### ✨ LeChat Pro Version
+<img src="./qrcode.jpg" width=120/>
+
+### LeChat Pro
 
 👍 We recommend: <https://lechat.cas-ll.cn>
-
-![LeChat Pro Preview](https://www.uniai.us/lechat-pro.gif)
 
 - Multi-model Chat
 - Office file upload and parse
 - Image generation
 - Image recognition
+
+![example](https://raw.githubusercontent.com/uni-openai/uniai/main/icon/lechat-pro.png)
 
 ## System Requirements
 

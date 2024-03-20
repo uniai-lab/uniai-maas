@@ -7,7 +7,6 @@ export interface ChatStreamCache {
     chatId: number
     dialogId: number
     content: string
-    time: number
     resourceId: number | null
     model: ModelProvider | null
     subModel: ChatModel | string | null

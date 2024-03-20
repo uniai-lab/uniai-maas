@@ -29,7 +29,7 @@ const CHAT_PAGE_SIZE = 10
 const CHAT_PAGE_LIMIT = 20
 const DIALOG_PAGE_SIZE = 10
 const DIALOG_PAGE_LIMIT = 20
-const CHAT_STREAM_EXPIRE = 3 * 60 * 1000
+const CHAT_STREAM_EXPIRE = 10
 const SMS_EXPIRE = 5 * 60 * 1000
 const SMS_COUNT = 5
 const QR_CODE_EXPIRE = 30 // 30 seconds
@@ -315,16 +315,16 @@ export default class WeChat extends Service {
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
-        // get pro version (temporarily)
-        if (input.includes(ctx.__('pro version'))) {
+        // get pro version (temporarily announcement)
+        if (input === ctx.__('pro version')) {
             const cache: WXChatResponse = {
                 chatId: 0,
-                role: ChatRoleEnum.ASSISTANT,
+                role: ASSISTANT,
                 content: await this.getConfig('APP_URL'),
                 dialogId,
                 resourceId: null,
-                model: PROVIDER,
-                subModel: MODEL,
+                model: null,
+                subModel: null,
                 avatar: await ctx.service.weChat.getConfig('DEFAULT_AVATAR_AI'),
                 isEffect: true
             }
@@ -446,10 +446,9 @@ export default class WeChat extends Service {
                 content: '',
                 model: PROVIDER,
                 subModel: MODEL,
-                time: Date.now(),
                 isEffect
             }
-            if (isEffect) await app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+            if (isEffect) await app.redis.setex(`chat_${userId}`, CHAT_STREAM_EXPIRE, JSON.stringify(cache))
 
             // save user prompt
             const chat = await ctx.model.Chat.create({
@@ -466,7 +465,7 @@ export default class WeChat extends Service {
                 if (obj) {
                     cache.content += obj.content
                     cache.subModel = obj.model
-                    if (isEffect) app.redis.set(`chat_${userId}`, JSON.stringify(cache))
+                    if (isEffect) app.redis.setex(`chat_${userId}`, CHAT_STREAM_EXPIRE, JSON.stringify(cache))
                 }
             })
             res.on('error', e => {
@@ -512,7 +511,7 @@ export default class WeChat extends Service {
         const { app } = this
         const res = $.json<ChatStreamCache>(await app.redis.get(`chat_${userId}`))
         // expire, remove chat cache
-        if (res) if (Date.now() - res.time > CHAT_STREAM_EXPIRE || res.chatId) app.redis.del(`chat_${userId}`)
+        if (res?.chatId) await app.redis.del(`chat_${userId}`)
         return res
     }
 

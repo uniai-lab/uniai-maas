@@ -37,22 +37,24 @@ UniAI集成了多个AI模型，已包括：
 
 ## 案例
 
-探索UniAI的使用，体验它:
+想探索UniAI的使用？请体验以下应用！
 
-### 💬乐聊小程序
+### 乐聊小程序版
 
-![微信小程序](./qrcode.jpg)
+微信扫码登陆小程序！
 
-### ✨乐聊Pro版本
+<img src="./qrcode.jpg" width=120/>
+
+### 乐聊Pro版本
 
 👍我们推荐：<https://lechat.cas-ll.cn>
-
-![LeChat Pro预览](https://www.uniai.us/lechat-pro.gif)
 
 -   多模型聊天
 -   办公室文件上传和解析
 -   图片生成
 -   图片识别
+
+![example](https://raw.githubusercontent.com/uni-openai/uniai/main/icon/lechat-pro.png)
 
 ## 系统需求
 

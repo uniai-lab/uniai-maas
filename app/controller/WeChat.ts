@@ -253,9 +253,7 @@ export default class WeChat {
     @Middleware(auth())
     @HTTPMethod({ path: '/get-chat-stream', method: HTTPMethodEnum.GET })
     async getChat(@Context() ctx: EggContext) {
-        const user = ctx.user!
-
-        const res = await ctx.service.weChat.getChat(user.id)
+        const res = await ctx.service.weChat.getChat(ctx.user!.id)
         if (!res) return ctx.service.res.success('No chat stream', null)
 
         // filter sensitive
