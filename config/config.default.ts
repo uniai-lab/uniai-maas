@@ -83,7 +83,10 @@ export default (appInfo: EggAppInfo) => {
         password: POSTGRES_PASS,
         port: parseInt(POSTGRES_PORT),
         username: POSTGRES_USER,
-        database: POSTGRES_DB
+        database: POSTGRES_DB,
+        pool: {
+            max: 200
+        }
     }
 
     config.redis = {
