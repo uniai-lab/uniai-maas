@@ -42,7 +42,7 @@ export class User extends Model {
     @Column(DataType.STRING)
     password: string | null
 
-    @Unique
+    @Unique(false)
     @Column(DataType.STRING)
     token: string | null
 

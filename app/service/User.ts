@@ -27,6 +27,7 @@ export default class User extends Service {
     // create user by phone, wx openid
     async findOrCreate(where: { wxOpenId?: string; phone?: string }, fid?: number) {
         if (!where.phone && !where.wxOpenId) throw new Error('Need phone or openid')
+        if (where.phone && where.wxOpenId) delete where.phone // first use wechat
 
         const { ctx } = this
         const { transaction } = ctx
