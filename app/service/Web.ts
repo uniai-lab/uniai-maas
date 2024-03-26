@@ -435,7 +435,9 @@ export default class Web extends Service {
                 return 2
             case ModelModel.ERNIE4 || ModelModel.GEM_PRO || ModelModel.GPT3_16K || ModelModel.MOON_V1_32K:
                 return 5
-            case ModelModel.GLM_4 || ModelModel.GPT4 || ModelModel.MOON_V1_128K || ModelModel.MJ:
+            case ModelModel.GLM_4 || ModelModel.GPT4_TURBO || ModelModel.GPT4 || ModelModel.MOON_V1_128K:
+                return 10
+            case ModelModel.MJ:
                 return 10
             case ModelModel.GLM_4V || ModelModel.GPT4_VISION || ModelModel.GEM_VISION:
                 return 15
