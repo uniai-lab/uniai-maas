@@ -600,8 +600,6 @@ export default class Web extends Service {
             })
             data.chatId = chat.id
 
-            output.end(JSON.stringify(data))
-
             // reduce user chance, first cost free chance
             const user = await ctx.model.User.findByPk(data.userId, {
                 attributes: ['id', 'chatChanceFree', 'chatChance']
@@ -611,6 +609,7 @@ export default class Web extends Service {
                 user.chatChance = Math.max(user.chatChance - Math.max(cost - user.chatChanceFree, 0), 0)
                 await user.save()
             }
+            output.end(JSON.stringify(data))
         })
         res.on('error', e => output.destroy(e))
     }
@@ -688,8 +687,6 @@ export default class Web extends Service {
                     )
                     data.chatId = chat.id
 
-                    output.end(JSON.stringify(data))
-
                     // reduce user chance, first cost free chance
                     const user = await ctx.model.User.findByPk(data.userId, {
                         attributes: ['id', 'chatChanceFree', 'chatChance']
@@ -699,6 +696,7 @@ export default class Web extends Service {
                         user.chatChance = Math.max(user.chatChance - Math.max(cost - user.chatChanceFree, 0), 0)
                         await user.save()
                     }
+                    output.end(JSON.stringify(data))
                     break
                 }
             }
