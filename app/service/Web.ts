@@ -16,7 +16,8 @@ import {
     ChatModelProvider,
     EmbedModelProvider,
     ImagineModelProvider,
-    ImagineModel
+    ImagineModel,
+    ModelModel
 } from 'uniai'
 import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
@@ -39,8 +40,6 @@ const TITLE_SUB_TOKEN = 20 // dialog title limit length
 const QUERY_PAGE_LIMIT = 5 // query resource page limit
 const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
 
-const IMAGINE_COST = 10
-const CHAT_COST = 1
 const LIMIT_IMG_SIZE = 1 * 1024 * 1024 // image over 1mb need compress
 
 const TRANSLATE_PROVIDER = ChatModelProvider.OpenAI
@@ -429,6 +428,22 @@ export default class Web extends Service {
         return { provider, model }
     }
 
+    // get model chance consume
+    getModelChance(model?: ModelModel) {
+        switch (model) {
+            case ModelModel.SPARK_V3_5 || ModelModel.GPT3 || ModelModel.MOON_V1_8K:
+                return 2
+            case ModelModel.ERNIE4 || ModelModel.GEM_PRO || ModelModel.GPT3_16K || ModelModel.MOON_V1_32K:
+                return 5
+            case ModelModel.GLM_4 || ModelModel.GPT4 || ModelModel.MOON_V1_128K || ModelModel.MJ:
+                return 10
+            case ModelModel.GLM_4V || ModelModel.GPT4_VISION || ModelModel.GEM_VISION:
+                return 15
+            default:
+                return 1
+        }
+    }
+
     // use imagine model
     async useImagineModel(level: number) {
         const options = await this.getConfig<LevelImagineModel>('LEVEL_IMAGINE_MODEL')
@@ -471,7 +486,6 @@ export default class Web extends Service {
         // check user chat chance
         const user = await ctx.service.user.get(data.userId)
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance < CHAT_COST) throw new Error('Chat chance not enough')
 
         // get chat history
         const chats = await ctx.model.Chat.findAll({
@@ -544,6 +558,10 @@ export default class Web extends Service {
         const provider = data.model as ChatModelProvider
         const model = data.subModel as ChatModel
 
+        // model chance
+        const cost = this.getModelChance(model)
+        if (user.chatChanceFree + user.chatChance < cost) throw new Error('Chat chance not enough')
+
         // start chat stream
         data.content = ctx.__('model inputting')
         output.write(JSON.stringify(data))
@@ -587,8 +605,8 @@ export default class Web extends Service {
                 attributes: ['id', 'chatChanceFree', 'chatChance']
             })
             if (user) {
-                user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
-                user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
+                user.chatChanceFree = Math.max(user.chatChanceFree - cost, 0)
+                user.chatChance = Math.max(user.chatChance - Math.max(cost - user.chatChanceFree, 0), 0)
                 await user.save()
             }
         })
@@ -601,12 +619,14 @@ export default class Web extends Service {
         // check user chat chance
         const user = await ctx.service.user.get(data.userId)
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance < IMAGINE_COST) throw new Error('Imagine chance not enough')
 
         // auto set provider and model
         const { provider, model } = await this.useImagineModel(user.level)
         data.model = provider
         data.subModel = model
+        const cost = this.getModelChance(model)
+        if (user.chatChanceFree + user.chatChance < cost) throw new Error('Imagine chance not enough')
+
         data.content = ctx.__('prepare to imagine')
         data.file = { name: '', url: LOAD_IMG, size: 0, ext: 'image/gif' }
         output.write(JSON.stringify(data))
@@ -673,8 +693,8 @@ export default class Web extends Service {
                         attributes: ['id', 'chatChanceFree', 'chatChance']
                     })
                     if (user) {
-                        user.chatChanceFree = Math.max(user.chatChanceFree - IMAGINE_COST, 0)
-                        user.chatChance = Math.max(user.chatChance - Math.max(IMAGINE_COST - user.chatChanceFree, 0), 0)
+                        user.chatChanceFree = Math.max(user.chatChanceFree - cost, 0)
+                        user.chatChance = Math.max(user.chatChance - Math.max(cost - user.chatChanceFree, 0), 0)
                         await user.save()
                     }
                     break
@@ -698,10 +718,11 @@ export default class Web extends Service {
             transaction
         })
         if (!user) throw new Error('Fail to find user')
-        if (user.chatChanceFree + user.chatChance <= CHAT_COST) throw new Error('Chat chance not enough')
+        const cost = this.getModelChance() // upload cost 1 chance
+        if (user.chatChanceFree + user.chatChance <= cost) throw new Error('Upload chance not enough')
         // reduce user chance, first cost free chance
-        user.chatChanceFree = Math.max(user.chatChanceFree - CHAT_COST, 0)
-        user.chatChance = Math.max(user.chatChance - Math.max(CHAT_COST - user.chatChanceFree, 0), 0)
+        user.chatChanceFree = Math.max(user.chatChanceFree - cost, 0)
+        user.chatChance = Math.max(user.chatChance - Math.max(cost - user.chatChanceFree, 0), 0)
         await user.save({ transaction })
 
         // check dialog is right
