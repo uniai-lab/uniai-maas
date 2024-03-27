@@ -431,7 +431,11 @@ export default class Web extends Service {
     // separate model cost chance
     getModelChance(model?: ModelModel) {
         switch (model) {
+            case ModelModel.MJ:
+                return 10
             case ModelModel.GPT3:
+            case ModelModel.SPARK_V3_5:
+            case ModelModel.ERNIE_3_5_8K:
             case ModelModel.MOON_V1_8K:
                 return 2
             case ModelModel.GLM_4:
@@ -440,20 +444,20 @@ export default class Web extends Service {
             case ModelModel.GPT3_16K:
             case ModelModel.MOON_V1_32K:
                 return 4
-            case ModelModel.GPT4:
-            case ModelModel.GPT4_TURBO:
             case ModelModel.MOON_V1_128K:
-                return 10
-            case ModelModel.MJ:
-                return 10
+                return 15
+            case ModelModel.GPT4_TURBO:
             case ModelModel.GLM_4V:
             case ModelModel.GPT4_VISION:
             case ModelModel.GEM_VISION:
-                return 15
+                return 25
+            case ModelModel.GPT4:
+                return 50
             default:
                 return 1
         }
     }
+
     // use imagine model
     async useImagineModel(level: number) {
         const options = await this.getConfig<LevelImagineModel>('LEVEL_IMAGINE_MODEL')

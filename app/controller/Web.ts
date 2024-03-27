@@ -30,7 +30,8 @@ import {
     UploadRequest,
     DialogListRequest,
     DialogListResponse,
-    ChatListRequest
+    ChatListRequest,
+    ModelCostResponse
 } from '@interface/controller/Web'
 import { ResourceType } from '@interface/Enum'
 import $ from '@util/util'
@@ -42,6 +43,17 @@ export default class Web {
     async config(@Context() ctx: EggContext) {
         const data = await ctx.service.web.getUserConfig()
         ctx.service.res.success('Success to list config', data)
+    }
+
+    // model cost list
+    @HTTPMethod({ path: '/model-cost', method: HTTPMethodEnum.GET })
+    async modelCost(@Context() ctx: EggContext) {
+        const res = await ctx.service.uniAI.getChatModels()
+        const data: ModelCostResponse[] = res.map(v => ({
+            provider: v.provider,
+            model: v.models.map(v => ({ model: v, chance: ctx.service.web.getModelChance(v) }))
+        }))
+        ctx.service.res.success('Success to list model cost', data)
     }
 
     @HTTPMethod({ path: '/file', method: HTTPMethodEnum.GET })

@@ -132,3 +132,11 @@ export interface ChatListRequest {
     lastId?: number
     pageSize?: number
 }
+
+export interface ModelCostResponse {
+    provider: keyof typeof ModelProvider
+    model: {
+        model: ModelModel
+        chance: number
+    }[]
+}

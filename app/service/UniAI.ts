@@ -80,6 +80,7 @@ export default class UniAI extends Service {
         return $.json<T>(value) || (value as T)
     }
 
+    // list all chat models
     async getChatModels() {
         return ai.chatModels
     }
