@@ -47,6 +47,11 @@ export class Chat extends Model {
     @Column(DataType.TEXT)
     content: string
 
+    @AllowNull(false)
+    @Default(0)
+    @Column(DataType.INTEGER)
+    token: number
+
     @ForeignKey(() => Resource)
     @Column(DataType.INTEGER)
     resourceId: number | null

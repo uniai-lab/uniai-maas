@@ -417,6 +417,7 @@ export default class WeChat extends Service {
                         dialogId,
                         role: USER,
                         content: input,
+                        token: $.countTokens(JSON.stringify(prompts)),
                         model: cache.model,
                         subModel: cache.subModel,
                         isEffect: cache.isEffect
@@ -427,6 +428,7 @@ export default class WeChat extends Service {
                         dialogId,
                         role: ASSISTANT,
                         content: cache.content,
+                        token: $.countTokens(cache.content),
                         model: cache.model,
                         subModel: cache.subModel,
                         isEffect: cache.isEffect
@@ -455,6 +457,7 @@ export default class WeChat extends Service {
                 dialogId,
                 role: USER,
                 content: input,
+                token: $.countTokens(JSON.stringify(prompts)),
                 model: PROVIDER,
                 subModel: MODEL,
                 isEffect
@@ -492,6 +495,7 @@ export default class WeChat extends Service {
                         dialogId: cache.dialogId,
                         role: ASSISTANT,
                         content: cache.content,
+                        token: $.countTokens(cache.content),
                         model: cache.model,
                         subModel: cache.subModel,
                         isEffect: cache.isEffect

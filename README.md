@@ -4,7 +4,7 @@
 
 <h1 align=center>UniAI MaaS Platform </h1>
 
-<p align=center>Powered by the eponymous node.js library <a href="https://www.npmjs.com/package/uniai">uniai</a> and <a href="https://www.eggjs.org/">egg.js</a>.</p>
+<p align=center>Powered by the eponymous node.js library <a href="https://www.npmjs.com/package/uniai">uniai</a>.
 
 <img src="./framework.png" width=100% />
 
@@ -16,7 +16,7 @@ This platform project aims to streamline the integration of multiple AI models, 
 
 The platform supports a vector database and enables users to upload, parse, and manage office files.
 
-In addition to text generation models, it also offers multimodal models such as image generation and recognition.
+In addition to text generation models, it also offers multi-modal models such as image generation and recognition.
 
 Furthermore, the platform supports custom development for integration with platforms like WeChat Mini Programs. 
 
@@ -37,7 +37,7 @@ UniAI integrates multiple AI models, including:
 -   [OpenAI/DALL-E](https://platform.openai.com)
 -   [Midjourney](https://github.com/novicezk/midjourney-proxy)
 
-## 📱 Samples
+## Samples
 
 Discover how UniAI is utilized and experience it firsthand:
 
@@ -80,7 +80,6 @@ touch ./.env
 Fill the `.env` file with the following environment variables:
 
 ```bash
-
 # Platform default admin token
 ADMIN_TOKEN=
 
@@ -171,9 +170,6 @@ POSTGRES_DATA_PATH=./data
 MINIO_DATA_PATH=./data
 MINIO_ROOT_USER=root
 MINIO_ROOT_PASS=12345678
-
-
-
 ```
 
 ### Installation Steps
@@ -252,7 +248,7 @@ yarn tsc
 yarn start
 ```
 
-⚠️ **Important**: Avoid compiling TypeScript files in development mode. Use `yarn clean` before `yarn dev` if `tsc` was previously run.
+⚠️ Avoid compiling TypeScript files in development mode. Use `yarn clean` before `yarn dev` if `tsc` was previously run.
 
 ### Cleaning Up
 

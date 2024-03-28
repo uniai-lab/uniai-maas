@@ -1,6 +1,6 @@
 {
     "name": "uniai-maas",
-    "version": "2.2.0",
+    "version": "3.0.0",
     "description": "UniAI Model as a Service Platform",
     "egg": {
         "typescript": true,
@@ -68,9 +68,9 @@
         "sbd": "^1.0.19",
         "sequelize": "^6.37.1",
         "sequelize-typescript": "^2.1.6",
-        "sharp": "^0.33.2",
+        "sharp": "^0.33.3",
         "tslog": "^4.9.2",
-        "uniai": "^1.5.5",
+        "uniai": "^1.6.0",
         "wechatpay-node-v3": "^2.2.0",
         "ws": "^8.16.0",
         "xlsx": "^0.18.5"

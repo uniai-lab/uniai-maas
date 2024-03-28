@@ -44,6 +44,7 @@ const LEVEL_IMAGINE_MODEL: LevelImagineModel = {
     [ImagineModel.SD_1_6]: 0,
     [ImagineModel.SD_XL_1024]: 0,
     [ImagineModel.DALL_E_2]: 0,
+    [ImagineModel.V2]: 0,
     [ImagineModel.DALL_E_3]: 1,
     [ImagineModel.MJ]: 2
 }

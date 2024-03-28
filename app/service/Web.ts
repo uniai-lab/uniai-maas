@@ -599,6 +599,7 @@ export default class Web extends Service {
                 dialogId: data.dialogId,
                 role: USER,
                 content: input,
+                token: $.countTokens(JSON.stringify(prompts)),
                 model: data.model,
                 subModel: data.subModel
             })
@@ -607,6 +608,7 @@ export default class Web extends Service {
                 dialogId: data.dialogId,
                 role: ASSISTANT,
                 content: data.content,
+                token: $.countTokens(data.content),
                 model: data.model,
                 subModel: data.subModel
             })
@@ -674,6 +676,7 @@ export default class Web extends Service {
                         dialogId: data.dialogId,
                         role: ChatRoleEnum.USER,
                         content: input,
+                        token: $.countTokens(input),
                         model: data.model,
                         subModel: data.subModel
                     })
