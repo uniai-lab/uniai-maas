@@ -269,10 +269,11 @@ export default class WeChat extends Service {
             order: [['id', 'DESC']],
             where: {
                 dialogId: dialog.id,
+                resourceId: null,
                 id: lastId ? { [Op.lt]: lastId } : { [Op.lte]: await ctx.model.Chat.max('id') },
+                [Op.or]: [{ model: PROVIDER }, { model: null }],
                 isEffect: true,
-                isDel: false,
-                [Op.or]: [{ model: PROVIDER }, { model: null }]
+                isDel: false
             }
         })
 
