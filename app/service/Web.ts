@@ -432,6 +432,8 @@ export default class Web extends Service {
     getModelChance(model?: ModelModel) {
         switch (model) {
             case ModelModel.MJ:
+            case ModelModel.DALL_E_2:
+            case ModelModel.DALL_E_3:
                 return 10
             case ModelModel.GPT3:
             case ModelModel.SPARK_V3_5:
@@ -443,16 +445,16 @@ export default class Web extends Service {
             case ModelModel.GEM_PRO:
             case ModelModel.GPT3_16K:
             case ModelModel.MOON_V1_32K:
-                return 4
+                return 5
             case ModelModel.MOON_V1_128K:
                 return 15
             case ModelModel.GPT4_TURBO:
             case ModelModel.GLM_4V:
             case ModelModel.GPT4_VISION:
             case ModelModel.GEM_VISION:
-                return 25
+                return 20
             case ModelModel.GPT4:
-                return 50
+                return 40
             default:
                 return 1
         }
@@ -461,9 +463,13 @@ export default class Web extends Service {
     // use imagine model
     async useImagineModel(level: number) {
         const options = await this.getConfig<LevelImagineModel>('LEVEL_IMAGINE_MODEL')
-        let provider: ImagineModelProvider = ImagineModelProvider.MidJourney
-        let model: ImagineModel = ImagineModel.MJ
+        let provider: ImagineModelProvider = ImagineModelProvider.OpenAI
+        let model: ImagineModel = ImagineModel.DALL_E_2
 
+        if (level >= options['dall-e-3']) {
+            provider = ImagineModelProvider.OpenAI
+            model = ImagineModel.DALL_E_3
+        }
         /*
         if (level >= options['stable-diffusion-v1-6']) {
             provider = ImagineModelProvider.StabilityAI
@@ -473,15 +479,11 @@ export default class Web extends Service {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_2
         }
-        if (level >= options['dall-e-3']) {
-            provider = ImagineModelProvider.OpenAI
-            model = ImagineModel.DALL_E_3
-        }
-        */
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
         }
+        */
         return { provider, model }
     }
 
