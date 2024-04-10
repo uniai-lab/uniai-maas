@@ -21,8 +21,8 @@ const SHARE_REWARD_UPLOAD_CHANCE = 5
 const LIMIT_UPLOAD_SIZE = 20 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 
-const FREE_CHAT_CHANCE: number[] = [10, 10, 20, 30]
-const FREE_UPLOAD_CHANCE: number[] = [5, 5, 10, 15]
+const FREE_CHAT_CHANCE: number[] = [5, 10, 20, 30]
+const FREE_UPLOAD_CHANCE: number[] = [2, 5, 10, 15]
 /*
  * Level 0 -> 0 score
  * Level 1 -> 30 score
@@ -41,12 +41,12 @@ const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
 }
 
 const LEVEL_IMAGINE_MODEL: LevelImagineModel = {
+    [ImagineModel.V2]: 0,
     [ImagineModel.SD_1_6]: 0,
     [ImagineModel.SD_XL_1024]: 0,
-    [ImagineModel.DALL_E_2]: 0,
-    [ImagineModel.V2]: 0,
-    [ImagineModel.DALL_E_3]: 1,
-    [ImagineModel.MJ]: 2
+    [ImagineModel.DALL_E_2]: 1,
+    [ImagineModel.DALL_E_3]: 2,
+    [ImagineModel.MJ]: 3
 }
 
 const USER_MENU: ConfigMenu[] = [

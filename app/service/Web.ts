@@ -462,10 +462,18 @@ export default class Web extends Service {
 
     // use imagine model
     async useImagineModel(level: number) {
+        // level 0
         const options = await this.getConfig<LevelImagineModel>('LEVEL_IMAGINE_MODEL')
-        let provider: ImagineModelProvider = ImagineModelProvider.OpenAI
-        let model: ImagineModel = ImagineModel.DALL_E_2
+        let provider: ImagineModelProvider = ImagineModelProvider.IFlyTek
+        let model: ImagineModel = ImagineModel.V2
 
+        // level 1
+        if (level >= options['dall-e-2']) {
+            provider = ImagineModelProvider.OpenAI
+            model = ImagineModel.DALL_E_2
+        }
+
+        // level 2
         if (level >= options['dall-e-3']) {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_3
