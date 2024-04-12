@@ -478,20 +478,12 @@ export default class Web extends Service {
             provider = ImagineModelProvider.OpenAI
             model = ImagineModel.DALL_E_3
         }
-        /*
-        if (level >= options['stable-diffusion-v1-6']) {
-            provider = ImagineModelProvider.StabilityAI
-            model = ImagineModel.SD_1_6
-        }
-        if (level >= options['dall-e-2']) {
-            provider = ImagineModelProvider.OpenAI
-            model = ImagineModel.DALL_E_2
-        }
+
+        // level 3
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
         }
-        */
         return { provider, model }
     }
 
