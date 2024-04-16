@@ -6,7 +6,7 @@
 
 <p align=center>Powered by the eponymous node.js library <a href="https://www.npmjs.com/package/uniai">uniai</a>.
 
-<img src="./framework.png" width=100% />
+<img src="./framework.jpg" width=100% />
 
 ## Overview
 

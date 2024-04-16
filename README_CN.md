@@ -9,7 +9,7 @@
 <p align=center>由同名node.js库 <a href="https://www.npmjs.com/package/uniai">uniai</a> 助力</p>
 
 <p align=center>
-<img src="./framework.png" width=100% />
+<img src="./framework.jpg" width=100% />
 </p>
 
 ## 概述
