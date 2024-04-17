@@ -1,12 +1,12 @@
 <!-- @format -->
 
 <p align=center>
-<img src="./logo.png" width=100 height=100 />
+<img src="./logo.png" width=65 height=65 />
 </p>
 
-<h1 align=center>UniAI MaaS平台 </h1>
+<h1 align=center>UniAI MaaS</h1>
 
-<p align=center>由同名node.js库 <a href="https://www.npmjs.com/package/uniai">uniai</a> 助力</p>
+<p align=center>基于同名node.js库 <a href="https://www.npmjs.com/package/uniai">uniai</a> 开发</p>
 
 <p align=center>
 <img src="./framework.jpg" width=100% />
@@ -14,11 +14,13 @@
 
 ## 概述
 
-[For English Reading](./README.md) 🇨🇳
+[English Reading](./README.md) 🇺🇸
 
-UniAI的平台项目旨在简化多模型的集成过程，减低目的开发者处理过程的复杂度，使他们更加专注于业务逻辑的开发。该平台支持向量数据库，并允许用户上传、解析、操控Office工具文件。除了文本生成模型，该平台也提供诸如图片生成和识别等多模态模型，具有支持自定义开发以与微信小程序等平台集成的能力。
+UniAI MaaS旨在构建一个模型即服务平台，提供多模型的接入，开发者可以直接基于该平台进行AI应用开发。
 
-利用同名node.js库 **uniai**，UniAI提供了对各式各样AI模型以及实用工具的无缝存取和管理。为了在你的项目中融入UniAI，你可以通过[npm](https://www.npmjs.com/package/uniai) 或者[Github](https://github.com/devilyouwei/UniAI)来安装。
+该项目包含了向量数据库，缓存数据库，文件存储服务等，实现了RAG技术，可以解析上传的Office文件，并存入知识库，在模型输入时进行抽取和注入。
+
+同名node.js库**uniai**是从本项目中剥离出去的nodejs类库，集成了许许多多的模型，你也可以单独使用**uniai**，来自定义你的**MaaS**平台，这样或许更轻量化。为了在你的项目中融入UniAI底座，你可以通过[npm](https://www.npmjs.com/package/uniai) 或者[Github](https://github.com/devilyouwei/UniAI)来安装。
 
 ## 集成模型
 
@@ -47,7 +49,7 @@ UniAI集成了多个AI模型，已包括：
 
 ### 乐聊Pro版本
 
-👍我们推荐：<https://lechat.cas-ll.cn>
+👍推荐使用我们的专业版：<https://lechat.cas-ll.cn>
 
 -   多模型聊天
 -   办公室文件上传和解析
@@ -285,15 +287,15 @@ UniAI计划扩展其能力到：
 
 ## 贡献
 
-黄工 <huangyw@iict.ac.cn>
+黄有为 <huangyw@iict.ac.cn>
 
 中科苏州智能计算技术研究院
 
 ## 许可
 
-由 [Egg.js](https://www.eggjs.org/) 助力
-<img src="https://static-production.npmjs.com/255a118f56f5346b97e56325a1217a16.svg" height="20px"/>
+基于 [Egg.js](https://www.eggjs.org/)
+<img src="https://static-production.npmjs.com/255a118f56f5346b97e56325a1217a16.svg" height="15px"/>
 
 [MIT](./LICENSE)
 
-版权所有 © 2022至今, Youwei Huang
+版权所有 © 2022至今, 中科苏州智能计算技术研究院

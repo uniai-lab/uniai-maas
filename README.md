@@ -1,8 +1,8 @@
 <p align=center>
-<img src="./logo.png" width=80 height=80 />
+<img src="./logo.png" width=65 height=65 />
 </p>
 
-<h1 align=center>UniAI MaaS Platform </h1>
+<h1 align=center>UniAI MaaS</h1>
 
 <p align=center>Powered by the eponymous node.js library <a href="https://www.npmjs.com/package/uniai">uniai</a>.
 
@@ -10,17 +10,25 @@
 
 ## Overview
 
-[Read this in Simplified Chinese (简体中文说明)](./README_CN.md) 🇨🇳
+[Simplified Chinese (简体中文说明)](./README_CN.md) 🇨🇳
 
-This platform project aims to streamline the integration of multiple AI models, reducing the complexity of the process for developers. This allows developers to focus more on developing business logic.
+### Model as a Service
+UniAI MaaS aims to implement a model as a service platform integrated multi AI models, allowing developers to focus on developing AI-related applications.
 
-The platform supports a vector database and enables users to upload, parse, and manage office files.
+### Retrieval Augmented Generation
+The platform supports a vector database, and an object storage service which enables users to upload, parse, and manage office files.
 
+### Multi-modals & Multi-models
 In addition to text generation models, it also offers multi-modal models such as image generation and recognition.
 
-Furthermore, the platform supports custom development for integration with platforms like WeChat Mini Programs. 
+### Application
+UniAI MaaS supports custom application development for integration with platforms like WeChat Mini Programs. 
 
+### About
 UniAI, powered by the node.js library of the same name **uniai**, provides seamless access and management of a diverse range of AI models and utilities. To incorporate UniAI into your project, you can install it via [npm](https://www.npmjs.com/package/uniai) or [Github](https://github.com/devilyouwei/UniAI).
+
+### Frontend Example
+Front end: <https://github.com/uni-openai/lechat-pro>
 
 ## Integrated Models
 
@@ -41,7 +49,7 @@ UniAI integrates multiple AI models, including:
 
 Discover how UniAI is utilized and experience it firsthand:
 
-### LeChat Mini Program
+### LeChat Mini App
 
 To launch the mini app, use WeChat to scan the following QR code.
 
@@ -292,7 +300,7 @@ Institute of Intelligent Computing Technology, Suzhou, CAS
 ## License
 
 Powered by [Egg.js](https://www.eggjs.org/)
-<img src="https://static-production.npmjs.com/255a118f56f5346b97e56325a1217a16.svg" height="20px"/>
+<img src="https://static-production.npmjs.com/255a118f56f5346b97e56325a1217a16.svg" height="15px"/>
 
 [MIT](./LICENSE)
 
