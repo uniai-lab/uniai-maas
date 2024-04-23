@@ -26,9 +26,9 @@ export default (app: Application) => {
         if (app.config.env === 'local') {
             // await app.redis.flushdb() // flush redis, be careful
             // await syncDataStruct(app)
-            await syncDatabase(app) // init database struct and data
-            await syncConfigCache(app) // sync config cache
-            await syncPayItemCache(app)
+            // await syncDatabase(app) // init database struct and data
+            // await syncConfigCache(app) // sync config cache
+            // await syncPayItemCache(app)
             // await updateNewRows(app) // update some rows
         }
 
@@ -77,6 +77,10 @@ async function syncConfigCache(app: Application) {
         console.log(item.key, item.value)
     }
 }
+/**
+ * Sets payment items data to Redis cache.
+ * @param app - The Egg.js application instance.
+ */
 async function syncPayItemCache(app: Application) {
     console.log('================SYNC PAY ITEM CACHE====================')
     const items = await app.model.PayItem.findAll({
@@ -107,17 +111,4 @@ async function hookUserSave(app: Application) {
         await app.redis.set(`user_${user.id}`, JSON.stringify(cache))
     })
     console.log('HOOK', res)
-}
-
-/**
- * Loop through and update new rows in the User table.
- * @param app - The Egg.js application instance.
- */
-async function updateNewRows(app: Application) {
-    console.log('================UPDATE LARGE ROWs=====================')
-    const max: number = await app.model.User.max('id')
-    for (let i = 1; i <= max; i++) {
-        const res = await app.model.User.update({ freeChanceUpdateAt: new Date(0) }, { where: { id: i } })
-        console.log(i, res)
-    }
 }
