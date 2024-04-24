@@ -47,8 +47,8 @@ export default class Web {
 
     // model cost list
     @HTTPMethod({ path: '/model-cost', method: HTTPMethodEnum.GET })
-    async modelCost(@Context() ctx: EggContext) {
-        const res = await ctx.service.uniAI.getChatModels()
+    modelCost(@Context() ctx: EggContext) {
+        const res = ctx.service.uniAI.getChatModels()
         const data: ModelCostResponse[] = res.map(v => ({
             provider: v.provider,
             model: v.models.map(v => ({ model: v, chance: ctx.service.web.getModelChance(v) }))

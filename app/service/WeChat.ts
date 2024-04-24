@@ -560,7 +560,7 @@ export default class WeChat extends Service {
         }
 
         // split pages as images
-        resource = await this.resource(resource.id)
+        // resource = await this.resource(resource.id)
 
         // reduce user upload chance
         if (user.uploadChanceFree > 0) user.uploadChanceFree--

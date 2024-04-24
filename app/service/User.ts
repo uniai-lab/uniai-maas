@@ -83,14 +83,14 @@ export default class User extends Service {
 
     // update user free chance by level
     async updateFreeChance(id: number) {
-        const { ctx } = this
-        const { transaction } = ctx
         const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
-
         const now = new Date()
+
         // refresh free chat chance
         if (now.getTime() - cache.freeChanceUpdateAt > FREE_CHANCE_TIME) {
+            const { ctx } = this
+            const { transaction } = ctx
             const user = await ctx.model.User.findByPk(id, {
                 attributes: ['id', 'chatChanceFree', 'uploadChanceFree', 'freeChanceUpdateAt', 'level'],
                 transaction
@@ -111,6 +111,7 @@ export default class User extends Service {
     async addUserChance(id: number, chance: number) {
         const { ctx } = this
         const { transaction } = ctx
+
         const user = await ctx.model.User.findByPk(id, { attributes: ['id', 'chatChance'], transaction })
         if (!user) throw new Error('Can not find the user')
 
@@ -123,9 +124,10 @@ export default class User extends Service {
         const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
         const now = Date.now()
-        const expired = cache.levelExpiredAt
+        const expire = cache.levelExpiredAt
 
-        if (score || (expired > 0 && now >= expired)) {
+        // expire=0 means forever
+        if (score || (expire > 0 && now > expire)) {
             const { ctx } = this
             const { transaction } = ctx
             const user = await ctx.model.User.findByPk(id, {
@@ -134,7 +136,7 @@ export default class User extends Service {
             })
             if (!user) throw new Error('Can not find the user')
 
-            if (expired > 0 && now >= expired) {
+            if (expire > 0 && now > expire) {
                 user.level = 0
                 user.levelExpiredAt = new Date(0)
             }
@@ -154,7 +156,7 @@ export default class User extends Service {
         }
     }
 
-    // get user benefits
+    // get user benefits by level
     async getBenefit(id: number) {
         const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
@@ -173,7 +175,7 @@ export default class User extends Service {
         const cache = await this.get(id)
         if (!cache) throw new Error('User cache not found')
 
-        const models = await this.service.uniAI.getChatModels()
+        const models = this.service.uniAI.getChatModels()
         const options = await Promise.all(
             models.map<Promise<Option>>(async v => {
                 const disabled = await this.checkLevelModel(cache.level, v.value)
@@ -204,6 +206,6 @@ export default class User extends Service {
     async checkLevelModel(level: number, provider?: ModelProvider) {
         if (!provider) return false
         const res = await this.getConfig<LevelChatProvider>('LEVEL_CHAT_PROVIDER')
-        return level >= res[provider] ? false : true
+        return level < res[provider]
     }
 }

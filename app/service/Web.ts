@@ -437,17 +437,16 @@ export default class Web extends Service {
                 return 10
             case ModelModel.GPT3:
             case ModelModel.SPARK_V3_5:
-            case ModelModel.ERNIE_3_5_8K:
+            case ModelModel.ERNIE_3_5:
             case ModelModel.MOON_V1_8K:
                 return 2
             case ModelModel.GLM_4:
-            case ModelModel.ERNIE4:
+            case ModelModel.ERNIE_4:
             case ModelModel.GEM_PRO:
             case ModelModel.GPT3_16K:
             case ModelModel.MOON_V1_32K:
                 return 5
             case ModelModel.MOON_V1_128K:
-                return 15
             case ModelModel.GPT4_TURBO:
             case ModelModel.GLM_4V:
             case ModelModel.GPT4_VISION:

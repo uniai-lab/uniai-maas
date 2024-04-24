@@ -81,7 +81,7 @@ export default class UniAI extends Service {
     }
 
     // list all chat models
-    async getChatModels() {
+    getChatModels() {
         return ai.chatModels
     }
 
@@ -437,7 +437,7 @@ export default class UniAI extends Service {
 
             try {
                 const result = await ai.chat(message, {
-                    provider: ModelProvider.GLM,
+                    provider: ChatModelProvider.GLM,
                     model: GLMChatModel.GLM_6B,
                     stream: false,
                     temperature: 0
