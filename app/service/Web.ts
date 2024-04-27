@@ -127,7 +127,7 @@ export default class Web extends Service {
                 order: [['id', 'DESC']],
                 transaction
             })
-            if (!res) throw new Error('Can not find the phone number')
+            if (!res) throw new Error('Phone verify code is not sent')
             // limit code request times
             await res.increment('count', { transaction })
             if (res.count >= SMS_COUNT) throw new Error('Try too many times')
@@ -343,12 +343,10 @@ export default class Web extends Service {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_3_TURBO
             }
-            /*
-            if (level >= options.moonshot) {
-                provider = ChatModelProvider.MoonShot
-                model = ChatModel.MOON_V1_8K
+            if (level >= options.google) {
+                provider = ChatModelProvider.Google
+                model = ChatModel.GEM_PRO
             }
-            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT3
@@ -356,29 +354,25 @@ export default class Web extends Service {
         }
         // 16k input
         else if (count >= 8000 && count < 16000) {
-            /*
-            if (level >= options.moonshot) {
-                provider = ChatModelProvider.MoonShot
-                model = ChatModel.MOON_V1_32K
+            if (level >= options.glm) {
+                provider = ChatModelProvider.GLM
+                model = ChatModel.GLM_3_TURBO
             }
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
                 model = ChatModel.GEM_PRO
             }
-            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT3_16K
+                model = ChatModel.GPT3
             }
         }
         // 32k input
         else if (count >= 16000 && count < 32000) {
-            /*
-            if (level >= options.moonshot) {
-                provider = ChatModelProvider.MoonShot
-                model = ChatModel.MOON_V1_32K
+            if (level >= options.glm) {
+                provider = ChatModelProvider.GLM
+                model = ChatModel.GLM_4
             }
-            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_TURBO
@@ -386,23 +380,29 @@ export default class Web extends Service {
         }
         // 128k input
         else if (count >= 32000 && count < 128000) {
-            /*
-            if (level >= options.moonshot) {
-                provider = ChatModelProvider.MoonShot
-                model = ChatModel.MOON_V1_128K
+            if (level >= options.glm) {
+                provider = ChatModelProvider.GLM
+                model = ChatModel.GLM_4
             }
-            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_TURBO
             }
         } else throw new Error('Context is too long')
 
-        // handle excel table
+        // handle excel table use GPT-4
         if (exts.includes('xlsx') || exts.includes('xls') || exts.includes('csv')) {
+            if (level >= options.glm) {
+                provider = ChatModelProvider.GLM
+                model = ChatModel.GLM_4
+            }
+            if (level >= options.google) {
+                provider = ChatModelProvider.Google
+                model = ChatModel.GEM_PRO
+            }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = count < 8000 ? ChatModel.GPT4 : ChatModel.GPT4_TURBO
+                model = ChatModel.GPT4_TURBO
             }
         }
 
@@ -412,18 +412,16 @@ export default class Web extends Service {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_4V
             }
-            /*
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
                 model = ChatModel.GEM_VISION
             }
-            */
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
                 model = ChatModel.GPT4_VISION
             }
         }
-        if (!provider || !model) throw new Error('Context is too long or invalid')
+        if (!provider || !model) throw new Error('Can not find an available model')
 
         return { provider, model }
     }
@@ -435,11 +433,10 @@ export default class Web extends Service {
             case ModelModel.DALL_E_2:
             case ModelModel.DALL_E_3:
                 return 10
-            case ModelModel.GPT3:
             case ModelModel.SPARK_V3_5:
             case ModelModel.ERNIE_3_5:
             case ModelModel.MOON_V1_8K:
-                return 2
+            case ModelModel.GPT3:
             case ModelModel.GLM_4:
             case ModelModel.ERNIE_4:
             case ModelModel.GEM_PRO:
@@ -547,13 +544,11 @@ export default class Web extends Service {
                         content: `
                         # ${ctx.__('File Reference')} ${count}
                         ## ${ctx.__('File Info')}
-                        ${ctx.__('File name:')}${item.resourceName}
-                        ${ctx.__('File size:')}${file.fileSize} Bytes
-                        ${ctx.__('Total pages:')}${file.page}
+                        ${ctx.__('File Name:')}${item.resourceName}
+                        ${ctx.__('File Size:')}${file.fileSize} Bytes
+                        ${ctx.__('Total Pages:')}${file.page}
                         ## ${ctx.__('File Content')}
                         ${pages.map(v => v.content).join('\n')}
-                        ## ${ctx.__('Note')}
-                        All the data in CSV format needs to be output in table format.
                     `
                     })
                 }

@@ -33,7 +33,7 @@ const LEVEL_SCORE: number[] = [0, 10, 100, 300]
 
 const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
     [ChatModelProvider.IFlyTek]: 0,
-    [ChatModelProvider.GLM]: 0,
+    [ChatModelProvider.GLM]: 1,
     [ChatModelProvider.Baidu]: 1,
     [ChatModelProvider.MoonShot]: 1,
     [ChatModelProvider.Google]: 2,

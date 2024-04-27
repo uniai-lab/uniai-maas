@@ -26,6 +26,7 @@ import pdf2md from 'pdf2md-ts'
 import { parseOfficeAsync } from 'officeparser'
 import sharp from 'sharp'
 import $ from '@util/util'
+import csvToMarkdown from 'csv-to-markdown-table'
 
 const convertSync = util.promisify(libreoffice.convert)
 
@@ -109,19 +110,17 @@ export default class Util extends Service {
     async extractPages(path: string) {
         const ext = extname(path).replace('.', '').toLowerCase()
 
-        if (['xls', 'xlsx', 'et'].includes(ext)) {
+        if (['xls', 'xlsx', 'et', 'csv'].includes(ext)) {
             const res = xlsx.readFile(path)
-            const arr = Object.keys(res.Sheets).map(
-                i => `**Sheet Name: ${i}**<hr>${xlsx.utils.sheet_to_csv(res.Sheets[i])}<hr>`
-            )
-            return arr
+            return Object.keys(res.Sheets).map((v, i) => {
+                const csv = xlsx.utils.sheet_to_csv(res.Sheets[v])
+                const table = csvToMarkdown(csv, ',', true)
+                return `# Sheet ${i + 1}: ${v}\n${table}`
+            })
         } else {
-            const buffer =
-                extname(path).toLowerCase() === '.pdf'
-                    ? readFileSync(path)
-                    : await convertSync(readFileSync(path), 'pdf', undefined)
+            const buffer = ext === 'pdf' ? readFileSync(path) : await convertSync(readFileSync(path), 'pdf', undefined)
             const pages = await pdf2md(buffer)
-            return pages.map((v, i) => `**Page Number: ${i + 1}**<hr>${v}<hr>`)
+            return pages.map((v, i) => `[PAGE NO.${i + 1} START]\n${v}\n[PAGE NO.${i + 1} END]`)
         }
     }
 
