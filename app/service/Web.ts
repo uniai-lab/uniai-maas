@@ -418,7 +418,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_VISION
+                model = ChatModel.GPT4_TURBO
             }
         }
         if (!provider || !model) throw new Error('Can not find an available model')
@@ -440,13 +440,11 @@ export default class Web extends Service {
             case ModelModel.GLM_4:
             case ModelModel.ERNIE_4:
             case ModelModel.GEM_PRO:
-            case ModelModel.GPT3_16K:
             case ModelModel.MOON_V1_32K:
                 return 5
             case ModelModel.MOON_V1_128K:
             case ModelModel.GPT4_TURBO:
             case ModelModel.GLM_4V:
-            case ModelModel.GPT4_VISION:
             case ModelModel.GEM_VISION:
                 return 20
             case ModelModel.GPT4:
