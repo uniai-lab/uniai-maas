@@ -22,7 +22,7 @@ const LIMIT_UPLOAD_SIZE = 20 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 
 const FREE_CHAT_CHANCE: number[] = [5, 10, 20, 30]
-const FREE_UPLOAD_CHANCE: number[] = [2, 5, 10, 15]
+const FREE_UPLOAD_CHANCE: number[] = [1, 5, 10, 20]
 /*
  * Level 0 -> 0 score
  * Level 1 -> 30 score

@@ -330,11 +330,11 @@ export default class Web extends Service {
         let provider: ChatModelProvider | null = null
         let model: ChatModel | null = null
 
-        // 6k
+        // 6k input
         if (count < 6000) {
             if (level >= options.iflytek) {
                 provider = ChatModelProvider.IFlyTek
-                model = ChatModel.SPARK_V3
+                model = ChatModel.SPARK_V1
             }
         }
         // 8k input
@@ -386,12 +386,16 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_TURBO
+                model = ChatModel.GPT4_O
             }
         } else throw new Error('Context is too long')
 
         // handle excel table use GPT-4
         if (exts.includes('xlsx') || exts.includes('xls') || exts.includes('csv')) {
+            if (level >= options.iflytek) {
+                provider = ChatModelProvider.IFlyTek
+                model = ChatModel.SPARK_V3
+            }
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_4
@@ -402,7 +406,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_TURBO
+                model = ChatModel.GPT4_O
             }
         }
 
@@ -418,7 +422,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_TURBO
+                model = ChatModel.GPT4_O
             }
         }
         if (!provider || !model) throw new Error('Can not find an available model')
@@ -433,19 +437,24 @@ export default class Web extends Service {
             case ModelModel.DALL_E_2:
             case ModelModel.DALL_E_3:
                 return 10
-            case ModelModel.SPARK_V3_5:
             case ModelModel.ERNIE_3_5:
+            case ModelModel.GLM_3_TURBO:
+            case ModelModel.SPARK_V3:
+                return 2
+            case ModelModel.SPARK_V3_5:
             case ModelModel.MOON_V1_8K:
             case ModelModel.GPT3:
             case ModelModel.GLM_4:
             case ModelModel.ERNIE_4:
             case ModelModel.GEM_PRO:
-            case ModelModel.MOON_V1_32K:
                 return 5
-            case ModelModel.MOON_V1_128K:
+            case ModelModel.MOON_V1_32K:
+                return 10
+            case ModelModel.GPT4_O:
             case ModelModel.GPT4_TURBO:
             case ModelModel.GLM_4V:
             case ModelModel.GEM_VISION:
+            case ModelModel.MOON_V1_128K:
                 return 20
             case ModelModel.GPT4:
                 return 40
