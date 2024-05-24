@@ -252,8 +252,7 @@ export default class UniAI extends Service {
 
         // compress image
         if (typeId === ResourceType.IMAGE && fileSize > LIMIT_IMG_SIZE) {
-            const path = await ctx.service.util.compressImage(file.filepath)
-            filePath = path
+            filePath = await ctx.service.util.compressImage(file.filepath)
             fileSize = statSync(filePath).size
             fileExt = extname(filePath).replace('.', '').toLowerCase()
             fileName = fileName.replace(extname(fileName), `.${fileExt}`) // replace file name ext

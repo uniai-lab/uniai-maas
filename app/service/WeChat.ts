@@ -42,8 +42,10 @@ const WX_MSG_CHECK_URL = 'https://api.weixin.qq.com/wxa/msg_sec_check' // use PO
 const WX_MEDIA_CHECK_URL = 'https://api.weixin.qq.com/wxa/img_sec_check' // use POST
 const WX_QR_CODE_URL = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit'
 const { WX_APP_ID, WX_APP_SECRET } = process.env
+
+// WeChat use free model, Pro use advanced model
 const PROVIDER = ChatModelProvider.IFlyTek
-const MODEL = ChatModel.SPARK_V3
+const MODEL = ChatModel.SPARK_V1
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {

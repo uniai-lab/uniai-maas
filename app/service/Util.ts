@@ -91,7 +91,7 @@ export default class Util extends Service {
             content = Object.keys(res.Sheets)
                 .map(i => decode(Buffer.from(xlsx.utils.sheet_to_txt(res.Sheets[i]), 'binary'), 'utf-16'))
                 .join('\n')
-        } else if (['docx', 'pptx', 'odt', 'odp', 'ods'].includes(ext)) return await parseOfficeAsync(path)
+        } else if (['docx', 'pptx', 'odt', 'odp', 'ods'].includes(ext)) content = await parseOfficeAsync(path)
         else if (['doc', 'ppt', 'pdf'].includes(ext)) {
             const buffer = readFileSync(path)
             const { text } = await pdf(ext === 'pdf' ? buffer : await convertSync(buffer, 'pdf', undefined))

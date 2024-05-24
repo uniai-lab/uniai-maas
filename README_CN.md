@@ -122,9 +122,6 @@ MJ_TOKEN= # mj 令牌
 # stability ai
 STABILITY_KEY=
 
-# 其他模型，本地部署模型，开源模型
-OTHER_API=
-
 # PostgreSQL 数据库
 DB_DIALECT=postgres
 POSTGRES_HOST=localhost

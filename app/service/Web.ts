@@ -42,8 +42,8 @@ const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.g
 
 const LIMIT_IMG_SIZE = 1 * 1024 * 1024 // image over 1mb need compress
 
-const TRANSLATE_PROVIDER = ChatModelProvider.OpenAI
-const TRANSLATE_MODEL = ChatModel.GPT3
+const TRANSLATE_PROVIDER = ChatModelProvider.GLM
+const TRANSLATE_MODEL = ChatModel.GLM_6B
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
@@ -482,11 +482,12 @@ export default class Web extends Service {
             model = ImagineModel.DALL_E_3
         }
 
-        // level 3
+        /* level 3
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
         }
+        */
         return { provider, model }
     }
 
@@ -496,6 +497,7 @@ export default class Web extends Service {
         const message: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `${prompt}\n${input}` }]
         const res = await this.ctx.service.uniAI.chat(message, false, TRANSLATE_PROVIDER, TRANSLATE_MODEL)
         if (res instanceof Readable) throw new Error('Chat response is stream')
+        console.log(res)
         return res.content
     }
 
@@ -650,13 +652,14 @@ export default class Web extends Service {
         output.write(JSON.stringify(data))
 
         // imagine
-        const res = await ctx.service.uniAI.imagine(await this.translate(input), '', 1, 1024, 1024, provider, model)
+        // await this.translate(input)
+        const res = await ctx.service.uniAI.imagine(input, '', 1, 1024, 1024, provider, model)
         // watch task
         let loop = 0
         while (loop < LOOP_MAX) {
             loop++
             // check task status
-            const task = await this.ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
+            const task = await ctx.service.uniAI.task(res.taskId, data.model as ImagineModelProvider)
             if (!task[0]) throw new Error('Task not found')
             if (task[0].fail) throw new Error(task[0].fail)
 

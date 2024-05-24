@@ -15,14 +15,14 @@ import {
 const { ADMIN_TOKEN } = process.env
 
 const ADV_REWARD_LIMIT_COUNT = 3
-const ADV_REWARD_CHAT_CHANCE = 5
-const SHARE_REWARD_CHAT_CHANCE = 5
+const ADV_REWARD_CHAT_CHANCE = 10
+const SHARE_REWARD_CHAT_CHANCE = 20
 const SHARE_REWARD_UPLOAD_CHANCE = 5
 const LIMIT_UPLOAD_SIZE = 20 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 
 const FREE_CHAT_CHANCE: number[] = [5, 10, 20, 30]
-const FREE_UPLOAD_CHANCE: number[] = [1, 5, 10, 20]
+const FREE_UPLOAD_CHANCE: number[] = [5, 10, 20, 30]
 /*
  * Level 0 -> 0 score
  * Level 1 -> 30 score

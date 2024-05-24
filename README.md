@@ -129,9 +129,6 @@ MJ_TOKEN= # mj token
 # stability ai
 STABILITY_KEY=
 
-# other models, local deployed models, opensource models
-OTHER_API=
-
 # PostgreSQL database
 DB_DIALECT=postgres
 POSTGRES_HOST=localhost
