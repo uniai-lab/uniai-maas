@@ -334,7 +334,7 @@ export default class Web extends Service {
         if (count < 6000) {
             if (level >= options.iflytek) {
                 provider = ChatModelProvider.IFlyTek
-                model = ChatModel.SPARK_V3
+                model = ChatModel.SPARK_V3_5
             }
         }
         // 8k input

@@ -315,8 +315,11 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
         dialogId = dialog.id
 
+        const system =
+            (await this.getConfig('SYSTEM_PROMPT')) +
+            ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
-        const prompts: ChatMessage[] = []
+        const prompts: ChatMessage[] = [{ role: SYSTEM, content: ctx.__('Prompt', system) }]
 
         // get pro version (temporarily announcement)
         if (input === ctx.__('pro version')) {

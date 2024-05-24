@@ -44,7 +44,7 @@
     "prompt: markdown to json": "Convert the above markdown to json format, with the chapter title as key, value as the sub chapter title, and the content as an empty string",
     "You have another processing chat": "You have another processing chat",
     "Role": "Role Play: You are %s",
-    "Prompt": "Scenario Requirement: %s",
+    "Prompt": "[Important]: %s",
     "Language": "Use the same language as the user's input",
     "Start Topic": "===============Instructional Divider, the following is a dialogue between two parties===============",
     "Invalid user access": "Invalid user access",
