@@ -264,6 +264,7 @@ export default class Web extends Service {
             isEffect: true
         }
         const output: PassThrough = new PassThrough()
+        const chartPrompt = await this.getConfig('CHART_PROMPT')
 
         this.useOutputMode(input, mode, data, output)
             .then(select => {
@@ -272,6 +273,9 @@ export default class Web extends Service {
                         return this.doChat(input, system, assistant, data, output)
                     case 2:
                         return this.doImagine(input, data, output)
+                    case 3:
+                        system += chartPrompt
+                        return this.doChat(input, system, assistant, data, output)
                     default:
                         return this.doChat(input, system, assistant, data, output)
                 }
@@ -301,11 +305,12 @@ export default class Web extends Service {
         output.write(JSON.stringify(data))
 
         const prompt = [
-            { role: ChatRoleEnum.USER, content: `${input}\n${await this.getConfig('PROMPT_MODEL_SELECT')}` }
+            { role: ChatRoleEnum.SYSTEM, content: await this.getConfig('PROMPT_MODEL_SELECT') },
+            { role: ChatRoleEnum.USER, content: `User Input:\n${input}` }
         ]
         const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
         if (res instanceof Readable) throw new Error('Chat response is stream')
-        mode = parseInt(res.content)
+        mode = $.jsonFix<{ mode: number }>(res.content)?.mode || OutputMode.TEXT
 
         // send message to front mode is selected
         if (mode === OutputMode.IMAGE) {
@@ -527,7 +532,7 @@ export default class Web extends Service {
         // system prompt and initial assistant prompt
         system = system || (await this.getConfig('SYSTEM_PROMPT'))
         system += ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
-        prompts.push({ role: SYSTEM, content: ctx.__('Prompt', system) })
+        prompts.push({ role: SYSTEM, content: system })
         if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
 
         // add history chat including resource files

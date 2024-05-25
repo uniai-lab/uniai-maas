@@ -11,6 +11,7 @@ import { createReadStream, existsSync, readFileSync, writeFileSync } from 'fs'
 import axios, { AxiosRequestConfig } from 'axios'
 import { randomUUID } from 'crypto'
 import isJSON from '@stdlib/assert-is-json'
+import fixJSON from 'json-fixer'
 import { sentences } from 'sbd'
 import { encode, decode } from 'gpt-tokenizer'
 import { similarity } from 'ml-distance'
@@ -131,6 +132,16 @@ export default {
     json<T>(str: string | null) {
         if (isJSON(str)) return JSON.parse(str) as T
         else return null
+    },
+
+    jsonFix<T>(str: string | null) {
+        try {
+            if (!str) return null
+            else return fixJSON(str).data as T
+        } catch (e) {
+            console.error(e)
+            return null
+        }
     },
 
     /**
