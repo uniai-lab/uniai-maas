@@ -432,22 +432,18 @@ export default class UniAI extends Service {
             res.data = result
         } else if (provider === AuditProvider.AI) {
             const prompt = await this.getConfig('AUDIT_PROMPT')
-            const message: ChatMessage[] = [{ role: ChatRoleEnum.SYSTEM, content: prompt + content }]
+            const message: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: prompt + content }]
 
-            try {
-                const result = await ai.chat(message, {
-                    provider: ChatModelProvider.GLM,
-                    model: GLMChatModel.GLM_6B,
-                    stream: false,
-                    temperature: 0
-                })
-                const json = $.json<AIAuditResponse>((result as ChatResponse).content)
-                res.flag = json?.safe || false
-                res.data = result
-            } catch (e) {
-                res.flag = false
-                res.data = e as Error
-            }
+            const result = await ai.chat(message, {
+                provider: ChatModelProvider.GLM,
+                model: GLMChatModel.GLM_6B,
+                stream: false,
+                temperature: 0
+            })
+            if (result instanceof Readable) throw new Error('Chat response is stream')
+            const json = $.jsonFix<AIAuditResponse>(result.content)
+            res.flag = json?.safe || false
+            res.data = result
         } else {
             const result = ctx.service.util.mintFilter(content)
             res.flag = result.verify

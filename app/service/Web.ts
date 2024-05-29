@@ -339,7 +339,7 @@ export default class Web extends Service {
         if (count < 6000) {
             if (level >= options.iflytek) {
                 provider = ChatModelProvider.IFlyTek
-                model = ChatModel.SPARK_V3_5
+                model = ChatModel.SPARK_PRO
             }
         }
         // 8k input
@@ -399,7 +399,7 @@ export default class Web extends Service {
         if (exts.includes('xlsx') || exts.includes('xls') || exts.includes('csv')) {
             if (level >= options.iflytek) {
                 provider = ChatModelProvider.IFlyTek
-                model = ChatModel.SPARK_V3
+                model = ChatModel.SPARK_PRO
             }
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
@@ -444,9 +444,9 @@ export default class Web extends Service {
                 return 10
             case ModelModel.ERNIE_3_5:
             case ModelModel.GLM_3_TURBO:
-            case ModelModel.SPARK_V3:
+            case ModelModel.SPARK_PRO:
                 return 2
-            case ModelModel.SPARK_V3_5:
+            case ModelModel.SPARK_MAX:
             case ModelModel.MOON_V1_8K:
             case ModelModel.GPT3:
             case ModelModel.GLM_4:
@@ -525,6 +525,8 @@ export default class Web extends Service {
             }
         })
         chats.reverse()
+        // first message should not be assistant
+        while (chats[0] && chats[0].role === ChatRoleEnum.ASSISTANT) chats.shift()
 
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []

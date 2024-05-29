@@ -236,8 +236,8 @@ export default [
     {
         id: 1,
         key: 'APP_NAME',
-        value: '乐聊-微信小程序',
-        description: '小程序名称'
+        value: '乐聊-LeChat',
+        description: '应用名称'
     },
     {
         id: 2,
@@ -254,7 +254,7 @@ export default [
     {
         id: 4,
         key: 'SYSTEM_PROMPT',
-        value: readFileSync(`${ROOT_PATH}/app/data/prompt-system.md`, 'utf-8'),
+        value: readFileSync(`${ROOT_PATH}/app/data/agent/prompt-system.md`, 'utf-8'),
         description: 'AI默认提示词'
     },
     {
@@ -392,7 +392,7 @@ export default [
     {
         id: 27,
         key: 'AUDIT_PROMPT',
-        value: readFileSync(`${ROOT_PATH}/app/data/prompt-audit.md`, 'utf-8'),
+        value: readFileSync(`${ROOT_PATH}/app/data/agent/prompt-audit.md`, 'utf-8'),
         description: 'AI审核提示词'
     },
     {
@@ -494,7 +494,7 @@ export default [
     {
         id: 39,
         key: 'PROMPT_MODEL_SELECT',
-        value: readFileSync(`${ROOT_PATH}/app/data/prompt-model-select.md`, 'utf-8')
+        value: readFileSync(`${ROOT_PATH}/app/data/agent/prompt-model-select.md`, 'utf-8')
     },
     {
         id: 40,
@@ -510,13 +510,13 @@ export default [
     {
         id: 42,
         key: 'IMAGINE_PROMPT',
-        value: readFileSync(`${ROOT_PATH}/app/data/prompt-imagine.md`, 'utf-8'),
+        value: readFileSync(`${ROOT_PATH}/app/data/agent/prompt-imagine.md`, 'utf-8'),
         description: '图片生成优化'
     },
     {
         id: 43,
         key: 'CHART_PROMPT',
-        value: readFileSync(`${ROOT_PATH}/app/data/prompt-chart.md`, 'utf-8'),
+        value: readFileSync(`${ROOT_PATH}/app/data/agent/prompt-chart.md`, 'utf-8'),
         description: 'ECharts图表生成优化'
     }
 ]
