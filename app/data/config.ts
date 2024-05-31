@@ -21,8 +21,8 @@ const SHARE_REWARD_UPLOAD_CHANCE = 5
 const LIMIT_UPLOAD_SIZE = 20 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 
-const FREE_CHAT_CHANCE: number[] = [5, 10, 20, 30]
-const FREE_UPLOAD_CHANCE: number[] = [5, 10, 20, 30]
+const FREE_CHAT_CHANCE: number[] = [10, 20, 30, 30]
+const FREE_UPLOAD_CHANCE: number[] = [5, 10, 20, 20]
 /*
  * Level 0 -> 0 score
  * Level 1 -> 30 score
@@ -35,8 +35,8 @@ const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
     [ChatModelProvider.IFlyTek]: 0,
     [ChatModelProvider.GLM]: 1,
     [ChatModelProvider.Baidu]: 1,
-    [ChatModelProvider.MoonShot]: 1,
-    [ChatModelProvider.Google]: 2,
+    [ChatModelProvider.MoonShot]: 2,
+    [ChatModelProvider.Google]: 3,
     [ChatModelProvider.OpenAI]: 3
 }
 

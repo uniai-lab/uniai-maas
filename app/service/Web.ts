@@ -310,7 +310,7 @@ export default class Web extends Service {
         ]
         const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
         if (res instanceof Readable) throw new Error('Chat response is stream')
-        mode = $.jsonFix<{ mode: number }>(res.content)?.mode || OutputMode.TEXT
+        mode = $.jsonFix<{ mode: OutputMode }>(res.content)?.mode || OutputMode.TEXT
 
         // send message to front mode is selected
         if (mode === OutputMode.IMAGE) {
@@ -445,10 +445,10 @@ export default class Web extends Service {
             case ModelModel.ERNIE_3_5:
             case ModelModel.GLM_3_TURBO:
             case ModelModel.SPARK_PRO:
+            case ModelModel.GPT3:
                 return 2
             case ModelModel.SPARK_MAX:
             case ModelModel.MOON_V1_8K:
-            case ModelModel.GPT3:
             case ModelModel.GLM_4:
             case ModelModel.ERNIE_4:
             case ModelModel.GEM_PRO:
@@ -460,9 +460,9 @@ export default class Web extends Service {
             case ModelModel.GLM_4V:
             case ModelModel.GEM_VISION:
             case ModelModel.MOON_V1_128K:
-                return 20
+                return 15
             case ModelModel.GPT4:
-                return 40
+                return 30
             default:
                 return 1
         }
