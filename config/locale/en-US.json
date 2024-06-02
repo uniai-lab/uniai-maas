@@ -17,7 +17,7 @@
     "you are": "You are LeChat, a large language model (LLM), developed to answer according to the document context.",
     "document content start": "Document content：",
     "document content end": "Document end.",
-    "answer according to": "Answer the question according to the information contained in the document. If you cannot answer the question based on the document content, please just reply 'The document does not contain the relevant information', question: ",
+    "answer according to": "【Important】Answer the question according to the information contained in the document. If you cannot answer the question based on the document content, please just reply 'The document does not contain the relevant information', question: ",
     "Chance of upload not enough, waiting for one week": "Chance of upload not enough, waiting for one week.",
     "Chance of chat not enough, waiting for one week": "Chance of chat not enough, waiting for one week.",
     "Fail to get wechat access token": "Fail to get wechat access token.",

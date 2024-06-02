@@ -15,7 +15,7 @@
     "you are": "角色定义：乐聊机器人，任务：分析文档内容并回答用户问题。",
     "document content start": "以下是供参考的文档内容：",
     "document content end": "文档内容至此结束，下面是历史对话。",
-    "answer according to": "请务必根据文档内容和历史对话的上下文进行回答。",
+    "answer according to": "【重要】根据文档内容和历史对话进行回答，不得回到与上文无关的话题，如问题与上文档内容无关，回答“很抱歉，无法在文中找到相关内容”。问题是：",
     "Chance of upload not enough, waiting for one week": "上传次数不足，请等待一周试试",
     "Chance of chat not enough, waiting for one week": "聊天次数不足，请等待一周试试",
     "Fail to get wechat access token": "获取微信 Access Token 失败",

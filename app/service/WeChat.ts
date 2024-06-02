@@ -315,11 +315,11 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
         dialogId = dialog.id
 
-        const system =
-            (await this.getConfig('SYSTEM_PROMPT')) +
-            ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
+        let system = await this.getConfig('SYSTEM_PROMPT')
+        system += ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
+
         const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
-        const prompts: ChatMessage[] = [{ role: SYSTEM, content: ctx.__('Prompt', system) }]
+        const prompts: ChatMessage[] = []
 
         // get pro version (temporarily announcement)
         if (input === ctx.__('pro version')) {
@@ -349,27 +349,24 @@ export default class WeChat extends Service {
             // query resource pages by input prompt
             const resources = await ctx.service.uniAI.queryResources(input, resourceId, EmbedModelProvider.Other, 3)
             const { fileName, fileSize, page, pages } = resources[0]
-            prompts.push({
-                role: SYSTEM,
-                content: `
-                    # ${ctx.__('Reference File')}
-                    ## ${ctx.__('File Info')}
-                    ${ctx.__('File name:')}${fileName}
-                    ${ctx.__('File size:')}${fileSize} Bytes
-                    ${ctx.__('Total pages:')}${page}
-                    ## ${ctx.__('File Content:')}
-                    ${$.subTokens(pages.map(v => v.content).join('\n'), 5000)}
-                    ${ctx.__('document content end')}
-                    ${ctx.__('answer according to')}
-                    `
-            })
+            system += `
+            # ${ctx.__('Reference File')}
+            ## ${ctx.__('File Info')}
+            ${ctx.__('File name:')}${fileName}
+            ${ctx.__('File size:')}${fileSize} Bytes
+            ${ctx.__('Total pages:')}${page}
+            ## ${ctx.__('File Content:')}
+            ${$.subTokens(pages.map(v => v.content).join('\n'), 5000)}
+            ${ctx.__('document content end')}
+            ${ctx.__('answer according to')}
+            `
         }
 
-        // add user chat history
+        // add user chat history, first message role should not be assistant
         for (const { role, content } of dialog.chats) prompts.push({ role, content })
 
         // add user current input
-        prompts.push({ role: USER, content: input })
+        prompts.push({ role: USER, content: system + input })
         console.log(prompts)
 
         // WeChat require to audit input content

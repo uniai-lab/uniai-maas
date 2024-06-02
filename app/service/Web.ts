@@ -301,14 +301,14 @@ export default class Web extends Service {
         const { ctx } = this
 
         // send message to front, auto selecting mode
-        data.content = this.ctx.__('selecting model for user')
+        data.content = ctx.__('selecting model for user')
         output.write(JSON.stringify(data))
 
         const prompt = [
             { role: ChatRoleEnum.SYSTEM, content: await this.getConfig('PROMPT_MODEL_SELECT') },
             { role: ChatRoleEnum.USER, content: `User Input:\n${input}` }
         ]
-        const res = await this.ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
+        const res = await ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
         if (res instanceof Readable) throw new Error('Chat response is stream')
         mode = $.jsonFix<{ mode: OutputMode }>(res.content)?.mode || OutputMode.TEXT
 
@@ -317,6 +317,7 @@ export default class Web extends Service {
             data.content = ctx.__('system detect imagine task')
             output.write(JSON.stringify(data))
         }
+        console.log('mode', mode)
         return mode
     }
 
