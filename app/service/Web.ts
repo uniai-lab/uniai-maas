@@ -269,11 +269,11 @@ export default class Web extends Service {
         this.useOutputMode(input, mode, data, output)
             .then(select => {
                 switch (select) {
-                    case 1:
+                    case OutputMode.TEXT:
                         return this.doChat(input, system, assistant, data, output)
-                    case 2:
+                    case OutputMode.IMAGE:
                         return this.doImagine(input, data, output)
-                    case 3:
+                    case OutputMode.CHART:
                         system += chartPrompt
                         return this.doChat(input, system, assistant, data, output)
                     default:
@@ -335,12 +335,17 @@ export default class Web extends Service {
         // default provider and model
         let provider: ChatModelProvider | null = null
         let model: ChatModel | null = null
+        if (!level) {
+            provider = ChatModelProvider.IFlyTek
+            model = ChatModel.SPARK_LITE
+            return { provider, model }
+        }
 
         // 6k input
         if (count < 6000) {
             if (level >= options.iflytek) {
                 provider = ChatModelProvider.IFlyTek
-                model = ChatModel.SPARK_PRO
+                model = ChatModel.SPARK_MAX
             }
         }
         // 8k input

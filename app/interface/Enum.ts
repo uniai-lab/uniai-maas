@@ -22,8 +22,8 @@ export enum FLYAuditType {
 export enum OutputMode {
     AUTO,
     TEXT,
-    IMAGE,
-    CHART
+    CHART,
+    IMAGE
 }
 
 export enum ResourceType {
