@@ -493,12 +493,10 @@ export default class Web extends Service {
             model = ImagineModel.DALL_E_3
         }
 
-        /* level 3
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
         }
-        */
         return { provider, model }
     }
 

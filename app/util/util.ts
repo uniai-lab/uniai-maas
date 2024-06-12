@@ -266,6 +266,24 @@ export default {
     },
 
     /**
+     * Returns the date of the same time in the next year.
+     *
+     * @param date - The date from which to calculate the next year's date. Defaults to the current date.
+     * @returns A new Date object representing the same time in the next year.
+     */
+    nextYear(date: Date = new Date()): Date {
+        return new Date(
+            date.getFullYear() + 1,
+            date.getMonth(),
+            date.getDate(),
+            date.getHours(),
+            date.getMinutes(),
+            date.getSeconds(),
+            date.getMilliseconds()
+        )
+    },
+
+    /**
      * Formats a Date object according to a given template.
      *
      * @param date - The Date object to format. Defaults to the current date.
