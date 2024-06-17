@@ -17,7 +17,8 @@ import {
     EmbedModelProvider,
     ImagineModelProvider,
     ImagineModel,
-    ModelModel
+    ModelModel,
+    MidJourneyImagineModel
 } from 'uniai'
 import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
@@ -661,6 +662,7 @@ export default class Web extends Service {
         data.content = ctx.__('prepare to imagine')
         data.file = { name: '', url: LOAD_IMG, size: 0, ext: 'image/gif' }
         output.write(JSON.stringify(data))
+        if (model === MidJourneyImagineModel.MJ) input = await this.translate(input)
 
         // imagine
         // await this.translate(input)
