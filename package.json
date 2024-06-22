@@ -40,7 +40,7 @@
         "dotenv": "^16.4.5",
         "egg": "^3.23.0",
         "egg-cors": "^3.0.1",
-        "egg-minio-typescript": "^1.0.1",
+        "egg-minio-typescript": "^1.1.1",
         "egg-multipart": "^3.3.0",
         "egg-redis": "^2.6.0",
         "egg-scripts": "^3.0.1",
