@@ -201,7 +201,7 @@ export default class UniAI extends Service {
 
     // chat to model
     async chat(
-        messages: ChatMessage[],
+        messages: ChatMessage[] | string,
         stream: boolean = false,
         provider: ChatModelProvider = ChatModelProvider.OpenAI,
         model?: ChatModel,
@@ -209,7 +209,7 @@ export default class UniAI extends Service {
         temperature?: number,
         maxLength?: number
     ) {
-        return ai.chat(messages, { provider, model, stream, top, temperature, maxLength })
+        return await ai.chat(messages, { provider, model, stream, top, temperature, maxLength })
     }
 
     // concat chat stream chunk

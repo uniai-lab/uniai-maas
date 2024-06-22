@@ -248,7 +248,7 @@ export default class Web extends Service {
         })
         if (!dialog) throw new Error('Dialog is not available')
 
-        // update title
+        // update title if null title
         if (!dialog.title) await dialog.update({ title: $.subTokens(input, TITLE_SUB_TOKEN) })
 
         const data: ChatResponse = {
@@ -265,26 +265,17 @@ export default class Web extends Service {
             isEffect: true
         }
         const output: PassThrough = new PassThrough()
-        const chartPrompt = await this.getConfig('CHART_PROMPT')
+        const prompts: ChatMessage[] = []
 
-        this.useOutputMode(input, mode, data, output)
-            .then(select => {
-                switch (select) {
-                    case OutputMode.TEXT:
-                        return this.doChat(input, system, assistant, data, output)
-                    case OutputMode.IMAGE:
-                        return this.doImagine(input, data, output)
-                    case OutputMode.CHART:
-                        system += chartPrompt
-                        return this.doChat(input, system, assistant, data, output)
-                    default:
-                        return this.doChat(input, system, assistant, data, output)
-                }
-            })
-            .catch((e: Error) => {
-                console.error(e)
-                output.destroy(e)
-            })
+        // push system prompt, assistant prompt, user prompt
+        system = system || (await this.getConfig('SYSTEM_PROMPT'))
+        system =
+            ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString())) + '\n' + system
+        prompts.push({ role: ChatRoleEnum.SYSTEM, content: system })
+        if (assistant) prompts.push({ role: ChatRoleEnum.ASSISTANT, content: assistant })
+        prompts.push({ role: ChatRoleEnum.USER, content: input })
+
+        this.autoModeChat(prompts, mode, data, output)
 
         return output as Readable
     }
@@ -296,30 +287,39 @@ export default class Web extends Service {
      * @param data Chat response data
      * @param output PassThrough stream for output
      */
-    async useOutputMode(input: string, mode: OutputMode, data: ChatResponse, output: PassThrough) {
-        if (mode) return mode
+    async autoModeChat(prompts: ChatMessage[], mode: OutputMode, data: ChatResponse, output: PassThrough) {
+        try {
+            const { ctx } = this
+            const input = prompts[prompts.length - 1].content
+            if (!mode) {
+                // send message to front, auto selecting mode
+                data.content = ctx.__('selecting model for user')
+                output.write(JSON.stringify(data))
 
-        const { ctx } = this
-
-        // send message to front, auto selecting mode
-        data.content = ctx.__('selecting model for user')
-        output.write(JSON.stringify(data))
-
-        const prompt = [
-            { role: ChatRoleEnum.SYSTEM, content: await this.getConfig('PROMPT_MODEL_SELECT') },
-            { role: ChatRoleEnum.USER, content: `User Input:\n${input}` }
-        ]
-        const res = await ctx.service.uniAI.chat(prompt, false, ChatModelProvider.GLM, ChatModel.GLM_6B, 1, 0)
-        if (res instanceof Readable) throw new Error('Chat response is stream')
-        mode = $.jsonFix<{ mode: OutputMode }>(res.content)?.mode || OutputMode.TEXT
-
-        // send message to front mode is selected
-        if (mode === OutputMode.IMAGE) {
-            data.content = ctx.__('system detect imagine task')
-            output.write(JSON.stringify(data))
+                mode = await this.ctx.service.agent.useOutputMode(input)
+            }
+            // send message to front, mode is selected
+            if (mode === OutputMode.IMAGE) {
+                data.content = ctx.__('system detect imagine task')
+                output.write(JSON.stringify(data))
+            }
+            // run function according to mode
+            switch (mode) {
+                case OutputMode.TEXT:
+                    return this.doChat(prompts, data, output)
+                case OutputMode.IMAGE:
+                    return this.doImagine(input, data, output)
+                case OutputMode.CHART:
+                    // add chart prompt to system prompt
+                    prompts[0].content += await this.getConfig('CHART_PROMPT')
+                    return this.doChat(prompts, data, output)
+                default:
+                    return this.doChat(prompts, data, output)
+            }
+        } catch (e) {
+            console.error(e)
+            output.destroy(e as Error)
         }
-        console.log('mode', mode)
-        return mode
     }
 
     /**
@@ -494,24 +494,17 @@ export default class Web extends Service {
             model = ImagineModel.DALL_E_3
         }
 
+        /*
         if (level >= options['midjourney']) {
             provider = ImagineModelProvider.MidJourney
             model = ImagineModel.MJ
         }
+        */
         return { provider, model }
     }
 
-    // translate input content
-    async translate(input: string) {
-        const prompt = await this.getConfig('IMAGINE_PROMPT')
-        const message: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: `${prompt}\n${input}` }]
-        const res = await this.ctx.service.uniAI.chat(message, false, TRANSLATE_PROVIDER, TRANSLATE_MODEL)
-        if (res instanceof Readable) throw new Error('Chat response is stream')
-        console.log(res)
-        return res.content
-    }
-
-    async doChat(input: string, system: string, assistant: string, data: ChatResponse, output: PassThrough) {
+    // do chat model
+    async doChat(prompts: ChatMessage[], data: ChatResponse, output: PassThrough) {
         const { ctx } = this
 
         // check user chat chance
@@ -533,14 +526,8 @@ export default class Web extends Service {
         // first message should not be assistant
         while (chats[0] && chats[0].role === ChatRoleEnum.ASSISTANT) chats.shift()
 
-        const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
-        const prompts: ChatMessage[] = []
-
-        // system prompt and initial assistant prompt
-        system = system || (await this.getConfig('SYSTEM_PROMPT'))
-        system += ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
-        prompts.push({ role: SYSTEM, content: system })
-        if (assistant) prompts.push({ role: ASSISTANT, content: assistant })
+        const input = prompts.pop()?.content
+        if (!input) throw new Error('Empty user input')
 
         // add history chat including resource files
         let embedding: number[] | null = null
@@ -552,7 +539,7 @@ export default class Web extends Service {
                 if (file.typeId === ResourceType.IMAGE) {
                     const content = `# Image File\nFile name: ${item.resourceName}\nFile size: ${file.fileSize} Bytes`
                     const img = ctx.service.util.fileURL(file.filePath, file.fileName, file.fileSize > LIMIT_IMG_SIZE)
-                    prompts.push({ role: USER, content, img })
+                    prompts.push({ role: ChatRoleEnum.USER, content, img })
                 } else {
                     count++
                     exts.push(file.fileExt)
@@ -561,7 +548,7 @@ export default class Web extends Service {
                     const pages = await this.queryPages(file.id, embedding)
                     // make reference resource prompt
                     prompts.push({
-                        role: USER,
+                        role: item.role,
                         content: `
                         # ${ctx.__('File Reference')} ${count}
                         ## ${ctx.__('File Info')}
@@ -577,7 +564,7 @@ export default class Web extends Service {
         }
 
         // add user chat
-        prompts.push({ role: USER, content: input })
+        prompts.push({ role: ChatRoleEnum.USER, content: input })
         console.log(prompts)
 
         // auto select model
@@ -614,7 +601,7 @@ export default class Web extends Service {
             // save user chat
             await ctx.model.Chat.create({
                 dialogId: data.dialogId,
-                role: USER,
+                role: ChatRoleEnum.USER,
                 content: input,
                 token: $.countTokens(JSON.stringify(prompts)),
                 model: data.model,
@@ -623,7 +610,7 @@ export default class Web extends Service {
             // save assistant chat
             const chat = await ctx.model.Chat.create({
                 dialogId: data.dialogId,
-                role: ASSISTANT,
+                role: ChatRoleEnum.ASSISTANT,
                 content: data.content,
                 token: $.countTokens(data.content),
                 model: data.model,
@@ -645,6 +632,7 @@ export default class Web extends Service {
         res.on('error', e => output.destroy(e))
     }
 
+    // do image model
     async doImagine(input: string, data: ChatResponse, output: PassThrough) {
         const { ctx } = this
 
@@ -662,7 +650,7 @@ export default class Web extends Service {
         data.content = ctx.__('prepare to imagine')
         data.file = { name: '', url: LOAD_IMG, size: 0, ext: 'image/gif' }
         output.write(JSON.stringify(data))
-        if (model === MidJourneyImagineModel.MJ) input = await this.translate(input)
+        input = await ctx.service.agent.translateImagine(input)
 
         // imagine
         // await this.translate(input)
