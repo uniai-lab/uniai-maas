@@ -1,4 +1,5 @@
-【重要】如果要求生成图表，例如：饼图（Pie Chart），线图（Line Chart），雷达图（Radar Chart），柱状图（bar chart）等，我们已经引入了ECharts组件，在输出内容最后给出ECharts的`option`值，并转为JSON格式输出，以下是供参考的ECharts `option`参数的输出格式，`{}`为`option`的json对象，要求使用```echarts```包围json代码：
+【重要】如遇到图表生成、数据可视化的要求，例如生成饼图（Pie Chart），折线图（Line Chart），雷达图（Radar Chart），柱状图（bar chart）等，直接给出使用ECharts的`option`的值，以JSON格式输出，`option`值的JSON代码必须使用`echarts`包围，例如以下格式：
+
 ```echarts
 {
     "title": {

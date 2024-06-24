@@ -17,8 +17,7 @@ import {
     EmbedModelProvider,
     ImagineModelProvider,
     ImagineModel,
-    ModelModel,
-    MidJourneyImagineModel
+    ModelModel
 } from 'uniai'
 import { ConfigVIP, LevelChatProvider, LevelImagineModel } from '@interface/Config'
 import { ChatResponse } from '@interface/controller/Web'
@@ -268,7 +267,7 @@ export default class Web extends Service {
         const prompts: ChatMessage[] = []
 
         // push system prompt, assistant prompt, user prompt
-        system = system || (await this.getConfig('SYSTEM_PROMPT'))
+        system = (system || (await this.getConfig('SYSTEM_PROMPT'))) + '\n' + (await this.getConfig('CHART_PROMPT'))
         system =
             ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString())) + '\n' + system
         prompts.push({ role: ChatRoleEnum.SYSTEM, content: system })
@@ -297,22 +296,19 @@ export default class Web extends Service {
                 output.write(JSON.stringify(data))
 
                 mode = await this.ctx.service.agent.useOutputMode(input)
+                // send message to front, mode is selected
+                if (mode === OutputMode.IMAGE) {
+                    data.content = ctx.__('system detect imagine task')
+                    output.write(JSON.stringify(data))
+                }
             }
-            // send message to front, mode is selected
-            if (mode === OutputMode.IMAGE) {
-                data.content = ctx.__('system detect imagine task')
-                output.write(JSON.stringify(data))
-            }
+
             // run function according to mode
             switch (mode) {
                 case OutputMode.TEXT:
                     return this.doChat(prompts, data, output)
                 case OutputMode.IMAGE:
                     return this.doImagine(input, data, output)
-                case OutputMode.CHART:
-                    // add chart prompt to system prompt
-                    prompts[0].content += await this.getConfig('CHART_PROMPT')
-                    return this.doChat(prompts, data, output)
                 default:
                     return this.doChat(prompts, data, output)
             }
