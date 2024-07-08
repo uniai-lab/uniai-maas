@@ -37,7 +37,7 @@ const LOOP_MAX = 600 // imagine task request max loop
 const LOOP_WAIT = 1000 // imagine task request interval, ms
 
 const TITLE_SUB_TOKEN = 20 // dialog title limit length
-const QUERY_PAGE_LIMIT = 5 // query resource page limit
+const QUERY_PAGE_LIMIT = 10 // query resource page limit
 const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.gif'
 
 const LIMIT_IMG_SIZE = 1 * 1024 * 1024 // image over 1mb need compress
@@ -527,7 +527,6 @@ export default class Web extends Service {
 
         // add history chat including resource files
         let embedding: number[] | null = null
-        let count = 0
         const exts: string[] = []
         for (const item of chats) {
             const file = item.resource
@@ -537,23 +536,26 @@ export default class Web extends Service {
                     const img = ctx.service.util.fileURL(file.filePath, file.fileName, file.fileSize > LIMIT_IMG_SIZE)
                     prompts.push({ role: ChatRoleEnum.USER, content, img })
                 } else {
-                    count++
                     exts.push(file.fileExt)
                     // query resource, one time embedding
                     if (!embedding) embedding = (await ctx.service.uniAI.embedding(input)).embedding[0]
                     const pages = await this.queryPages(file.id, embedding)
+
                     // make reference resource prompt
                     prompts.push({
                         role: item.role,
                         content: `
-                        # ${ctx.__('File Reference')} ${count}
+                        # ${ctx.__('File Reference')}
                         ## ${ctx.__('File Info')}
                         ${ctx.__('File Name:')}${item.resourceName}
                         ${ctx.__('File Size:')}${file.fileSize} Bytes
                         ${ctx.__('Total Pages:')}${file.page}
                         ## ${ctx.__('File Content')}
-                        ${pages.map(v => v.content).join('\n')}
-                    `
+                        ${pages
+                            .sort((a, b) => a.page - b.page)
+                            .map(v => v.content)
+                            .join('\n\n')}
+                        `
                     })
                 }
             } else prompts.push({ role: item.role, content: item.content })
