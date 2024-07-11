@@ -318,7 +318,7 @@ export default class WeChat extends Service {
         let system = await this.getConfig('SYSTEM_PROMPT')
         system += ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
 
-        const { USER, SYSTEM, ASSISTANT } = ChatRoleEnum
+        const { USER, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
 
         // get pro version (temporarily announcement)
