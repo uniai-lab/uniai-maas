@@ -21,7 +21,7 @@ const SHARE_REWARD_UPLOAD_CHANCE = 5
 const LIMIT_UPLOAD_SIZE = 20 * 1024 * 1024
 const INIT_RESOURCE_ID = 449
 
-const FREE_CHAT_CHANCE: number[] = [10, 20, 30, 30]
+const FREE_CHAT_CHANCE: number[] = [20, 30, 50, 50]
 const FREE_UPLOAD_CHANCE: number[] = [5, 10, 20, 20]
 /*
  * Level 0 -> 0 score

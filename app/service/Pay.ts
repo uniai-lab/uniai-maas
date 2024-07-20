@@ -29,11 +29,6 @@ export default class Pay extends Service {
         else return items
     }
 
-    // list pay items
-    async list() {
-        return await this.getPayItems()
-    }
-
     // create a payment
     async create(id: number, type: PayType, userId: number = 0) {
         const { ctx } = this
@@ -45,7 +40,8 @@ export default class Pay extends Service {
 
             // generate a transaction, amount must be int, *100
             const res = await wx.transactions_native({
-                description: item[0].title,
+                // remove emoji special character
+                description: item[0].title.replace(/[^\p{L}\p{N}\p{P}\p{Z}\p{M}]/gu, ''),
                 out_trade_no: transactionId,
                 notify_url: ctx.service.util.paybackURL(),
                 amount: { total: parseInt(new Decimal(item[0].price).mul(100).toFixed(0)) }
