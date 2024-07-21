@@ -334,7 +334,7 @@ export default class Web extends Service {
         let model: ChatModel | null = null
         if (!level) {
             provider = ChatModelProvider.IFlyTek
-            model = ChatModel.SPARK_LITE
+            model = ChatModel.SPARK_PRO
             return { provider, model }
         }
 
@@ -347,13 +347,17 @@ export default class Web extends Service {
         }
         // 8k input
         else if (count >= 6000 && count < 8000) {
+            if (level >= options.iflytek) {
+                provider = ChatModelProvider.IFlyTek
+                model = ChatModel.SPARK_ULTRA
+            }
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_3_TURBO
             }
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
-                model = ChatModel.GEM_PRO
+                model = ChatModel.GEM_FLASH_1_5
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
@@ -362,13 +366,17 @@ export default class Web extends Service {
         }
         // 16k input
         else if (count >= 8000 && count < 16000) {
+            if (level >= options.iflytek) {
+                provider = ChatModelProvider.IFlyTek
+                model = ChatModel.SPARK_ULTRA
+            }
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_3_TURBO
             }
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
-                model = ChatModel.GEM_PRO
+                model = ChatModel.GEM_PRO_1_5
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
@@ -377,6 +385,10 @@ export default class Web extends Service {
         }
         // 32k input
         else if (count >= 16000 && count < 32000) {
+            if (level >= options.iflytek) {
+                provider = ChatModelProvider.IFlyTek
+                model = ChatModel.SPARK_ULTRA
+            }
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_4
@@ -388,6 +400,10 @@ export default class Web extends Service {
         }
         // 128k input
         else if (count >= 32000 && count < 128000) {
+            if (level >= options.iflytek) {
+                provider = ChatModelProvider.IFlyTek
+                model = ChatModel.SPARK_ULTRA
+            }
             if (level >= options.glm) {
                 provider = ChatModelProvider.GLM
                 model = ChatModel.GLM_4
@@ -410,7 +426,7 @@ export default class Web extends Service {
             }
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
-                model = ChatModel.GEM_PRO
+                model = ChatModel.GEM_PRO_1_5
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
@@ -426,7 +442,7 @@ export default class Web extends Service {
             }
             if (level >= options.google) {
                 provider = ChatModelProvider.Google
-                model = ChatModel.GEM_VISION
+                model = ChatModel.GEM_PRO_1_5
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
@@ -447,6 +463,7 @@ export default class Web extends Service {
                 return 10
             case ModelModel.ERNIE_3_5:
             case ModelModel.GLM_3_TURBO:
+            case ModelModel.GEM_PRO_1:
             case ModelModel.SPARK_PRO:
             case ModelModel.GPT3:
                 return 2
@@ -454,14 +471,15 @@ export default class Web extends Service {
             case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_4:
             case ModelModel.ERNIE_4:
-            case ModelModel.GEM_PRO:
+            case ModelModel.GEM_FLASH_1_5:
                 return 5
+            case ModelModel.SPARK_ULTRA:
+            case ModelModel.GEM_PRO_1_5:
             case ModelModel.MOON_V1_32K:
                 return 10
             case ModelModel.GPT4_O:
             case ModelModel.GPT4_TURBO:
             case ModelModel.GLM_4V:
-            case ModelModel.GEM_VISION:
             case ModelModel.MOON_V1_128K:
                 return 15
             case ModelModel.GPT4:
