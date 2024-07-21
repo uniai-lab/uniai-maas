@@ -1,3 +1,5 @@
+<!-- @format -->
+
 <p align=center>
 <img src="./logo.png" width=65 height=65 />
 </p>
@@ -13,21 +15,27 @@
 [Simplified Chinese (简体中文说明)](./README_CN.md) 🇨🇳
 
 ### Model as a Service
+
 UniAI MaaS aims to implement a model as a service platform integrated multi AI models, allowing developers to focus on developing AI-related applications.
 
 ### Retrieval Augmented Generation
+
 The platform supports a vector database, and an object storage service which enables users to upload, parse, and manage office files.
 
 ### Multi-modals & Multi-models
+
 In addition to text generation models, it also offers multi-modal models such as image generation and recognition.
 
 ### Application
-UniAI MaaS supports custom application development for integration with platforms like WeChat Mini Programs. 
+
+UniAI MaaS supports custom application development for integration with platforms like WeChat Mini Programs.
 
 ### About
+
 UniAI, powered by the node.js library of the same name **uniai**, provides seamless access and management of a diverse range of AI models and utilities. To incorporate UniAI into your project, you can install it via [npm](https://www.npmjs.com/package/uniai) or [Github](https://github.com/devilyouwei/UniAI).
 
 ### Frontend Example
+
 Front end: <https://github.com/uni-openai/lechat-pro>
 
 ## Integrated Models
@@ -59,10 +67,10 @@ To launch the mini app, use WeChat to scan the following QR code.
 
 👍 We recommend: <https://lechat.cas-ll.cn>
 
-- Multi-model Chat
-- Office file upload and parse
-- Image generation
-- Image recognition
+-   Multi-model Chat
+-   Office file upload and parse
+-   Image generation
+-   Image recognition
 
 ![example](https://raw.githubusercontent.com/uni-openai/uniai/main/icon/lechat-pro.png)
 
@@ -271,7 +279,7 @@ UniAI integrates various AI models, focusing on NLP and CV domains. Specific mod
 
 ### NLP Models
 
--   OpenAI GPT, GLM/ChatGLM, IFLYTEK/SPARK
+-   OpenAI GPT, GLM/ChatGLM, IFLYTEK/SPARK, Google/Gemini, Moonshot, Baidu
 
 ### CV Models
 
