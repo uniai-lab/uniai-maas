@@ -19,11 +19,14 @@ config/**/*.js
 app/**/*.map
 test/**/*.map
 config/**/*.map
-app/public/docs/*
-app/public/models/*
-!app/public/docs/.gitkeep
-!app/public/models/.gitkeep
 
-docker/**/data
+docker/es/*
+!docker/es/docker-compose.yml
+docker/minio/*
+!docker/minio/docker-compose.yml
+docker/pgvector/*
+!docker/pgvector/docker-compose.yml
+docker/redis/*
+!docker/redis/docker-compose.yml
 
 cache

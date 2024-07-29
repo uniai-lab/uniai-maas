@@ -1,0 +1,75 @@
+version: '3.5'
+services:
+  es01:
+    image: elasticsearch:8.14.3
+    container_name: es01
+    restart: unless-stopped
+    volumes:
+      - ./es01/data:/usr/share/elasticsearch/data
+      - ./es01/plugins:/usr/share/elasticsearch/plugins
+      - ./es01/logs:/usr/share/elasticsearch/logs
+    environment:
+      - node.name=es01
+      - cluster.name=docker-cluster
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - network.publish_host=es01
+      - node.roles=master,data
+      - xpack.security.enabled=false
+      - xpack.graph.enabled=true
+    ports:
+      - "9200:9200"
+
+  es02:
+    image: elasticsearch:8.14.3
+    container_name: es02
+    restart: unless-stopped
+    volumes:
+      - ./es02/data:/usr/share/elasticsearch/data
+      - ./es02/plugins:/usr/share/elasticsearch/plugins
+      - ./es02/logs:/usr/share/elasticsearch/logs
+    environment:
+      - node.name=es02
+      - cluster.name=docker-cluster
+      - discovery.seed_hosts=es01,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - network.publish_host=es02
+      - node.roles=master,data
+      - xpack.security.enabled=false
+      - xpack.graph.enabled=true
+    ports:
+      - "9201:9200"
+
+  es03:
+    image: elasticsearch:8.14.3
+    container_name: es03
+    restart: unless-stopped
+    volumes:
+      - ./es03/data:/usr/share/elasticsearch/data
+      - ./es03/plugins:/usr/share/elasticsearch/plugins
+      - ./es03/logs:/usr/share/elasticsearch/logs
+    environment:
+      - node.name=es03
+      - cluster.name=docker-cluster
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02,es03
+      - network.publish_host=es03
+      - node.roles=master,data
+      - xpack.security.enabled=false
+      - xpack.graph.enabled=true
+    ports:
+      - "9202:9200"
+
+  kibana:
+    image: kibana:8.14.3
+    container_name: kibana
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    environment:
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+    depends_on:
+      - es01
+      - es02
+      - es03
