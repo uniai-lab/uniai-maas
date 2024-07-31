@@ -45,7 +45,7 @@ const { WX_APP_ID, WX_APP_SECRET } = process.env
 
 // WeChat use free model, Pro use advanced model
 const PROVIDER = ChatModelProvider.IFlyTek
-const MODEL = ChatModel.SPARK_PRO
+const MODEL = ChatModel.SPARK_LITE
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class WeChat extends Service {
