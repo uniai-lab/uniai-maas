@@ -334,7 +334,7 @@ export default class Web extends Service {
         let model: ChatModel | null = null
         if (!level) {
             provider = ChatModelProvider.IFlyTek
-            model = ChatModel.SPARK_PRO
+            model = ChatModel.SPARK_LITE
             return { provider, model }
         }
 
@@ -342,7 +342,7 @@ export default class Web extends Service {
         if (count < 6000) {
             if (level >= options.iflytek) {
                 provider = ChatModelProvider.IFlyTek
-                model = ChatModel.SPARK_MAX
+                model = ChatModel.SPARK_ULTRA
             }
         }
         // 8k input
@@ -461,26 +461,28 @@ export default class Web extends Service {
             case ModelModel.DALL_E_2:
             case ModelModel.DALL_E_3:
                 return 10
+            case ModelModel.SPARK_PRO:
+            case ModelModel.SPARK_MAX:
+            case ModelModel.SPARK_ULTRA:
             case ModelModel.ERNIE_3_5:
+            case ModelModel.ERNIE_CHAR:
+            case ModelModel.ERNIE_CHAR_FICTION:
+            case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_3_TURBO:
             case ModelModel.GEM_PRO_1:
-            case ModelModel.SPARK_PRO:
             case ModelModel.GPT3:
                 return 2
-            case ModelModel.SPARK_MAX:
-            case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_4:
             case ModelModel.ERNIE_4:
-            case ModelModel.GEM_FLASH_1_5:
-                return 5
-            case ModelModel.SPARK_ULTRA:
-            case ModelModel.GEM_PRO_1_5:
+            case ModelModel.ERNIE_4_TURBO:
             case ModelModel.MOON_V1_32K:
-                return 10
-            case ModelModel.GPT4_O:
-            case ModelModel.GPT4_TURBO:
+            case ModelModel.GEM_FLASH_1_5:
+            case ModelModel.GEM_PRO_1_5:
+                return 4
             case ModelModel.GLM_4V:
             case ModelModel.MOON_V1_128K:
+            case ModelModel.GPT4_O:
+            case ModelModel.GPT4_TURBO:
                 return 15
             case ModelModel.GPT4:
                 return 30

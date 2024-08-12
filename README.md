@@ -16,11 +16,11 @@
 
 ### Model as a Service
 
-UniAI MaaS aims to implement a model as a service platform integrated multi AI models, allowing developers to focus on developing AI-related applications.
+**UniAI MaaS** aims to implement a model as a service platform integrated multi AI models, allowing developers to focus on developing Generative AI applications.
 
 ### Retrieval Augmented Generation
 
-The platform supports a vector database, and an object storage service which enables users to upload, parse, and manage office files.
+The platform supports a vector database, and an object storage service which enables users to upload, parse, and manage MS office files.
 
 ### Multi-modals & Multi-models
 
@@ -32,7 +32,7 @@ UniAI MaaS supports custom application development for integration with platform
 
 ### About
 
-UniAI, powered by the node.js library of the same name **uniai**, provides seamless access and management of a diverse range of AI models and utilities. To incorporate UniAI into your project, you can install it via [npm](https://www.npmjs.com/package/uniai) or [Github](https://github.com/devilyouwei/UniAI).
+UniAI, powered by the node.js library of the same name **uniai**, provides seamless access and management of a diverse range of AI models and utilities. To incorporate UniAI into your own project, you can install it via [npm](https://www.npmjs.com/package/uniai) or [Github](https://github.com/devilyouwei/UniAI).
 
 ### Frontend Example
 
@@ -228,7 +228,7 @@ sudo apt install docker.io docker-compose
 
 -   Start pgvector: `yarn docker up pgvector`
 -   Start Redis: `yarn docker up redis`
--   Start Minio (local OSS): `yarn docker up minio`
+-   Start Minio: `yarn docker up minio`
 
 **Important Notes**
 
