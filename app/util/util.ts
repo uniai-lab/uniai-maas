@@ -130,7 +130,7 @@ export default {
      * @returns The parsed JSON as a generic type T.
      */
     json<T>(str: string | null) {
-        if (isJSON(str)) return JSON.parse(str) as T
+        if (str && isJSON(str)) return JSON.parse(str) as T
         else return null
     },
 
