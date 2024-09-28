@@ -410,7 +410,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_O
+                model = ChatModel.GPT_4O
             }
         } else throw new Error('Context is too long')
 
@@ -430,7 +430,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_O
+                model = ChatModel.GPT_4O
             }
         }
 
@@ -446,7 +446,7 @@ export default class Web extends Service {
             }
             if (level >= options.openai) {
                 provider = ChatModelProvider.OpenAI
-                model = ChatModel.GPT4_O
+                model = ChatModel.GPT_4O
             }
         }
         if (!provider || !model) throw new Error('Can not find an available model')
@@ -466,7 +466,7 @@ export default class Web extends Service {
             case ModelModel.SPARK_ULTRA:
             case ModelModel.ERNIE_3_5:
             case ModelModel.ERNIE_CHAR:
-            case ModelModel.ERNIE_CHAR_FICTION:
+            case ModelModel.ERNIE_NOVEL:
             case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_3_TURBO:
             case ModelModel.GEM_PRO_1:
@@ -481,7 +481,7 @@ export default class Web extends Service {
                 return 4
             case ModelModel.GLM_4V:
             case ModelModel.MOON_V1_128K:
-            case ModelModel.GPT4_O:
+            case ModelModel.GPT_4O:
             case ModelModel.GPT4_TURBO:
                 return 15
             case ModelModel.GPT4:
