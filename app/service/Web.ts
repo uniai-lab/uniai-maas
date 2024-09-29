@@ -461,23 +461,21 @@ export default class Web extends Service {
             case ModelModel.DALL_E_2:
             case ModelModel.DALL_E_3:
                 return 10
-            case ModelModel.SPARK_PRO:
-            case ModelModel.SPARK_MAX:
-            case ModelModel.SPARK_ULTRA:
-            case ModelModel.ERNIE_3_5:
+            case ModelModel.ERNIE_4:
+            case ModelModel.ERNIE_4_TURBO:
             case ModelModel.ERNIE_CHAR:
             case ModelModel.ERNIE_NOVEL:
+            case ModelModel.SPARK_ULTRA:
             case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_3_TURBO:
             case ModelModel.GEM_PRO_1:
             case ModelModel.GPT3:
                 return 2
             case ModelModel.GLM_4:
-            case ModelModel.ERNIE_4:
-            case ModelModel.ERNIE_4_TURBO:
             case ModelModel.MOON_V1_32K:
             case ModelModel.GEM_FLASH_1_5:
             case ModelModel.GEM_PRO_1_5:
+            case ModelModel.GPT_4O_MINI:
                 return 4
             case ModelModel.GLM_4V:
             case ModelModel.MOON_V1_128K:

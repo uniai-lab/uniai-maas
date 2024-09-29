@@ -40,6 +40,7 @@ const {
     BAIDU_API_KEY,
     BAIDU_SECRET_KEY,
     MOONSHOT_KEY,
+    ALI_KEY,
     MJ_API,
     MJ_TOKEN,
     MJ_IMG_PROXY,
@@ -53,6 +54,7 @@ const ai = new AI({
     IFlyTek: { apiKey: FLY_API_KEY, apiSecret: FLY_API_SECRET, appId: FLY_APP_ID },
     Baidu: { apiKey: BAIDU_API_KEY, secretKey: BAIDU_SECRET_KEY },
     MoonShot: { key: MOONSHOT_KEY.split(',') },
+    AliYun: { key: ALI_KEY.split(',') },
     Other: { api: GLM_API },
     MidJourney: { proxy: MJ_API, token: MJ_TOKEN, imgProxy: MJ_IMG_PROXY },
     StabilityAI: { key: STABILITY_KEY }

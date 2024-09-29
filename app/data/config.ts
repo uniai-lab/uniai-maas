@@ -36,6 +36,7 @@ const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
     [ChatModelProvider.GLM]: 1,
     [ChatModelProvider.Baidu]: 1,
     [ChatModelProvider.MoonShot]: 1,
+    [ChatModelProvider.AliYun]: 1,
     [ChatModelProvider.Google]: 3,
     [ChatModelProvider.OpenAI]: 3
 }
