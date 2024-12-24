@@ -15,6 +15,7 @@ declare global {
             FLY_APP_ID: string
             FLY_API_KEY: string
             FLY_API_SECRET: string
+            FLY_API_PASS: string
             BAIDU_API: string
             BAIDU_API_KEY: string
             BAIDU_SECRET_KEY: string

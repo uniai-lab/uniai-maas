@@ -315,11 +315,9 @@ export default class WeChat extends Service {
         dialog.chats.reverse()
         dialogId = dialog.id
 
-        let system = await this.getConfig('SYSTEM_PROMPT')
-        system += ctx.__('System Time', $.formatDate(new Date(), ctx.request.header['timezone']?.toString()))
-
         const { USER, ASSISTANT } = ChatRoleEnum
         const prompts: ChatMessage[] = []
+        let system = ''
 
         // get pro version (temporarily announcement)
         if (input === ctx.__('pro version')) {
@@ -357,8 +355,8 @@ export default class WeChat extends Service {
             ${ctx.__('Total pages:')}${page}
             ## ${ctx.__('File Content:')}
             ${$.subTokens(pages.map(v => v.content).join('\n'), 5000)}
-            ${ctx.__('document content end')}
-            ${ctx.__('answer according to')}
+            ${ctx.__('Document content end')}
+            ${ctx.__('My question is:')}
             `
         }
 

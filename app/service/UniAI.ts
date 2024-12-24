@@ -44,6 +44,7 @@ const {
     MJ_API,
     MJ_TOKEN,
     MJ_IMG_PROXY,
+    FLY_API_PASS,
     STABILITY_KEY
 } = process.env
 
@@ -51,7 +52,7 @@ const ai = new AI({
     OpenAI: { key: OPENAI_KEY.split(','), proxy: OPENAI_API },
     Google: { key: GOOGLE_AI_KEY.split(','), proxy: GOOGLE_AI_API },
     GLM: { key: ZHIPU_AI_KEY.split(','), local: GLM_API },
-    IFlyTek: { apiKey: FLY_API_KEY, apiSecret: FLY_API_SECRET, appId: FLY_APP_ID },
+    IFlyTek: { apiKey: FLY_API_KEY, apiSecret: FLY_API_SECRET, appId: FLY_APP_ID, apiPassword: FLY_API_PASS },
     Baidu: { apiKey: BAIDU_API_KEY, secretKey: BAIDU_SECRET_KEY },
     MoonShot: { key: MOONSHOT_KEY.split(',') },
     AliYun: { key: ALI_KEY.split(',') },

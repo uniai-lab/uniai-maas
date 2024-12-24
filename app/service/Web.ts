@@ -461,10 +461,15 @@ export default class Web extends Service {
             case ModelModel.DALL_E_2:
             case ModelModel.DALL_E_3:
                 return 10
-            case ModelModel.ERNIE_4:
-            case ModelModel.ERNIE_4_TURBO:
-            case ModelModel.ERNIE_CHAR:
-            case ModelModel.ERNIE_NOVEL:
+            case ModelModel.ERNIE_4_0_8K:
+            case ModelModel.ERNIE_4_0_LATEST:
+            case ModelModel.ERNIE_4_0_PREVIEW:
+            case ModelModel.ERNIE_4_0_TURBO_8K:
+            case ModelModel.ERNIE_4_0_TURBO_128K:
+            case ModelModel.ERNIE_4_0_TURBO_LATEST:
+            case ModelModel.ERNIE_4_0_TURBO_PREVIEW:
+            case ModelModel.ERNIE_CHAR_8K:
+            case ModelModel.ERNIE_NOVEL_8K:
             case ModelModel.SPARK_ULTRA:
             case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_3_TURBO:
@@ -482,6 +487,9 @@ export default class Web extends Service {
             case ModelModel.GPT_4O:
             case ModelModel.GPT4_TURBO:
                 return 15
+            case ModelModel.O1_MINI:
+            case ModelModel.O1_PRE:
+                return 20
             case ModelModel.GPT4:
                 return 30
             default:
