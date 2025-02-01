@@ -27,7 +27,8 @@ declare global {
             MJ_API: string
             MJ_TOKEN: string
             MJ_IMG_PROXY: string
-            GLM_API: string
+            OTHER_API: string
+            OTHER_MODEL: string
             STABILITY_KEY: string
 
             // select a database

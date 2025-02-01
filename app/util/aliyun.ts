@@ -17,7 +17,7 @@ export default {
         request.templateCode = ALI_SMS_TEMPLATE
         request.phoneNumbers = phone
         const res = await ali.sendSms(request)
-        if (res.body.code !== 'OK') throw new Error(res.body.message)
+        if (res.body?.code !== 'OK') throw new Error(res.body?.message)
         return res
     }
 }

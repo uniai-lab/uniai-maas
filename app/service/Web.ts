@@ -42,9 +42,6 @@ const LOAD_IMG = 'https://openai-1259183477.cos.ap-shanghai.myqcloud.com/giphy.g
 
 const LIMIT_IMG_SIZE = 1 * 1024 * 1024 // image over 1mb need compress
 
-const TRANSLATE_PROVIDER = ChatModelProvider.GLM
-const TRANSLATE_MODEL = ChatModel.GLM_6B
-
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class Web extends Service {
     // get config value by key
@@ -473,22 +470,22 @@ export default class Web extends Service {
             case ModelModel.SPARK_ULTRA:
             case ModelModel.MOON_V1_8K:
             case ModelModel.GLM_3_TURBO:
-            case ModelModel.GEM_PRO_1:
+            case ModelModel.GEM_FLASH_2_EXP:
+            case ModelModel.GEM_FLASH_2_THINK_EXP:
             case ModelModel.GPT3:
                 return 2
             case ModelModel.GLM_4:
             case ModelModel.MOON_V1_32K:
-            case ModelModel.GEM_FLASH_1_5:
-            case ModelModel.GEM_PRO_1_5:
             case ModelModel.GPT_4O_MINI:
                 return 4
             case ModelModel.GLM_4V:
             case ModelModel.MOON_V1_128K:
             case ModelModel.GPT_4O:
             case ModelModel.GPT4_TURBO:
-                return 15
             case ModelModel.O1_MINI:
+                return 15
             case ModelModel.O1_PRE:
+            case ModelModel.O1:
                 return 20
             case ModelModel.GPT4:
                 return 30

@@ -4,13 +4,14 @@ import { AccessLevel, SingletonProto } from '@eggjs/tegg'
 import { randomUUID } from 'crypto'
 import { Service } from 'egg'
 import md5 from 'md5'
-import { ModelProvider } from 'uniai'
+import { ChatModelProvider, ModelProvider } from 'uniai'
 import { ConfigVIP, LevelChatProvider } from '@interface/Config'
 import { UserCache } from '@interface/Cache'
 import { Option } from '@interface/controller/Web'
 import $ from '@util/util'
 
 const FREE_CHANCE_TIME = 24 * 60 * 60 * 1000 // update free chance everyday
+const { OTHER_MODEL } = process.env
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
 export default class User extends Service {
@@ -176,6 +177,7 @@ export default class User extends Service {
         if (!cache) throw new Error('User cache not found')
 
         const models = this.service.uniAI.getChatModels()
+        const others = OTHER_MODEL.split(',')
         const options = await Promise.all(
             models.map<Promise<Option>>(async v => {
                 const disabled = await this.checkLevelModel(cache.level, v.value)
@@ -183,7 +185,10 @@ export default class User extends Service {
                     value: v.value,
                     label: v.provider,
                     disabled,
-                    children: v.models.map(v => ({ disabled, value: v, label: v }))
+                    children:
+                        v.value === ChatModelProvider.Other
+                            ? others.map(v => ({ disabled, value: v, label: v }))
+                            : v.models.map(v => ({ disabled, value: v, label: v }))
                 }
             })
         )

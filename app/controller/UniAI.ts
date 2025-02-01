@@ -25,8 +25,8 @@ import $ from '@util/util'
 export default class UniAI {
     @Middleware()
     @HTTPMethod({ path: '/models', method: HTTPMethodEnum.GET })
-    async models(@Context() ctx: EggContext) {
-        const data = await ctx.service.uniAI.getChatModels()
+    models(@Context() ctx: EggContext) {
+        const data = ctx.service.uniAI.getChatModels()
         ctx.service.res.success(`Success to list models`, data)
     }
 

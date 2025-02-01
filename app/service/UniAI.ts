@@ -14,7 +14,6 @@ import AI, {
     ChatResponse,
     ChatRoleEnum,
     EmbedModelProvider,
-    GLMChatModel,
     ImagineModel,
     ImagineModelProvider,
     MJTaskType,
@@ -33,7 +32,6 @@ const {
     GOOGLE_AI_API,
     GOOGLE_AI_KEY,
     ZHIPU_AI_KEY,
-    GLM_API,
     FLY_API_KEY,
     FLY_API_SECRET,
     FLY_APP_ID,
@@ -41,6 +39,7 @@ const {
     BAIDU_SECRET_KEY,
     MOONSHOT_KEY,
     ALI_KEY,
+    OTHER_API,
     MJ_API,
     MJ_TOKEN,
     MJ_IMG_PROXY,
@@ -51,12 +50,12 @@ const {
 const ai = new AI({
     OpenAI: { key: OPENAI_KEY.split(','), proxy: OPENAI_API },
     Google: { key: GOOGLE_AI_KEY.split(','), proxy: GOOGLE_AI_API },
-    GLM: { key: ZHIPU_AI_KEY.split(','), local: GLM_API },
+    GLM: { key: ZHIPU_AI_KEY.split(',') },
     IFlyTek: { apiKey: FLY_API_KEY, apiSecret: FLY_API_SECRET, appId: FLY_APP_ID, apiPassword: FLY_API_PASS },
     Baidu: { apiKey: BAIDU_API_KEY, secretKey: BAIDU_SECRET_KEY },
     MoonShot: { key: MOONSHOT_KEY.split(',') },
     AliYun: { key: ALI_KEY.split(',') },
-    Other: { api: GLM_API },
+    Other: { api: OTHER_API },
     MidJourney: { proxy: MJ_API, token: MJ_TOKEN, imgProxy: MJ_IMG_PROXY },
     StabilityAI: { key: STABILITY_KEY }
 })
@@ -437,12 +436,7 @@ export default class UniAI extends Service {
             const prompt = await this.getConfig('AUDIT_PROMPT')
             const message: ChatMessage[] = [{ role: ChatRoleEnum.USER, content: prompt + content }]
 
-            const result = await ai.chat(message, {
-                provider: ChatModelProvider.GLM,
-                model: GLMChatModel.GLM_6B,
-                stream: false,
-                temperature: 0
-            })
+            const result = await ai.chat(message, { provider: ChatModelProvider.Other, stream: false, temperature: 0 })
             if (result instanceof Readable) throw new Error('Chat response is stream')
             const json = $.jsonFix<AIAuditResponse>(result.content)
             res.flag = json?.safe || false

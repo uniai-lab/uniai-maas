@@ -8,8 +8,7 @@ import { OutputMode } from '@interface/Enum'
 import $ from '@util/util'
 
 const DEFAULT_PROMPT_TYPE = promptType[0].id
-const DEFAULT_PROVIDER = ChatModelProvider.GLM
-const DEFAULT_MODEL = ChatModel.GLM_6B
+const DEFAULT_PROVIDER = ChatModelProvider.Other
 const JSON_REGEX = /^```json\s*|```$/gm
 
 @SingletonProto({ accessLevel: AccessLevel.PUBLIC })
@@ -33,11 +32,7 @@ export default class Agent extends Service {
     }
 
     // use output mode
-    async useOutputMode(
-        input: string,
-        provider: ChatModelProvider = DEFAULT_PROVIDER,
-        model: ChatModel = DEFAULT_MODEL
-    ) {
+    async useOutputMode(input: string, provider: ChatModelProvider = DEFAULT_PROVIDER, model?: ChatModel) {
         const { ctx } = this
         let prompt = `根据用户输入内容判断其目的是？\n`
         prompt += `1. 进行文本回复\n`
@@ -52,18 +47,14 @@ export default class Agent extends Service {
         const { content } = (await ctx.service.uniAI.chat(prompt, false, provider, model, 0, 0)) as ChatResponse
         console.log('Agent useOutputMode<<<', content)
 
-        return $.jsonFix<{ mode: OutputMode }>(content.replace(JSON_REGEX, ''))?.mode || OutputMode.TEXT
+        return $.jsonFix<{ mode: OutputMode }>(content!.replace(JSON_REGEX, ''))?.mode || OutputMode.TEXT
     }
 
-    async translateImagine(
-        input: string,
-        provider: ChatModelProvider = DEFAULT_PROVIDER,
-        model: ChatModel = DEFAULT_MODEL
-    ) {
+    async translateImagine(input: string, provider: ChatModelProvider = DEFAULT_PROVIDER, model?: ChatModel) {
         const prompt = `以下是一段用于生成图片的提示词，请优化提示词内容并翻译为英文输出：${input}`
         console.log('Agent translateImagine>>>', prompt)
         const { content } = (await this.ctx.service.uniAI.chat(prompt, false, provider, model)) as ChatResponse
         console.log('Agent translateImagine<<<', content)
-        return content
+        return content!
     }
 }
