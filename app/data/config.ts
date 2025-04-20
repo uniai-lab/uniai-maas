@@ -32,13 +32,15 @@ const FREE_UPLOAD_CHANCE: number[] = [5, 10, 20, 20]
 const LEVEL_SCORE: number[] = [0, 10, 100, 300]
 
 const LEVEL_CHAT_PROVIDER: LevelChatProvider = {
-    [ChatModelProvider.IFlyTek]: 0,
     [ChatModelProvider.Other]: 0,
+    [ChatModelProvider.IFlyTek]: 0,
     [ChatModelProvider.GLM]: 1,
     [ChatModelProvider.Baidu]: 1,
     [ChatModelProvider.MoonShot]: 1,
     [ChatModelProvider.AliYun]: 1,
-    [ChatModelProvider.Google]: 3,
+    [ChatModelProvider.DeepSeek]: 1,
+    [ChatModelProvider.Google]: 2,
+    [ChatModelProvider.XAI]: 2,
     [ChatModelProvider.OpenAI]: 3
 }
 

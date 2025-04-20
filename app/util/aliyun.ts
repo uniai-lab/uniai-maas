@@ -7,6 +7,7 @@ const { ALI_KEY_ID, ALI_KEY_SECRET, ALI_SMS_TEMPLATE, ALI_SMS_SIGN } = process.e
 
 const config = new Config({ accessKeyId: ALI_KEY_ID, accessKeySecret: ALI_KEY_SECRET })
 config.endpoint = `dysmsapi.aliyuncs.com`
+// @ts-ignore
 const ali = new Dysmsapi(config)
 
 export default {
