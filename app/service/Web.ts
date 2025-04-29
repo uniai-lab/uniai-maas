@@ -606,23 +606,20 @@ export default class Web extends Service {
         if (user.chatChanceFree + user.chatChance < cost) throw new Error('Chat chance not enough')
 
         // start chat stream
-        data.content = ctx.__('model inputting')
-        output.write(JSON.stringify(data))
         const res = await ctx.service.uniAI.chat(prompts, true, provider, model)
         if (!(res instanceof Readable)) throw new Error('Chat stream is not readable')
 
-        data.content = ''
+        let content = ''
         res.on('data', (buff: Buffer) => {
             const obj = $.json<ChatResponse>(buff.toString())
             if (obj && obj.content) {
-                data.content += obj.content
+                data.content = obj.content
                 data.subModel = obj.model
                 output.write(JSON.stringify(data))
+                content += obj.content
             }
         })
         res.on('end', async () => {
-            if (!data.content.trim()) return output.destroy(new Error('Unknown error, model output nothing'))
-
             // save user chat
             await ctx.model.Chat.create({
                 dialogId: data.dialogId,
@@ -636,12 +633,13 @@ export default class Web extends Service {
             const chat = await ctx.model.Chat.create({
                 dialogId: data.dialogId,
                 role: ChatRoleEnum.ASSISTANT,
-                content: data.content,
+                content,
                 token: $.countTokens(data.content),
                 model: data.model,
                 subModel: data.subModel
             })
             data.chatId = chat.id
+            data.content = ''
 
             // reduce user chance, first cost free chance
             const user = await ctx.model.User.findByPk(data.userId, {

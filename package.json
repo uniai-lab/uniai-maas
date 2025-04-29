@@ -72,7 +72,7 @@
         "sequelize-typescript": "^2.1.6",
         "sharp": "^0.33.5",
         "tslog": "^4.9.3",
-        "uniai": "^1.12.3",
+        "uniai": "^1.12.7",
         "wechatpay-node-v3": "^2.2.1",
         "xlsx": "^0.18.5"
     },
