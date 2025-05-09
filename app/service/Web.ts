@@ -673,11 +673,11 @@ export default class Web extends Service {
         data.content = ctx.__('prepare to imagine')
         data.file = { name: '', url: LOAD_IMG, size: 0, ext: 'image/gif' }
         output.write(JSON.stringify(data))
-        input = await ctx.service.agent.translateImagine(input)
+        const prompt = await ctx.service.agent.translateImagine(input)
 
         // imagine
         // await this.translate(input)
-        const res = await ctx.service.uniAI.imagine(input, '', 1, 1024, 1024, provider, model)
+        const res = await ctx.service.uniAI.imagine(prompt, '', 1, 1024, 1024, provider, model)
         // watch task
         let loop = 0
         while (loop < LOOP_MAX) {

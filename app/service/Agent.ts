@@ -51,7 +51,8 @@ export default class Agent extends Service {
     }
 
     async translateImagine(input: string, provider: ChatModelProvider = DEFAULT_PROVIDER, model?: ChatModel) {
-        const prompt = `以下是一段用于生成图片的提示词，请优化提示词内容并翻译为英文输出：${input}`
+        let prompt = `以下是一段用于生成图片的提示词：${input}\n`
+        prompt += '请优化提示词内容并翻译为英文输出，最终仅给出优化过后的提示词，不要有任何多余的内容！'
         console.log('Agent translateImagine>>>', prompt)
         const { content } = (await this.ctx.service.uniAI.chat(prompt, false, provider, model)) as ChatResponse
         console.log('Agent translateImagine<<<', content)
